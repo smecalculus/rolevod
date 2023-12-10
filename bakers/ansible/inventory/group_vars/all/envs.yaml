@@ -1,0 +1,58 @@
+---
+devenv: turing
+dev:
+  anyone:
+    maven:
+      min: 3.8.0
+      max: 3.10.0
+    docker:
+      min: 24.0.0
+      max: 25.0.0
+  godel:
+    jdk:
+      release: 17
+  turing:
+    jdk:
+      release: 19
+  church:
+    jdk:
+      release: 21
+
+opsenv: durkheim
+ops:
+  marx:
+    storage:
+      vendor: postgres
+      version: 14.9
+      mapping_mode: my_batis
+    app:
+      lang: java
+    config:
+      mapping_mode: lightbend_config
+  durkheim:
+    storage:
+      vendor: postgres
+      version: 15.4
+      mapping_mode: my_batis
+    app:
+      lang: kotlin
+    config:
+      mapping_mode: lightbend_config
+  veblen:
+    storage:
+      vendor: postgres
+      version: 15.4
+      mapping_mode: spring_data
+    app:
+      lang: kotlin
+    config:
+      mapping_mode: spring_config
+  commons:
+    storage:
+      vendor: postgres
+      version: 16.0
+      mapping_mode: spring_data
+    app:
+      lang: java
+    config:
+      mapping_mode: spring_config

@@ -1,0 +1,68 @@
+---
+- name: Binaries
+  hosts: app
+  run_once: true
+  tasks:
+    - name: Capture cids
+      ansible.builtin.command:
+        cmd: git hash-object --stdin
+        stdin: |
+          {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs') }}
+          {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=apps/' ~ app) }}
+      register: image_cid
+      changed_when: false
+      loop: "{{ solution.apps.values()|flatten|map(attribute='binary') }}"
+      loop_control:
+        loop_var: app
+      tags: [always]
+    - name: Declare tags
+      ansible.builtin.set_fact:
+        image_tags: >-
+          {{ dict(image_cid.results
+            |map(attribute='stdout')
+            |map('truncate', 7, True, '')
+            |map('regex_replace', '^', devenv ~ '-')
+            |zip(image_cid.results|map(attribute='app'))
+            |map('reverse'))
+          }}
+      tags: [always]
+    - name: Capture statuses
+      ansible.builtin.command:
+        cmd: docker {{ docker_entity }} inspect {{ app.image }}:{{ image_tags[app.binary] }}
+      register: image_status
+      changed_when:
+        - image_status.rc != 0
+      failed_when: false
+      loop: "{{ solution.apps.values()|flatten }}"
+      loop_control:
+        loop_var: app
+        label: "{{ app.binary }}"
+      tags: [always]
+    - name: Status commands
+      ansible.builtin.debug:
+        msg: "{{ image_status.results|map(attribute='cmd')|map('join', ' ') }}"
+      when: image_status is changed
+      tags: [always]
+    - name: Create binaries
+      ansible.builtin.command:
+        cmd: >-
+          mvn
+          --no-snapshot-updates
+          --fail-fast
+          --batch-mode
+          --threads 2
+          --projects {{
+            image_status.results
+            | select('changed')
+            | map(attribute='app.binary')
+            | map('regex_replace', '^', ':')
+            | join(',')
+          }}
+          --also-make
+          clean
+          {{ maven_phase | default('package') }}
+          --define maven.compiler.release={{ dev[devenv].jdk.release }}
+        chdir: "{{ project.dir }}"
+        strip_empty_ends: false
+      changed_when: true
+      when: image_status is changed

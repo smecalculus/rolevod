@@ -1,0 +1,229 @@
+---
+name: Beyond doubt
+
+on:
+  merge_group:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  BINARY_STORAGE: maven.pkg.github.com
+  IMAGE_STORAGE: ghcr.io
+
+jobs:
+  up-to-images:
+    name: Up to images (${{ matrix.env.dev }})
+    timeout-minutes: 10
+    permissions:
+      checks: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+          - dev: turing
+            os: ubuntu-22.04
+          - dev: church
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.env.os }}
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          devenv: ${{ matrix.env.dev }}
+          tools: python java docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml
+        working-directory: bakers/ansible
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: images
+        run: >-
+          ansible-playbook images.yaml
+          -e binary_storage=${{ env.BINARY_STORAGE }}
+          -e image_storage=${{ env.IMAGE_STORAGE }}
+          -e devenv=${{ matrix.env.dev }}
+        working-directory: bakers/ansible
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: mikepenz/action-junit-report@v4.0.3
+        if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
+        with:
+          check_name: Unit test report
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          require_tests: "${{ steps.images.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false
+      - uses: mikepenz/action-junit-report@v4.0.3
+        if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
+        with:
+          check_name: Integration test report
+          report_paths: "**/target/failsafe-reports/TEST-*.xml"
+          require_tests: "${{ steps.images.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false
+
+  stack-building:
+    name: Stack building (${{ matrix.env.dev }}, ${{ matrix.env.ops }})
+    timeout-minutes: 5
+    needs: [up-to-images]
+    strategy:
+      fail-fast: false
+      matrix:
+        purpose: [func]
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+            ops: marx
+          - dev: turing
+            os: ubuntu-22.04
+            ops: durkheim
+          - dev: turing
+            os: ubuntu-22.04
+            ops: veblen
+          - dev: church
+            os: ubuntu-22.04
+            ops: commons
+
+    runs-on: ${{ matrix.env.os }}
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          devenv: ${{ matrix.env.dev }}
+          tools: python docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: >-
+          ansible-playbook stacks.yaml -t build
+          -e image_storage=${{ env.IMAGE_STORAGE }}
+          -e purpose=${{ matrix.purpose }}
+          -e devenv=${{ matrix.env.dev }}
+          -e opsenv=${{ matrix.env.ops }}
+        working-directory: bakers/ansible
+      - uses: actions/upload-artifact@v3.1.3
+        with:
+          name: solution-${{ matrix.purpose }}-${{ matrix.env.ops }}
+          path: stacks/solution/target/image-context
+          if-no-files-found: ignore
+
+  stack-testing:
+    name: Stack testing (${{ matrix.shard }}, ${{ matrix.purpose }}, ${{ matrix.env.ops }})
+    timeout-minutes: 15
+    needs: [stack-building]
+    strategy:
+      fail-fast: false
+      matrix:
+        purpose: [func]
+        shard: [0, 1]
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+            ops: marx
+          - dev: turing
+            os: ubuntu-22.04
+            ops: durkheim
+          - dev: turing
+            os: ubuntu-22.04
+            ops: veblen
+          - dev: church
+            os: ubuntu-22.04
+            ops: commons
+    runs-on: ${{ matrix.env.os }}
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          devenv: ${{ matrix.env.dev }}
+          tools: python java docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v3.0.2
+        continue-on-error: true  # it's ok because stack building can be skipped
+        with:
+          name: solution-${{ matrix.purpose }}-${{ matrix.env.ops }}
+          path: stacks/solution/target/image-context
+      - run: >-
+          ansible-playbook stacks.yaml -t test
+          -e image_storage=${{ env.IMAGE_STORAGE }}
+          -e purpose=${{ matrix.purpose }}
+          -e reminder=${{ matrix.shard }}
+          -e modulus=2
+          -e devenv=${{ matrix.env.dev }}
+          -e opsenv=${{ matrix.env.ops }}
+        working-directory: bakers/ansible
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v3.1.3
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-test-report-${{ matrix.shard }}-${{ matrix.purpose }}-${{ matrix.env.ops }}
+          path: tests/e2e/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+
+  stack-publishing:
+    name: Stack publishing (${{ matrix.purpose }}, ${{ matrix.env.ops }})
+    timeout-minutes: 5
+    needs: [stack-testing]
+    strategy:
+      fail-fast: false
+      matrix:
+        purpose: [func]
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+            ops: marx
+          - dev: turing
+            os: ubuntu-22.04
+            ops: durkheim
+          - dev: turing
+            os: ubuntu-22.04
+            ops: veblen
+          - dev: church
+            os: ubuntu-22.04
+            ops: commons
+    runs-on: ${{ matrix.env.os }}
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          devenv: ${{ matrix.env.dev }}
+          tools: python docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v3.0.2
+        continue-on-error: true  # it's ok because stack building can be skipped
+        with:
+          name: solution-${{ matrix.purpose }}-${{ matrix.env.ops }}
+          path: stacks/solution/target/image-context
+      - run: >-
+          ansible-playbook stacks.yaml -t package
+          -e image_storage=${{ env.IMAGE_STORAGE }}
+          -e purpose=${{ matrix.purpose }}
+          -e opsenv=${{ matrix.env.ops }}
+        working-directory: bakers/ansible
+
+  stack-reporting:
+    name: Stack reporting
+    timeout-minutes: 5
+    needs: [stack-testing]
+    if: ${{ !cancelled() && (needs.stack-testing.result == 'success' || needs.stack-testing.result == 'failure') }}
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+    steps:
+      - uses: actions/download-artifact@v3.0.2
+        with:
+          path: artifacts
+      - uses: mikepenz/action-junit-report@v4.0.3
+        with:
+          check_name: E2E test report
+          report_paths: "artifacts/e2e-test-report-*/**/TEST-*.xml"
+          require_tests: "${{ needs.stack-testing.result == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false

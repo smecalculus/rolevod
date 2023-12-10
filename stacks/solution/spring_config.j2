@@ -1,0 +1,17 @@
+---
+solution:
+  messaging:
+    mapping:
+      modes: [spring_mvc, spring_management]
+  storage:
+    protocol:
+      {% set storage = solution.storages[ops[opsenv].storage.vendor]|combine(ops[opsenv].storage) %}
+      mode: {{ storage.vendor }}
+      {{ storage.vendor }}:
+        url: "jdbc:postgresql://storage:5432/{{ solution.databases[storage.vendor].name }}"
+        {% set schema = solution.schemas[storage.vendor]|first %}
+        schema: "{{ schema.name }}"
+        username: "{{ storage.owner.username }}"
+        password: "{{ storage.owner.password }}"
+    mapping:
+      mode: {{ storage.mapping_mode }}

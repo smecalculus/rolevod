@@ -1,0 +1,9 @@
+---
+- ansible.builtin.import_role:  # noqa: name[missing]
+    name: image
+  vars:
+    image_tag: "{{ solution_tag }}"
+    image_name: "{{ solution.image }}"
+    image_home: "{{ project.dir }}/stacks/solution"
+    image_context: target/image-context
+    image_push: "{{ image_storage != 'local' }}"

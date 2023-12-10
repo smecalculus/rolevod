@@ -1,0 +1,27 @@
+---
+- name: Remove artifacts
+  ansible.builtin.file:
+    path: "{{ stack_dir }}/target"
+    state: absent
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ stack_dir }}/target/image-context"
+    state: directory
+    recurse: true
+
+- name: Build conf
+  ansible.builtin.template:
+    src: "{{ stack_dir }}/{{ solution.config.mapping_mode }}.j2"
+    dest: "{{ stack_dir }}/target/image-context/application.{{ config_exts[solution.config.mapping_mode] }}"
+    lstrip_blocks: yes
+    trim_blocks: yes
+    mode: "644"
+
+- name: Build spec
+  ansible.builtin.template:
+    src: "{{ stack_dir }}/compose.j2"
+    dest: "{{ stack_dir }}/target/image-context/compose.yaml"
+    lstrip_blocks: yes
+    trim_blocks: yes
+    mode: "644"

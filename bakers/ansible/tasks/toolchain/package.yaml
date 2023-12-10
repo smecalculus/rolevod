@@ -1,0 +1,8 @@
+---
+- ansible.builtin.import_role:  # noqa: name[missing]
+    name: image
+  vars:
+    image_tag: "{{ toolchain_tag }}"
+    image_name: "{{ toolchain.image }}"
+    image_home: "{{ project.dir }}/.github"
+    image_push: "{{ image_storage != 'local' }}"

@@ -1,0 +1,56 @@
+---
+- import_playbook: images.yaml  # noqa: name[play]
+  tags: [images, deps]
+
+- name: Capturing
+  hosts: solution
+  run_once: true
+  tasks:
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/solution/status.yaml
+      tags: [always]
+
+- name: Capturing
+  hosts: toolchain
+  run_once: true
+  tasks:
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/toolchain/status.yaml
+      tags: [always]
+
+- name: Testing
+  hosts: stack
+  run_once: true
+  vars:
+    stack_dir: "{{ project.dir }}/stacks/solution"
+  tasks:
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/solution/build.yaml
+      tags: [build]
+      when: >-
+        hostvars.solution.stack_status is changed or
+        hostvars.toolchain.stack_status is changed
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/solution/test.yaml
+      tags: [test]
+      when: >-
+        hostvars.solution.stack_status is changed or
+        hostvars.toolchain.stack_status is changed
+
+- name: Packaging
+  hosts: solution
+  run_once: true
+  tasks:
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/solution/package.yaml
+      tags: [package]
+      when: stack_status is changed
+
+- name: Packaging
+  hosts: toolchain
+  run_once: true
+  tasks:
+    - ansible.builtin.import_tasks:  # noqa: name[missing]
+        file: tasks/toolchain/package.yaml
+      tags: [package]
+      when: stack_status is changed

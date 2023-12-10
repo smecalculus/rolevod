@@ -1,0 +1,12 @@
+---
+project:
+  name: bezmen
+  org: smecalculus
+  dir: "{{ playbook_dir }}/../.."
+
+binary_storage: local
+image_storage: local
+
+image_repo: "{{ image_storage }}/{{ project.org }}/{{ project.name }}"
+
+docker_entity: "{{ 'image' if image_storage == 'local' else 'manifest' }}"

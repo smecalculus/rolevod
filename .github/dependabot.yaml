@@ -1,0 +1,45 @@
+---
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/"
+    open-pull-requests-limit: 10
+    schedule:
+      interval: "daily"
+    groups:
+      spring-framework:
+        patterns:
+          - "org.springframework*"
+      junit-platform:
+        patterns:
+          - "org.junit*"
+  - package-ecosystem: "docker"
+    directory: "/dbs/postgres"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/envs/dev/church"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/envs/dev/turing"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "ansible-core"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+  - package-ecosystem: "pip"
+    directory: "/envs/dev/godel"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor

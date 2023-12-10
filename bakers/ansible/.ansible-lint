@@ -1,0 +1,9 @@
+---
+profile: production
+offline: true
+strict: true
+
+skip_list:
+  - jinja
+  - no-handler
+  - command-instead-of-module # encouraged for reasons of debuggability

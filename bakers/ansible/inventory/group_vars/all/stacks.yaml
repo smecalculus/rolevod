@@ -1,0 +1,40 @@
+---
+toolchain:
+  image: "{{ image_repo }}/stack/toolchain"
+
+solution:
+  name: "{{ project.name }}"
+  image: "{{ image_repo }}/stack/solution"
+  config:
+    file_name: "application.{{ config_exts[ops[opsenv].config.mapping_mode] }}"
+    mapping_mode: "{{ ops[opsenv].config.mapping_mode }}"
+  storages:
+    postgres:
+      image: "docker.io/library/postgres"
+      dba:
+        username: "postgres"
+        password: "password"
+      owner:
+        username: "{{ project.name }}"
+        password: "{{ project.name }}"
+  databases:
+    postgres:
+      name: "{{ project.name }}"
+      cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=dbs/postgres')[:7] }}"
+      image: "{{ image_repo }}/database/postgres"
+  schemas:
+    postgres:
+      - name: sepulkarium
+  apps:
+    java:
+      - service: sepuling
+        image: "{{ image_repo }}/app/sepuling-java"
+        binary: sepuling-java
+    kotlin:
+      - service: sepuling
+        image: "{{ image_repo }}/app/sepuling-kotlin"
+        binary: sepuling-kotlin
+
+config_exts:
+  lightbend_config: conf
+  spring_config: yaml

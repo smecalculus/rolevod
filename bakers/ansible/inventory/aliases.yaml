@@ -1,0 +1,16 @@
+---
+codebase:
+  hosts:
+    java:
+    ansible:
+    github:
+stack:
+  hosts:
+    solution:
+    toolchain:
+all:
+  hosts:
+    db:
+    app:
+  vars:
+    ansible_connection: local

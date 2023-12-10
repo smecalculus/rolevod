@@ -1,0 +1,94 @@
+name: {{ solution.name }}
+
+networks:
+  stack_network:
+
+configs:
+  stack_config:
+    file: ./{{ solution.config.file_name }}
+
+{% set storage = solution.storages[ops[opsenv].storage.vendor]|combine(ops[opsenv].storage) %}
+{% set database = solution.databases[storage.vendor] %}
+services:
+  storage:
+    image: {{ storage.image }}:{{ storage.version }}-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: {{ storage.dba.username }}
+      POSTGRES_PASSWORD: {{ storage.dba.password }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stack_network
+
+  database:
+    image: {{ database.image }}:{{ database.cid }}
+    depends_on:
+      storage:
+        condition: service_healthy
+    labels:
+      image.name: {{ database.image }}
+    command: >-
+      --show-banner=false
+      --changelog-file=dba/changelog.yaml
+      --url=jdbc:postgresql://storage:5432/postgres
+      --liquibase-schema-name=public
+      --default-schema-name=public
+      --username={{ storage.dba.username }}
+      --password={{ storage.dba.password }}
+      --labels=database,user
+      update
+      -Ddatabase.name={{ database.name }}
+      -Downer.username={{ storage.owner.username }}
+      -Downer.password={{ storage.owner.password }}
+    networks:
+      - stack_network
+
+{% for schema in solution.schemas[storage.vendor] %}
+  {{ schema.name }}:
+    image: {{ database.image }}:{{ database.cid }}
+    depends_on:
+      database:
+        condition: service_completed_successfully
+    labels:
+      image.name: {{ database.image }}
+    command: >-
+      --show-banner=false
+      --changelog-file=owner/changelog.yaml
+      --url=jdbc:postgresql://storage:5432/{{ database.name }}
+      --liquibase-schema-name=public
+      --default-schema-name={{ schema.name }}
+      --username={{ storage.owner.username }}
+      --password={{ storage.owner.password }}
+      update
+      -Dschema.name={{ schema.name }}
+    networks:
+      - stack_network
+{% endfor %}
+
+{% set apps = solution.apps[ops[opsenv].app.lang]|selectattr('service', 'in', usage[purpose].apps) %}
+{% for app in apps %}
+  {{ app.service }}:
+    image: {{ app.image }}:{{ hostvars.app.image_tags[app.binary] }}
+    ports:
+      - 8080:8080
+    configs:
+      - source: stack_config
+        target: /home/app/{{ solution.config.file_name }}
+    command: >-
+      --solution.config.mapping.mode={{ solution.config.mapping_mode }}
+      --spring.config.location=optional:file:application.yaml
+    depends_on:
+    {% for schema in solution.schemas.values()|flatten %}
+      {{ schema.name }}:
+        condition: service_completed_successfully
+    {% endfor %}
+    labels:
+      image.name: {{ app.image }}
+    networks:
+      - stack_network
+{% endfor %}

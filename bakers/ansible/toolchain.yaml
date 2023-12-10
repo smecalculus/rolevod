@@ -1,0 +1,31 @@
+---
+- name: Toolchain
+  hosts: toolchain
+  vars:
+    maven: "{{ dev[devenv].maven|default(dev.anyone.maven) }}"
+    docker: "{{ dev[devenv].docker|default(dev.anyone.docker) }}"
+  tasks:
+    - name: Capture maven version
+      ansible.builtin.command:
+        cmd: mvn --version --quiet
+      register: maven_version
+      changed_when: false
+    - name: Check maven version
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - maven_version.stdout is version(maven.min, '>=', version_type='semver')
+          - maven_version.stdout is version(maven.max, '<', version_type='semver')
+        msg: "{{ maven.min }} <= maven < {{ maven.max }}"
+    - name: Capture docker version
+      ansible.builtin.command:
+        cmd: docker version --format {{'{{.Server.Version}}'}}
+      register: docker_version
+      changed_when: false
+    - name: Check docker version
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - docker_version.stdout is version(docker.min, '>=', version_type='semver')
+          - docker_version.stdout is version(docker.max, '<', version_type='semver')
+        msg: "{{ docker.min }} <= docker < {{ docker.max }}"

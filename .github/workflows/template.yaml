@@ -1,0 +1,27 @@
+---
+name: Template
+
+on:
+  workflow_dispatch:
+
+jobs:
+  syncing:
+    name: Syncing
+    runs-on: ubuntu-latest
+    steps:
+      - id: orgbot
+        uses: actions/create-github-app-token@v1.6.2
+        with:
+          app-id: ${{ secrets.ORGBOT_APP_ID }}
+          private-key: ${{ secrets.ORGBOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v4.1.1
+        with:
+          token: ${{ steps.orgbot.outputs.token }}
+          persist-credentials: false
+      - uses: AndreasAugustin/actions-template-sync@v1.1.8
+        with:
+          pr_title: Syncing with template
+          source_repo_path: smecalculus/bezmen
+          upstream_branch: main
+          github_token: ${{ steps.orgbot.outputs.token }}
+          git_remote_pull_params: --allow-unrelated-histories --strategy=recursive -X ours

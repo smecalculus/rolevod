@@ -1,0 +1,70 @@
+---
+- import_playbook: binaries.yaml  # noqa: name[play]
+  vars:
+    maven_phase: "{{ 'install' if binary_storage == 'local' else 'deploy' }}"
+  tags: [binaries, deps]
+
+- name: Images
+  hosts: db
+  run_once: true
+  tasks:
+    - name: Capture statuses
+      ansible.builtin.command:
+        cmd: >-
+          docker {{ docker_entity }} inspect
+          {{ solution.databases[storage].image }}:{{ solution.databases[storage].cid }}
+      register: image_status
+      changed_when: image_status.rc != 0
+      failed_when: false
+      loop: "{{ solution.schemas.keys() }}"
+      loop_control:
+        loop_var: storage
+    - name: Status commands
+      ansible.builtin.debug:
+        msg: "{{ image_status.results|map(attribute='cmd')|map('join', ' ') }}"
+      when: image_status is changed
+    - name: Create images
+      ansible.builtin.include_role:
+        name: image
+      vars:
+        image_tag: "{{ solution.databases[storage].cid }}"
+        image_name: "{{ solution.databases[storage].image }}"
+        image_home: "{{ project.dir }}/dbs/{{ storage }}"
+        image_push: "{{ image_storage != 'local' }}"
+      loop: "{{ image_status.results|select('changed')|map(attribute='storage') }}"
+      loop_control:
+        loop_var: storage
+
+- name: Images
+  hosts: app
+  run_once: true
+  tasks:
+    - name: Analyze coverage
+      ansible.builtin.command:
+        cmd: >-
+          mvn
+          --no-snapshot-updates
+          --batch-mode
+          --projects tools
+          clean
+          antrun:run@coverage
+        chdir: "{{ project.dir }}"
+        strip_empty_ends: false
+      changed_when: true
+      when: image_status is changed
+    - name: Create images
+      ansible.builtin.include_role:
+        name: image
+      vars:
+        image_tag: "{{ image_tags[app.binary] }}"
+        image_name: "{{ app.image }}"
+        image_home: "{{ project.dir }}/apps/{{ app.binary }}"
+        image_context: target/image-context
+        image_push: "{{ image_storage != 'local' }}"
+        image_args:
+          JAVA_RELEASE: "{{ dev[devenv].jdk.release }}"
+      loop: "{{ image_status.results|select('changed')|map(attribute='app') }}"
+      loop_control:
+        loop_var: app
+        label: "{{ app.binary }}"
+      when: image_status is changed

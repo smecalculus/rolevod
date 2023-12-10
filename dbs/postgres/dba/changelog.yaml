@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - logical-file-path: changelog.yaml
+  - property:
+      name: author
+      value: dba
+  - changeSet:
+      id: owner-${owner.username}
+      author: ${author}
+      runAlways: true
+      runInTransaction: true
+      validCheckSum: ANY
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_roles WHERE rolname = '${owner.username}'
+      changes:
+        - sqlFile:
+            path: owner.sql
+            relativeToChangeLogFile: true
+            splitStatements: false
+  - changeSet:
+      id: database-${database.name}
+      author: ${author}
+      runAlways: true
+      validCheckSum: ANY
+      runInTransaction: false
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_database WHERE datname = '${database.name}'
+      changes:
+        - sqlFile:
+            path: database.sql
+            relativeToChangeLogFile: true
+            splitStatements: true

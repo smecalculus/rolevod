@@ -1,0 +1,137 @@
+= Решение (Solution)
+
+Система, реализуемая для клиентов.
+
+.Ключевые принципы
+****
+Множественность окружений и назначений::
+Решение используется клиентами в различных окружениях (envs) и в различных сценариях использования (usecases). Ключевые окружения/сценарии явно выделяются и проверяются в рамках непрерывной интеграции, устаревшие - снимаются с поддержки.
+
+Тесты! Тесты! Тесты!::
+Тестирование - один из важных или даже самый важный аспект разработки! При тестировании проверяется поведение целевого объекта в различных ситуациях. В зависимости от подхода к подготовке зависимостей целевого объекта тесты можно подразделить на 3 категории.
+Модульные тесты (unit tests):::
+Все зависимости целевого объекта глушатся (stub) или мокируются (mock).
+Интеграционные тесты (integration tests):::
+Все зависимости глушатся/мокируются кроме одной (иногда нескольких), которая честно конструируется.
+Сквозные тесты (end-to-end tests):::
+Все зависимости честно конструируются.
+****
+
+== Конфигурирование (Configuration)
+
+Читаем конфигурационные параметры (props) в рамках некоторого протокола, отображая их в объекты пограничных моделей.
+
+=== Протоколы (Protocols)
+
+==== FileSystem
+
+Протокол FileSystem
+
+=== Отображения (Mappings)
+
+==== SpringConfig
+
+Подробнее https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config
+
+==== LightbendConfig
+
+Подробнее https://lightbend.github.io/config
+
+== Обмен сообщениями (Messaging)
+
+Принимаем/отправляем сообщения (messages) в рамках некоторого протокола, отображая их в объекты пограничных моделей.
+
+=== Протоколы
+
+Wire protocol footnote:[Подробнее https://en.wikipedia.org/wiki/Wire_protocol] - протокол прикладного уровня, который используется для коммуникации между сервером и клиентом.
+
+NOTE: Обычно используются стандартные протоколы, реже - кастомные.
+
+==== HTTP
+
+Протокол HTTP
+
+==== JMX
+
+Протокол JMX
+
+=== Отображения (Mappings)
+
+NOTE: Шаблон проектирования `Message Mapping`.
+
+==== SpringMvc
+
+Подробнее https://docs.spring.io/spring-framework/reference/web/webmvc.html
+
+==== SpringManagement
+
+Подробнее https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html
+
+== Хранение состояния (Storage)
+
+Сохраняем/извлекаем состояние (state) в рамках некоторого протокола, отображая его в объекты пограничных моделей.
+
+=== Протоколы (Protocols)
+
+NOTE: Обычно используются кастомные протоколы, реже - стандартные.
+
+==== PostgreSQL
+
+Кастомный протокол PostgreSQL
+
+=== Отображения (Mappings)
+
+NOTE: Шаблон проектирования `Object-Relational Mapping`.
+
+==== MyBatis
+
+Подробнее https://mybatis.org/mybatis-3
+
+==== SpringData
+
+Подробнее https://docs.spring.io/spring-data/jdbc/docs/current/reference/html
+
+== Ядро (Core)
+
+image::solution/core.png[]
+
+=== Модели и мапперы (models & mappers)
+
+[discrete]
+====== Модели делим по нескольким основаниям
+
+. Предметные (domain side) и пограничные (edge side)
+. Клиентские (client side) и серверные (server side)
+
+=== Клиенты и серверы (clients & servers)
+
+Клиент принимает и возвращает пограничную модель. Сервер - предметную.
+
+[discrete]
+====== Сопоставление с популярными архитектурами
+[%autowidth]
+|===
+2.+| ^|Hexagonal & Onion ^| Clean
+
+.2+s|Client
+s|Interface
+|Port
+|Use case input port
+
+s|Impl
+|Adapter
+|Use case interactor
+
+.2+s|Server
+s|Interface
+|Port
+|Use case output port
+
+s|Impl
+|Adapter
+|Use case interactor
+|===
+
+=== Сервисы (services)
+
+Инкапсулируют операции над сущностями предметной области. Принимают и возвращают срезы.

@@ -1,0 +1,60 @@
+@startuml
+hide stereotype
+
+skinparam nodesep 50
+skinparam ranksep 50
+
+skinparam file {
+  BackgroundColor<<Nowhere>> Transparent
+  BorderColor<<Nowhere>> Transparent
+}
+
+show <<Interface>> stereotype
+show <<Impl>> stereotype
+
+component Mapper as mapperIn
+component Mapper as mapper
+component Mapper as mapperOut
+
+file "request" as requestIn <<Nowhere>>
+interface Client as portIn1 <<Interface>>
+component Client as adapterIn1 <<Impl>>
+component Service as service1
+interface Server as portOut1 <<Interface>>
+component Server as adapterOut1 <<Impl>>
+file "request" as requestOut <<Nowhere>>
+
+requestIn - portIn1
+portIn1 -> adapterIn1
+adapterIn1 --> mapperIn: Edge\nModel
+adapterIn1 <-- mapperIn: Domain\nModel
+adapterIn1 -> service1
+service1 --> mapper: Slice\nModel
+service1 <-- mapper: Entity\nModel
+service1 - portOut1
+portOut1 -> adapterOut1
+adapterOut1 --> mapperOut: Domain\nModel
+adapterOut1 <-- mapperOut: Edge\nModel
+adapterOut1 -> requestOut
+
+file "response" as responseIn <<Nowhere>>
+component Server as adapterOut2 <<Impl>>
+interface Server as portOut2 <<Interface>>
+component Service as service2
+component Client as adapterIn2 <<Impl>>
+interface Client as portIn2 <<Interface>>
+file "response" as responseOut <<Nowhere>>
+
+adapterOut2 <- responseIn
+mapperOut --> adapterOut2: Domain\nModel
+mapperOut <-- adapterOut2: Edge\nModel
+portOut2 - adapterOut2
+service2 <- portOut2
+mapper --> service2: Slice\nModel
+mapper <-- service2: Entity\nModel
+adapterIn2 <- service2
+mapperIn --> adapterIn2: Edge\nModel
+mapperIn <-- adapterIn2: Domain\nModel
+portIn2 - adapterIn2
+responseOut <- portIn2
+@enduml

@@ -1,0 +1,44 @@
+---
+name: Prepare tools
+description: Tools preparation for specific environment
+inputs:
+  devenv:
+    description: Env name
+    required: true
+    default: turing
+  tools:
+    description: Tools to prepare
+    required: true
+  token:
+    description: Github token
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - id: dotenv
+      uses: falti/dotenv-action@v1.0.4
+      with:
+        path: envs/dev/${{ inputs.devenv }}/.env
+    - uses: actions/setup-python@v4.7.0
+      if: ${{ contains(inputs.tools, 'python') }}
+      with:
+        python-version: ${{ steps.dotenv.outputs.python_version }}
+        cache: 'pip'
+    - shell: bash
+      if: ${{ contains(inputs.tools, 'python') }}
+      run: pip install -r envs/dev/${{ inputs.devenv }}/requirements.txt
+    - uses: actions/setup-java@v3.12.0
+      if: ${{ contains(inputs.tools, 'java') }}
+      with:
+        distribution: 'temurin'
+        java-version: ${{ steps.dotenv.outputs.java_version }}
+        cache: 'maven'
+    - shell: bash
+      run: ansible-playbook toolchain.yaml
+      working-directory: bakers/ansible
+    - uses: docker/login-action@v2.2.0
+      if: ${{ contains(inputs.tools, 'docker') }}
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.token }}

@@ -1,0 +1,28 @@
+---
+- name: Capture cid
+  ansible.builtin.command:
+    cmd: git hash-object --stdin
+    stdin: |
+      {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=dbs') }}
+      {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs') }}
+      {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=apps') }}
+      {{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=stacks/solution') }}
+  register: stack_cid
+  changed_when: false
+
+- name: Declare tag
+  ansible.builtin.set_fact:
+    solution_tag: "{{ purpose }}-{{ opsenv }}-{{ stack_cid.stdout[:7] }}"
+
+- name: Capture status
+  ansible.builtin.command:
+    cmd: docker {{ docker_entity }} inspect {{ solution.image }}:{{ solution_tag }}
+  register: stack_status
+  changed_when:
+    - stack_status.rc != 0
+  failed_when: false
+
+- name: Status command
+  ansible.builtin.debug:
+    msg: "{{ stack_status.cmd|join(' ') }}"
+  when: stack_status is changed

@@ -1,0 +1,42 @@
+---
+name: Sanity
+
+on:
+  pull_request:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+
+jobs:
+  up-to-binaries:
+    name: Up to binaries
+    timeout-minutes: 5
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          tools: python java
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml
+        working-directory: bakers/ansible
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: binaries
+        run: ansible-playbook binaries.yaml
+        working-directory: bakers/ansible
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: mikepenz/action-junit-report@v4.0.3
+        if: ${{ !cancelled() && (steps.binaries.outcome == 'success' || steps.binaries.outcome == 'failure') }}
+        with:
+          check_name: Unit test report
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          require_tests: "${{ steps.binaries.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false
