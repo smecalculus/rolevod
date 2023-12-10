@@ -5,8 +5,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>smecalculus.bezmen</groupId>
-    <artifactId>bezmen</artifactId>
+    <groupId>smecalculus.rolevod</groupId>
+    <artifactId>rolevod</artifactId>
     <version>latest</version>
   </parent>
 

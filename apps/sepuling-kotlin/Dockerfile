@@ -10,5 +10,5 @@ COPY bin bin
 ENTRYPOINT [ \
     "java", "-classpath", "bin/*:lib/*", \
     "-Dconfig.file=application.conf", \
-    "smecalculus.bezmen.construction.AppKt" \
+    "smecalculus.rolevod.construction.AppKt" \
 ]
