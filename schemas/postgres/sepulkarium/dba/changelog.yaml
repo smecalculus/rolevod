@@ -1,0 +1,56 @@
+databaseChangeLog:
+  - logical-file-path: dba/changelog.yaml
+  - property:
+      name: author
+      value: bezmen
+  - changeSet:
+      id: database-${bezmen.database}
+      author: ${author}
+      runAlways: true
+      validCheckSum: ANY
+      runInTransaction: false
+      labels: database
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_database WHERE datname = '${bezmen.database}'
+      changes:
+        - sqlFile:
+            path: database.sql
+            relativeToChangeLogFile: true
+            splitStatements: true
+  - changeSet:
+      id: user-${bezmen.owner}
+      author: ${author}
+      runAlways: true
+      runInTransaction: true
+      validCheckSum: ANY
+      labels: user
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_roles WHERE rolname = '${bezmen.owner}'
+      changes:
+        - sqlFile:
+            path: user.sql
+            relativeToChangeLogFile: true
+            splitStatements: false
+  - changeSet:
+      id: schema-${bezmen.schema}
+      author: ${author}
+      runAlways: true
+      runInTransaction: true
+      validCheckSum: ANY
+      labels: schema
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_namespace WHERE nspname = '${bezmen.schema}'
+      changes:
+        - sqlFile:
+            path: schema.sql
+            relativeToChangeLogFile: true
+            splitStatements: true

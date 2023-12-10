@@ -1,0 +1,89 @@
+---
+- name: Binaries
+  hosts: app
+  run_once: true
+  tasks:
+    - name: Capture cid's
+      ansible.builtin.command:
+        cmd: git hash-object --stdin
+        stdin: |
+          {{ app_cids[app] }}
+          {% for lib in app_deps[app] %}
+          {{ lib_cids[lib] }}
+          {% endfor %}
+      # TODO: try to choose better name
+      register: image_cid
+      changed_when: false
+      loop: "{{ app_images.keys() }}"
+      loop_control:
+        loop_var: app
+      tags: [always]
+    - name: Declare cid's
+      ansible.builtin.set_fact:
+        image_cids: "{{ image_cid.results|items2dict(key_name='app', value_name='stdout') }}"
+      tags: [always]
+    - name: Capture statuses
+      ansible.builtin.command:
+        cmd: docker {{ docker_entity }} inspect {{ app_images[app] }}:{{ image_cids[app][:7] }}-{{ opsenv }}
+      register: image_status
+      changed_when: image_status.rc != 0
+      failed_when: false
+      loop: "{{ image_cids.keys() }}"
+      loop_control:
+        loop_var: app
+      tags: [always]
+    - name: Status commands
+      ansible.builtin.debug:
+        msg: "{{ image_status.results|map(attribute='cmd')|map('join', ' ') }}"
+      when: image_status is changed
+      tags: [always]
+    - name: Capture env
+      ansible.builtin.include_vars:
+        file: ../envs/ops/{{ opsenv }}.yaml
+        name: ops
+    - name: Create binaries
+      ansible.builtin.command:
+        cmd: >
+          mvn
+          --no-snapshot-updates
+          --fail-fast
+          --batch-mode
+          --threads 1C
+          --projects {{
+            image_status.results
+            | select('changed')
+            | map(attribute='app')
+            | map('regex_replace', '^', 'apps/')
+            | join(',')
+          }}
+          --also-make
+          clean
+          {% if focus == 'solution' and up_to_images|default(false) %}
+          deploy
+          {% else %}
+          package
+          {% endif %}
+          --define maven.compiler.release={{ ops.java_release }}
+        chdir: "{{ playbook_dir }}/.."
+        strip_empty_ends: false
+      changed_when: true
+      when: image_status is changed
+
+- name: Binaries
+  hosts: test
+  run_once: true
+  tasks:
+    - name: Create binaries
+      ansible.builtin.command:
+        cmd: >
+          mvn
+          --no-snapshot-updates
+          --batch-mode
+          --projects tools,tests
+          --also-make
+          clean
+          package
+        chdir: "{{ playbook_dir }}/.."
+        strip_empty_ends: false
+      changed_when: true
+      when: focus != 'solution'

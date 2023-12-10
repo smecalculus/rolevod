@@ -1,0 +1,25 @@
+---
+name: Project template
+
+on:
+  workflow_dispatch:
+
+jobs:
+  syncing:
+    name: Syncing
+    runs-on: ubuntu-22.04
+    steps:
+      - id: orgbot
+        uses: tibdex/github-app-token@v2.1.0
+        with:
+          app_id: ${{ secrets.ORGBOT_APP_ID }}
+          private_key: ${{ secrets.ORGBOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v4.1.1
+        with:
+          token: ${{ steps.orgbot.outputs.token }}
+      - uses: AndreasAugustin/actions-template-sync@v1.1.3
+        with:
+          upstream_branch: main
+          source_repo_path: smecalculus/bezmen
+          github_token: ${{ steps.orgbot.outputs.token }}
+          pr_title: Syncing with project template

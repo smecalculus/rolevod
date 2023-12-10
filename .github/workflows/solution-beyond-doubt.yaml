@@ -1,0 +1,190 @@
+---
+name: Solution beyond doubt
+
+on:
+  merge_group:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  BINARY_REPO: maven.pkg.github.com
+  IMAGE_REPO: ghcr.io
+
+jobs:
+  up-to-images:
+    name: Up to images in ${{ matrix.env.ops }} env
+    timeout-minutes: 10
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - ops: shannon
+            dev: godel
+          - ops: lamport
+            dev: turing
+          - ops: milner
+            dev: church
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          name: ${{ matrix.env.dev }}
+          tools: python java docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml -e focus=solution
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: images
+        run: >
+          ansible-playbook images.yaml
+          -e binary_repo=${{ env.BINARY_REPO }}
+          -e image_repo=${{ env.IMAGE_REPO }}
+          -e opsenv=${{ matrix.env.ops }}
+          -e focus=solution
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: mikepenz/action-junit-report@v4
+        if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
+        with:
+          check_name: Unit Test Report
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          require_tests: "${{ steps.images.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false
+      - uses: mikepenz/action-junit-report@v4
+        if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
+        with:
+          check_name: Integration Test Report
+          report_paths: "**/target/failsafe-reports/TEST-*.xml"
+          require_tests: "${{ steps.images.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false
+
+  stack-building:
+    name: Stack building
+    timeout-minutes: 5
+    needs: [up-to-images]
+    strategy:
+      fail-fast: false
+      matrix:
+        opsenv: [shannon, lamport, milner]
+        usecase: [func]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          tools: python docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: >
+          ansible-playbook stacks.yaml -t build
+          -e image_repo=${{ env.IMAGE_REPO }}
+          -e opsenv=${{ matrix.opsenv }}
+          -e usecase=${{ matrix.usecase }}
+        working-directory: .dx
+      - uses: actions/upload-artifact@v3.1.3
+        with:
+          name: solution-${{ matrix.usecase }}-${{ matrix.opsenv }}
+          path: solutions/target/context
+          if-no-files-found: ignore
+
+  stack-testing:
+    name: Stack testing
+    timeout-minutes: 15
+    needs: [stack-building]
+    strategy:
+      fail-fast: false
+      matrix:
+        opsenv: [shannon, lamport, milner]
+        usecase: [func]
+        shard: [0, 1]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          tools: python java docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v3.0.2
+        continue-on-error: true  # it's ok because stack building can be skipped
+        with:
+          name: solution-${{ matrix.usecase }}-${{ matrix.opsenv }}
+          path: solutions/target/context
+      - run: >
+          ansible-playbook stacks.yaml -t test
+          -e image_repo=${{ env.IMAGE_REPO }}
+          -e opsenv=${{ matrix.opsenv }}
+          -e usecase=${{ matrix.usecase }}
+          -e reminder=${{ matrix.shard }}
+          -e modulus=2
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v3.1.3
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-test-report-${{ matrix.usecase }}-${{ matrix.opsenv }}-${{ matrix.shard }}
+          path: tests/e2e/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+
+  stack-packaging:
+    name: Stack packaging
+    timeout-minutes: 5
+    needs: [stack-testing]
+    strategy:
+      fail-fast: false
+      matrix:
+        opsenv: [shannon, lamport, milner]
+        usecase: [func]
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          tools: python docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v3.0.2
+        continue-on-error: true  # it's ok because stack building can be skipped
+        with:
+          name: solution-${{ matrix.usecase }}-${{ matrix.opsenv }}
+          path: solutions/target/context
+      - run: >
+          ansible-playbook stacks.yaml -t package
+          -e image_repo=${{ env.IMAGE_REPO }}
+          -e opsenv=${{ matrix.opsenv }}
+          -e usecase=${{ matrix.usecase }}
+          -e focus=solution
+        working-directory: .dx
+
+  stack-reporting:
+    name: Stack reporting
+    timeout-minutes: 5
+    needs: [stack-testing]
+    if: ${{ !cancelled() && (needs.stack-testing.result == 'success' || needs.stack-testing.result == 'failure') }}
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+    steps:
+      - uses: actions/download-artifact@v3.0.2
+        with:
+          path: artifacts
+      - run: ls -R
+      - uses: mikepenz/action-junit-report@v4
+        with:
+          check_name: E2E Test Report
+          report_paths: "artifacts/e2e-test-report-*/**/TEST-*.xml"
+          require_tests: "${{ needs.stack-testing.result == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false

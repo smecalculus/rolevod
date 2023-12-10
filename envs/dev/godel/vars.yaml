@@ -1,0 +1,10 @@
+---
+java_release: 17
+
+maven_version:
+  min: 3.8.0
+  max: 3.10.0
+
+docker_version:
+  min: 24.0.0
+  max: 25.0.0

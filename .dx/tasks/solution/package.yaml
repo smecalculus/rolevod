@@ -1,0 +1,9 @@
+---
+- ansible.builtin.import_role:  # noqa: name[missing]
+    name: image
+  vars:
+    image_tag: "{{ stack_cid.stdout[:7] }}-{{ opsenv }}"
+    image_name: "{{ stack_images.solution }}"
+    image_home: "{{ playbook_dir }}/../solutions"
+    image_context: target/context
+    image_push: "{{ focus == 'solution' }}"

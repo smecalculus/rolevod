@@ -1,0 +1,48 @@
+---
+name: Toolchain beyond doubt
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  everything:
+    name: Up to stacks in ${{ matrix.env.dev }} env
+    timeout-minutes: 10
+    runs-on: ${{ matrix.env.os }}
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+          - dev: turing
+            os: ubuntu-22.04
+          - dev: church
+            os: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          name: ${{ matrix.env.dev }}
+          tools: python java docker
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml -e focus=toolchain
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: >
+          ansible-playbook stacks.yaml
+          -e image_repo=ghcr.io
+          -e devenv=${{ matrix.env.dev }}
+          -e opsenv=shannon
+          -e focus=toolchain
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

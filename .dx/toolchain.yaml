@@ -1,0 +1,32 @@
+---
+- name: Toolchain
+  hosts: toolchain
+  tasks:
+    - name: Capture env
+      ansible.builtin.include_vars:
+        file: ../envs/dev/{{ devenv }}/vars.yaml
+        name: dev
+    - name: Capture maven version
+      ansible.builtin.command:
+        cmd: mvn --version --quiet
+      register: maven_version
+      changed_when: false
+    - name: Check maven version
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - maven_version.stdout is version(dev.maven_version.min, '>=', version_type='semver')
+          - maven_version.stdout is version(dev.maven_version.max, '<', version_type='semver')
+        msg: "{{ dev.maven_version.min }} <= maven < {{ dev.maven_version.max }}"
+    - name: Capture docker version
+      ansible.builtin.command:
+        cmd: docker version --format {{'{{.Server.Version}}'}}
+      register: docker_version
+      changed_when: false
+    - name: Check docker version
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - docker_version.stdout is version(dev.docker_version.min, '>=', version_type='semver')
+          - docker_version.stdout is version(dev.docker_version.max, '<', version_type='semver')
+        msg: "{{ dev.docker_version.min }} <= docker < {{ dev.docker_version.max }}"

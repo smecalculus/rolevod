@@ -1,0 +1,70 @@
+---
+- import_playbook: binaries.yaml   # noqa: name[play]
+  vars:
+    up_to_images: true
+  tags: [binaries, deps]
+
+- name: Images
+  hosts: schema
+  run_once: true
+  tasks:
+    - name: Capture statuses
+      ansible.builtin.command:
+        cmd: docker {{ docker_entity }} inspect {{ schema_images[schema] }}:{{ schema_cids[schema] }}
+      register: image_status
+      changed_when: image_status.rc != 0
+      failed_when: false
+      loop: "{{ schema_images.keys() }}"
+      loop_control:
+        loop_var: schema
+    - name: Status commands
+      ansible.builtin.debug:
+        msg: "{{ image_status.results|map(attribute='cmd')|map('join', ' ') }}"
+      when: image_status is changed
+    - name: Create images
+      ansible.builtin.include_role:
+        name: image
+      vars:
+        image_tag: "{{ schema_cids[schema] }}"
+        image_name: "{{ schema_images[schema] }}"
+        image_home: "{{ playbook_dir }}/../schemas/{{ schema }}"
+        image_push: "{{ focus == 'solution' }}"
+      loop: "{{ image_status.results|select('changed')|map(attribute='schema') }}"
+      loop_control:
+        loop_var: schema
+
+- name: Images
+  hosts: app
+  run_once: true
+  tasks:
+    - name: Analyze coverage
+      ansible.builtin.command:
+        cmd: >
+          mvn
+          --no-snapshot-updates
+          --batch-mode
+          clean
+          antrun:run@coverage
+        chdir: "{{ playbook_dir }}/../tools"
+        strip_empty_ends: false
+      changed_when: true
+      when: image_status is changed
+    - name: Capture env
+      ansible.builtin.include_vars:
+        file: ../envs/ops/{{ opsenv }}.yaml
+        name: ops
+    - name: Create images
+      ansible.builtin.include_role:
+        name: image
+      vars:
+        image_tag: "{{ image_cids[app][:7] }}-{{ opsenv }}"
+        image_name: "{{ app_images[app] }}"
+        image_home: "{{ playbook_dir }}/../apps/{{ app }}"
+        image_context: target/docker-context
+        image_push: "{{ focus == 'solution' }}"
+        image_args:
+          JAVA_RELEASE: "{{ ops.java_release }}"
+      loop: "{{ image_status.results|select('changed')|map(attribute='app') }}"
+      loop_control:
+        loop_var: app
+      when: image_status is changed

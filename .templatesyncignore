@@ -1,0 +1,3 @@
+.github/workflows/project-template.yaml
+.github/dependabot.yaml
+**/*.adoc

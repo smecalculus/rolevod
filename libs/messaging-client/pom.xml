@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>smecalculus.bezmen</groupId>
+    <artifactId>libs</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>messaging-client</artifactId>
+
+  <dependencies>
+    <!--CORE-->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>abstraction-client</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!--SERDE-->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!--TESTING-->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>testing</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,45 @@
+---
+- name: Remove stand (or part of it)
+  ansible.builtin.command:
+    cmd: docker rm -f env-db
+  changed_when: false
+  when: hostvars.schema.image_status|default({}) is changed
+
+- name: Create stand
+  ansible.builtin.command:
+    cmd: >
+      docker compose
+      --file compose.yaml
+      --profile {{ opsenv }}
+      up
+      --remove-orphans
+      --quiet-pull
+      --no-deps
+      --detach
+    chdir: "{{ playbook_dir }}/../solutions/target/context"
+    strip_empty_ends: false
+  changed_when: true
+
+- name: Test stand
+  ansible.builtin.command:
+    cmd: >
+      mvn
+      --no-snapshot-updates
+      --batch-mode
+      --threads 2
+      --projects tests/e2e
+      --activate-profiles {{ usecase }}
+      --also-make
+      clean
+      test
+      --define props={{ opsenv }}
+      {% if reminder is defined %}
+      --define bezmen.sharding.reminder={{ reminder }}
+      {% endif %}
+      {% if modulus is defined %}
+      --define bezmen.sharding.modulus={{ modulus }}
+      {% endif %}
+      --define skipUnits=true
+    chdir: "{{ playbook_dir }}/.."
+    strip_empty_ends: false
+  changed_when: true

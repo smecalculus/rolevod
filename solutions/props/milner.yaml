@@ -1,0 +1,12 @@
+---
+bezmen:
+  messaging:
+    mapping:
+      modes: [spring_mvc, spring_management]
+  storage:
+    protocol:
+      mode: postgres
+      postgres:
+        url: jdbc:postgresql://db:5432/bezmen
+    mapping:
+      mode: spring_data

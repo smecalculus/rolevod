@@ -1,0 +1,47 @@
+---
+name: Solution sanity
+
+on:
+  pull_request:
+    branches-ignore:
+      - main
+    paths:  # waiting for https://github.com/actions/runner/issues/2324
+      - libs/**
+      - apps/**
+      - schemas/**
+      - solutions/**
+  workflow_dispatch:
+
+jobs:
+  up-to-binaries:
+    name: Up to binaries
+    timeout-minutes: 5
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          tools: python java
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml -e focus=solution
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: binaries
+        run: ansible-playbook binaries.yaml -e focus=solution
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: mikepenz/action-junit-report@v4
+        if: ${{ !cancelled() && (steps.binaries.outcome == 'success' || steps.binaries.outcome == 'failure') }}
+        with:
+          check_name: Unit Test Report
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          require_tests: "${{ steps.binaries.outcome == 'failure' }}"
+          fail_on_failure: false
+          job_summary: false

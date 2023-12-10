@@ -1,0 +1,47 @@
+---
+name: Toolchain sanity
+
+on:
+  pull_request:
+    branches-ignore:
+      - main
+    paths:  # waiting for https://github.com/actions/runner/issues/2324
+      - .dx/**
+      - .github/**
+      - tools/**
+  workflow_dispatch:
+
+jobs:
+  up-to-binaries:
+    name: Up to binaries in ${{ matrix.env.dev }} env
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        env:
+          - dev: godel
+            os: ubuntu-20.04
+          - dev: turing
+            os: ubuntu-22.04
+          - dev: church
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.env.os }}
+    steps:
+      - uses: actions/checkout@v4.1.1
+      - uses: ./.github/actions/prepare
+        with:
+          name: ${{ matrix.env.dev }}
+          tools: python java
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: ansible-playbook codebase.yaml -e focus=toolchain
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: >
+          ansible-playbook binaries.yaml
+          -e opsenv=shannon
+          -e focus=toolchain
+        working-directory: .dx
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

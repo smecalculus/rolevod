@@ -1,0 +1,50 @@
+---
+organization: smecalculus
+project: bezmen
+
+devenv: turing
+opsenv: lamport
+usecase: toy
+
+lib_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs')[:7] }}"
+lib_cids:
+  abstraction: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs/abstraction')[:7] }}"
+  essentials: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs/essentials')[:7] }}"
+  messaging: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs/messaging')[:7] }}"
+  storage: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs/storage')[:7] }}"
+  testing: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=libs/testing')[:7] }}"
+app_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=apps')[:7] }}"
+app_cids:
+  sepuling: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=apps/sepuling')[:7] }}"
+schema_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=schemas')[:7] }}"
+schema_cids:
+  postgres: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=schemas/postgres')[:7] }}"
+solution_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=solutions')[:7] }}"
+
+test_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=tests')[:7] }}"
+
+dx_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=.dx')[:7] }}"
+env_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=envs')[:7] }}"
+tool_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=tools')[:7] }}"
+pipeline_cid: "{{ lookup('ansible.builtin.pipe', 'git write-tree --prefix=.github')[:7] }}"
+
+# solution - focus on solution changes
+# toolchain - focus on toolchain changes
+# null - without any particular focus
+focus: null
+
+binary_repo: local
+image_repo: local
+
+app_images:
+  sepuling: "{{ image_repo }}/{{ organization }}/{{ project }}/app/sepuling"
+schema_images:
+  postgres: "{{ image_repo }}/{{ organization }}/{{ project }}/schema/postgres"
+stack_images:
+  solution: "{{ image_repo }}/{{ organization }}/{{ project }}/stack/solution-{{ usecase }}"
+  toolchain: "{{ image_repo }}/{{ organization }}/{{ project }}/stack/toolchain"
+
+docker_entity: "{{ 'image' if image_repo == 'local' else 'manifest' }}"
+
+app_deps:
+  sepuling: [abstraction, essentials, messaging, storage]

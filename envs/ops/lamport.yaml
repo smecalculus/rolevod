@@ -1,0 +1,7 @@
+---
+java_release: 19
+postgres_version: 15.4
+config_mapping_mode: spring_config
+config_file_name:
+  source: lamport.yaml
+  target: application.yaml

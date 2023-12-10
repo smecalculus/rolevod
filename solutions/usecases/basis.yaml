@@ -1,0 +1,89 @@
+name: bezmen
+
+networks:
+  bezmen:
+    name: bezmen
+
+configs:
+  bezmen:
+    name: bezmen
+    file: ./${CONFIG_FILE_NAME}
+
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION}-alpine
+    container_name: env-db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: bezmen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      bezmen: null
+
+  schema-dba:
+    image: ${SCHEMA_IMAGE}:${SCHEMA_TAG}
+    container_name: schema-dba
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      image.name: ${SCHEMA_IMAGE}
+    command: >
+      --show-banner=false
+      --changelog-file=sepulkarium/dba/changelog.yaml
+      --url=jdbc:postgresql://db:5432/bezmen?currentSchema=public
+      --liquibase-schema-name=public
+      --username=postgres
+      --password=password
+      --labels=user,schema
+      update
+      -Dbezmen.schema=bezmen
+      -Dbezmen.owner=bezmen
+      -Dbezmen.password=bezmen
+    networks:
+      bezmen: null
+
+  schema-owner:
+    image: ${SCHEMA_IMAGE}:${SCHEMA_TAG}
+    container_name: schema-owner
+    depends_on:
+      schema-dba:
+        condition: service_completed_successfully
+    labels:
+      image.name: ${SCHEMA_IMAGE}
+    command: >
+      --show-banner=false
+      --changelog-file=sepulkarium/owner/changelog.yaml
+      --url=jdbc:postgresql://db:5432/bezmen?currentSchema=bezmen
+      --liquibase-schema-name=bezmen
+      --username=bezmen
+      --password=bezmen
+      update
+    networks:
+      bezmen: null
+
+  sepuling:
+    image: ${SEPULING_IMAGE}:${SEPULING_TAG}
+    container_name: sepuling
+    ports:
+      - 8080:8080
+    configs:
+      - source: bezmen
+        target: /home/bezmen/${CONFIG_FILE_NAME}
+    command: >
+      --bezmen.config.mapping.mode=${CONFIG_MAPPING_MODE}
+      --spring.config.location=optional:file:application.yaml
+    depends_on:
+      schema-owner:
+        condition: service_completed_successfully
+    labels:
+      image.name: ${SEPULING_IMAGE}
+    networks:
+      bezmen: null

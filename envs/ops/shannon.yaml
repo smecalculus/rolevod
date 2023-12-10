@@ -1,0 +1,7 @@
+---
+java_release: 17
+postgres_version: 14.9
+config_mapping_mode: lightbend_config
+config_file_name:
+  source: shannon.conf
+  target: application.conf

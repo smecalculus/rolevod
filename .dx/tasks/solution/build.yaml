@@ -1,0 +1,46 @@
+---
+- name: Remove artifacts
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../solutions/target"
+    state: absent
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../solutions/target/context"
+    state: directory
+    recurse: true
+
+- name: Capture env
+  ansible.builtin.include_vars:
+    file: ../envs/ops/{{ opsenv }}.yaml
+    name: ops
+
+- name: Build conf
+  ansible.builtin.command:
+    cmd: >
+      cp props/{{ ops.config_file_name.source }}
+      target/context/{{ ops.config_file_name.target }}
+    chdir: "{{ playbook_dir }}/../solutions"
+  changed_when: true
+
+- name: Build spec
+  ansible.builtin.command:
+    cmd: >
+      docker compose
+      --file usecases/basis.yaml
+      --file usecases/{{ usecase }}.yaml
+      --profile {{ opsenv }}
+      config
+      --output target/context/compose.yaml
+      --no-path-resolution
+    strip_empty_ends: false
+    chdir: "{{ playbook_dir }}/../solutions"
+  environment:
+    POSTGRES_VERSION: "{{ ops.postgres_version }}"
+    SCHEMA_TAG: "{{ schema_cids.postgres }}"
+    SCHEMA_IMAGE: "{{ schema_images.postgres }}"
+    SEPULING_TAG: "{{ hostvars.app.image_cids.sepuling[:7] }}-{{ opsenv }}"
+    SEPULING_IMAGE: "{{ app_images.sepuling }}"
+    CONFIG_FILE_NAME: "{{ ops.config_file_name.target }}"
+    CONFIG_MAPPING_MODE: "{{ ops.config_mapping_mode }}"
+  changed_when: true

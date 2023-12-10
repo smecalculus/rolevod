@@ -1,0 +1,49 @@
+---
+- name: Codebase
+  hosts: java
+  run_once: true
+  tasks:
+    - name: Analyze
+      ansible.builtin.command:
+        cmd: >
+          mvn
+          --no-snapshot-updates
+          --batch-mode
+          {% if focus == 'solution' %}
+          --projects apps/sepuling
+          {% elif focus == 'toolchain' %}
+          --projects tests/e2e
+          {% endif %}
+          --also-make
+          enforcer:enforce
+          spotless:check
+        chdir: "{{ playbook_dir }}/.."
+        strip_empty_ends: false
+      changed_when: false
+
+- name: Codebase
+  hosts: ansible
+  run_once: true
+  tasks:
+    - name: Analyze
+      ansible.builtin.command:
+        # list all top level playbooks
+        cmd: >
+          ansible-lint
+          toolchain.yaml
+          codebase.yaml
+          stacks.yaml
+        strip_empty_ends: false
+      changed_when: false
+      when: focus != 'solution'
+
+- name: Codebase
+  hosts: github
+  run_once: true
+  tasks:
+    - name: Analyze
+      ansible.builtin.command:
+        cmd: yamllint ../.github
+        strip_empty_ends: false
+      changed_when: false
+      when: focus != 'solution'

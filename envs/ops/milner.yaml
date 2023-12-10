@@ -1,0 +1,7 @@
+---
+java_release: 21
+postgres_version: 16.0
+config_mapping_mode: spring_config
+config_file_name:
+  source: milner.yaml
+  target: application.yaml
