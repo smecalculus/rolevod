@@ -24,7 +24,7 @@
   </modules>
 
   <properties>
-    <spring-boot.version>3.1.5</spring-boot.version>
+    <spring-boot.version>3.1.6</spring-boot.version>
   </properties>
 
   <distributionManagement>
