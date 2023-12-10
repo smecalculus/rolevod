@@ -24,4 +24,4 @@ jobs:
           source_repo_path: smecalculus/bezmen
           upstream_branch: main
           github_token: ${{ steps.orgbot.outputs.token }}
-          git_remote_pull_params: --allow-unrelated-histories --strategy=recursive -X ours
+          git_remote_pull_params: --allow-unrelated-histories --strategy=recursive -X theirs
