@@ -20,7 +20,7 @@
     <revision>0.1.0-SNAPSHOT</revision>
     <lombok.version>1.18.30</lombok.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
-    <spring.version>6.0.13</spring.version>
+    <spring.version>6.1.1</spring.version>
     <kotlin.version>1.9.21</kotlin.version>
     <jacoco.version>0.8.11</jacoco.version>
     <skipTests>false</skipTests>
