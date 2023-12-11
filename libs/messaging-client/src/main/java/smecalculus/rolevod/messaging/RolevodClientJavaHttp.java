@@ -14,7 +14,7 @@ import smecalculus.rolevod.messaging.SepulkaMessageEm.RegistrationRequest;
 import smecalculus.rolevod.messaging.SepulkaMessageEm.RegistrationResponse;
 
 @RequiredArgsConstructor
-public class BezmenClientJavaHttp implements BezmenClient {
+public class RolevodClientJavaHttp implements RolevodClient {
 
     @NonNull
     private ObjectMapper mapper;
