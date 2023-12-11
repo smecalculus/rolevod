@@ -4,16 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import smecalculus.rolevod.messaging.BezmenClient;
-import smecalculus.rolevod.messaging.BezmenClientJavaHttp;
+import smecalculus.rolevod.messaging.RolevodClient;
+import smecalculus.rolevod.messaging.RolevodClientJavaHttp;
 
 @Configuration(proxyBeanMethods = false)
 public class StandBeans {
 
     @Bean
-    BezmenClient bezmenClient() {
+    RolevodClient rolevodClient() {
         var jsonMapper = new ObjectMapper();
         var client = HttpClient.newHttpClient();
-        return new BezmenClientJavaHttp(jsonMapper, client);
+        return new RolevodClientJavaHttp(jsonMapper, client);
     }
 }

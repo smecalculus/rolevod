@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import smecalculus.rolevod.StandBeans;
-import smecalculus.rolevod.messaging.BezmenClient;
+import smecalculus.rolevod.messaging.RolevodClient;
 import smecalculus.rolevod.messaging.SepulkaMessageEmEg;
 
 @ExtendWith(SpringExtension.class)
@@ -21,11 +21,11 @@ import smecalculus.rolevod.messaging.SepulkaMessageEmEg;
 public class SepulkaTest {
 
     @Autowired
-    private BezmenClient bezmenClient;
+    private RolevodClient rolevodClient;
 
     @BeforeAll
     void beforeAll() {
-        await("isReady").atMost(ofSeconds(5)).until(bezmenClient::isReady);
+        await("isReady").atMost(ofSeconds(5)).until(rolevodClient::isReady);
     }
 
     @Test
@@ -36,7 +36,7 @@ public class SepulkaTest {
         // and
         var expectedResponse = SepulkaMessageEmEg.registrationResponse(request.getExternalId());
         // when
-        var actualResponse = bezmenClient.register(request);
+        var actualResponse = rolevodClient.register(request);
         // then
         assertThat(actualResponse).usingRecursiveComparison().isEqualTo(expectedResponse);
     }
