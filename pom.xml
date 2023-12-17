@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>smecalculus.rolevod</groupId>
-  <artifactId>rolevod</artifactId>
+  <groupId>smecalculus.bezmen</groupId>
+  <artifactId>bezmen</artifactId>
   <packaging>pom</packaging>
   <version>latest</version>
 
@@ -45,12 +45,12 @@
               <requireUpperBoundDeps/>
               <requireReleaseDeps>
                 <excludes>
-                  <exclude>smecalculus.rolevod</exclude>
+                  <exclude>smecalculus.bezmen</exclude>
                 </excludes>
               </requireReleaseDeps>
               <banDynamicVersions>
                 <ignores>
-                  <ignore>smecalculus.rolevod</ignore>
+                  <ignore>smecalculus.bezmen</ignore>
                 </ignores>
               </banDynamicVersions>
             </rules>
