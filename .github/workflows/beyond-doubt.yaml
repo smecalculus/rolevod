@@ -54,7 +54,7 @@ jobs:
       - uses: mikepenz/action-junit-report@v4.0.3
         if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
         with:
-          check_name: Unit test report
+          check_name: Unit test report (${{ matrix.env.dev }})
           report_paths: "**/target/surefire-reports/TEST-*.xml"
           require_tests: "${{ steps.images.outcome == 'failure' }}"
           fail_on_failure: false
@@ -62,7 +62,7 @@ jobs:
       - uses: mikepenz/action-junit-report@v4.0.3
         if: ${{ !cancelled() && (steps.images.outcome == 'success' || steps.images.outcome == 'failure') }}
         with:
-          check_name: Integration test report
+          check_name: Integration test report (${{ matrix.env.dev }})
           report_paths: "**/target/failsafe-reports/TEST-*.xml"
           require_tests: "${{ steps.images.outcome == 'failure' }}"
           fail_on_failure: false
@@ -212,7 +212,7 @@ jobs:
     name: Stack reporting
     timeout-minutes: 5
     needs: [stack-testing]
-    if: ${{ !cancelled() && (needs.stack-testing.result == 'success' || needs.stack-testing.result == 'failure') }}
+    if: ${{ !cancelled() && (contains(needs.*.result, 'success') || contains(needs.*.result, 'failure')) }}
     runs-on: ubuntu-22.04
     permissions:
       checks: write
@@ -224,6 +224,17 @@ jobs:
         with:
           check_name: E2E test report
           report_paths: "artifacts/e2e-test-report-*/**/TEST-*.xml"
-          require_tests: "${{ needs.stack-testing.result == 'failure' }}"
           fail_on_failure: false
           job_summary: false
+
+  everything-is-fine:
+    name: Everything is fine
+    needs: [stack-publishing, stack-reporting]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ always() }}
+    steps:
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'skipped') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "::error::Something went wrong"
+          exit 1
