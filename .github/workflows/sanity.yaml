@@ -5,9 +5,6 @@ on:
   pull_request:
     branches-ignore:
       - main
-      - feature/**
-      - bugfix/**
-      - chore/**
   workflow_dispatch:
 
 jobs:

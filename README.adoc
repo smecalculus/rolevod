@@ -23,14 +23,14 @@ ansible-playbook stacks.yaml
 
 == Ветки
 
-=== Feature
+=== feature/<concise-name>
 
 Функциональность, которая открывает новые возможности для потенциальных пользователей.
 
-=== Bugfix
+=== bugfix/<concise-name>
 
 Правка ошибок, опечаток и пр.
 
-=== Chore
+=== chore/<concise-name>
 
 Рефакторинг, технический долг, мелкие улучшения и пр.
