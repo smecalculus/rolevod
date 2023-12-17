@@ -1,6 +1,6 @@
 ---
 project:
-  name: bezmen
+  name: rolevod
   org: smecalculus
   dir: "{{ playbook_dir }}/../.."
 
