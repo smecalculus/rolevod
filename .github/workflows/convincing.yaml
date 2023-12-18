@@ -51,7 +51,7 @@ jobs:
           require_tests: "${{ steps.images.outcome == 'failure' }}"
           fail_on_failure: false
           job_summary: false
-      - uses: actions/upload-artifact@v3.1.3
+      - uses: actions/upload-artifact@v4.0.0
         if: ${{ !cancelled() }}
         with:
           name: test-coverage-report
