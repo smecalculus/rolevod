@@ -101,8 +101,8 @@ jobs:
       - run: >-
           ansible-playbook stacks.yaml -t build
           -e image_storage=${{ env.IMAGE_STORAGE }}
-          -e purpose=${{ matrix.purpose }}
           -e devenv=${{ matrix.env.dev }}
+          -e purpose=${{ matrix.purpose }}
           -e opsenv=${{ matrix.env.ops }}
         working-directory: bakers/ansible
       - uses: actions/upload-artifact@v3.1.3
@@ -149,10 +149,10 @@ jobs:
       - run: >-
           ansible-playbook stacks.yaml -t test
           -e image_storage=${{ env.IMAGE_STORAGE }}
-          -e purpose=${{ matrix.purpose }}
           -e reminder=${{ matrix.shard }}
           -e modulus=2
           -e devenv=${{ matrix.env.dev }}
+          -e purpose=${{ matrix.purpose }}
           -e opsenv=${{ matrix.env.ops }}
         working-directory: bakers/ansible
         env:
@@ -204,6 +204,7 @@ jobs:
       - run: >-
           ansible-playbook stacks.yaml -t package
           -e image_storage=${{ env.IMAGE_STORAGE }}
+          -e devenv=${{ matrix.env.dev }}
           -e purpose=${{ matrix.purpose }}
           -e opsenv=${{ matrix.env.ops }}
         working-directory: bakers/ansible
