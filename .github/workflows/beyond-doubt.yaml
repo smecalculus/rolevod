@@ -141,7 +141,7 @@ jobs:
           devenv: ${{ matrix.env.dev }}
           tools: python java docker
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@v3.0.2
+      - uses: actions/download-artifact@v4.1.0
         continue-on-error: true  # it's ok because stack building can be skipped
         with:
           name: solution-${{ matrix.purpose }}-${{ matrix.env.ops }}
@@ -196,7 +196,7 @@ jobs:
           devenv: ${{ matrix.env.dev }}
           tools: python docker
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@v3.0.2
+      - uses: actions/download-artifact@v4.1.0
         continue-on-error: true  # it's ok because stack building can be skipped
         with:
           name: solution-${{ matrix.purpose }}-${{ matrix.env.ops }}
@@ -218,7 +218,7 @@ jobs:
     permissions:
       checks: write
     steps:
-      - uses: actions/download-artifact@v3.0.2
+      - uses: actions/download-artifact@v4.1.0
         with:
           path: artifacts
       - uses: mikepenz/action-junit-report@v4.0.3
