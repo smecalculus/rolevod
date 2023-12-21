@@ -21,7 +21,7 @@
     <lombok.version>1.18.30</lombok.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
     <spring.version>6.0.13</spring.version>
-    <kotlin.version>1.9.21</kotlin.version>
+    <kotlin.version>1.9.22</kotlin.version>
     <jacoco.version>0.8.11</jacoco.version>
     <skipTests>false</skipTests>
     <skipUnits>${skipTests}</skipUnits>
