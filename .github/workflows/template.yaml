@@ -18,7 +18,7 @@ jobs:
         with:
           token: ${{ steps.orgbot.outputs.token }}
           persist-credentials: false
-      - uses: AndreasAugustin/actions-template-sync@v1.1.8
+      - uses: AndreasAugustin/actions-template-sync@v1.1.9
         with:
           pr_title: Syncing with template
           source_repo_path: smecalculus/bezmen
