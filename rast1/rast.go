@@ -58,12 +58,12 @@ func (TpDef) decl()  {}
 func (ExpDec) decl() {}
 
 type TpDef struct {
-	tpname tpname
-	tp     tp
+	name tpname
+	tp   tp
 }
 
 type ExpDec struct {
-	expname     expname
+	name        expname
 	antecedents context
 	succedent   chan_tp
 }
@@ -93,8 +93,8 @@ func (Wait) exp()    {}
 func (Imposs) exp()  {}
 
 type Id struct {
-	x channel
-	y channel
+	X channel
+	Y channel
 }
 
 type Spawn struct {
@@ -103,40 +103,40 @@ type Spawn struct {
 }
 
 type ExpName struct {
-	x  channel
-	f  expname
-	ys []channel
+	X  channel
+	F  expname
+	Ys []channel
 }
 
 type Lab struct {
-	x channel
-	k label
+	X channel
+	K label
 	P exp
 }
 
 type Case struct {
-	x        channel
-	branches branches
+	X        channel
+	Branches branches
 }
 
 type Send struct {
-	x channel
-	y channel
+	X channel
+	Y channel
 	P exp
 }
 
 type Recv struct {
-	x channel
-	y channel
+	X channel
+	Y channel
 	P exp
 }
 
 type Close struct {
-	x channel
+	X channel
 }
 
 type Wait struct {
-	x channel
+	X channel
 	P exp
 }
 
@@ -159,32 +159,32 @@ func (CloCase) value() {}
 func (CloRecv) value() {}
 
 type LabV struct {
-	k label
-	v value
+	K label
+	V value
 }
 
 type SendV struct {
-	w value
-	v value
+	W value
+	V value
 }
 
 type CloseV struct{}
 
 type CloCase struct {
-	eta      eta
-	branches branches
-	z        channel
+	Eta      eta
+	Branches branches
+	Z        channel
 }
 
 type chan_exp struct {
-	x channel
+	X channel
 	P exp
 }
 
 type CloRecv struct {
-	eta      eta
-	chan_exp chan_exp
-	z        channel
+	Eta     eta
+	ChanExp chan_exp
+	Z       channel
 }
 
 //
@@ -198,7 +198,7 @@ func evaluate(env env, P exp, z channel) (value, error) {
 func eval(env env, eta eta, P exp, z channel) (value, error) {
 	switch exp := P.(type) {
 	case Id:
-		return eta[exp.y], nil
+		return eta[exp.Y], nil
 	case Spawn:
 		eta2, err := eval_call(env, eta, exp.P)
 		if err != nil {
@@ -206,86 +206,89 @@ func eval(env env, eta eta, P exp, z channel) (value, error) {
 		}
 		return eval(env, eta2, exp.Q, z)
 	case Lab:
-		if exp.x == z {
-			v, err := eval(env, eta, P, z)
+		if exp.X == z {
+			v, err := eval(env, eta, exp.P, z)
 			if err != nil {
 				return nil, err
 			}
-			return LabV{exp.k, v}, nil
+			return LabV{exp.K, v}, nil
 		}
-		clo := eta[exp.x].(CloCase)
-		v, err := eval(env, clo.eta, clo.branches[exp.k], z)
+		clo := eta[exp.X].(CloCase)
+		v, err := eval(env, clo.Eta, clo.Branches[exp.K], z)
 		if err != nil {
 			return nil, err
 		}
-		eta[exp.x] = v
-		return eval(env, eta, P, z)
+		eta[exp.X] = v
+		return eval(env, eta, exp.P, z)
 	case Case:
-		if exp.x == z {
-			return CloCase{eta, exp.branches, z}, nil
+		if exp.X == z {
+			return CloCase{eta, exp.Branches, z}, nil
 		}
-		lab := eta[exp.x].(LabV)
-		eta[exp.x] = lab.v
-		return eval(env, eta, exp.branches[lab.k], z)
+		lab := eta[exp.X].(LabV)
+		eta[exp.X] = lab.V
+		return eval(env, eta, exp.Branches[lab.K], z)
 	case Send:
-		if exp.x == z {
-			delete(eta, exp.y)
-			v, err := eval(env, eta, P, z)
+		w := eta[exp.Y]
+		if exp.X == z {
+			delete(eta, exp.Y)
+			v, err := eval(env, eta, exp.P, z)
 			if err != nil {
 				return nil, err
 			}
-			// получаем то, что удалено
-			return SendV{eta[exp.y], v}, nil
+			return SendV{w, v}, nil
 		}
-		clo := eta[exp.x].(CloRecv)
-		clo.eta[clo.chan_exp.x] = eta[exp.y]
-		v, err := eval(env, clo.eta, clo.chan_exp.P, z)
+		clo := eta[exp.X].(CloRecv)
+		clo.Eta[clo.ChanExp.X] = w
+		v, err := eval(env, clo.Eta, clo.ChanExp.P, z)
 		if err != nil {
 			return nil, err
 		}
-		eta[exp.x] = v
-		delete(eta, exp.y)
-		return eval(env, eta, P, z)
+		eta[exp.X] = v
+		delete(eta, exp.Y)
+		return eval(env, eta, exp.P, z)
 	case Recv:
-		if exp.x == z {
-			return CloRecv{eta, chan_exp{exp.y, exp.P}, z}, nil
+		if exp.X == z {
+			return CloRecv{eta, chan_exp{exp.Y, exp.P}, z}, nil
 		}
-		send := eta[exp.x].(SendV)
-		eta[exp.x] = send.v
-		eta[exp.y] = send.w
+		send := eta[exp.X].(SendV)
+		eta[exp.X] = send.V
+		eta[exp.Y] = send.W
 		return eval(env, eta, exp.P, z)
 	case Close:
 		return CloseV{}, nil
 	case Wait:
-		_, ok := eta[exp.x].(CloseV)
+		_, ok := eta[exp.X].(CloseV)
 		if !ok {
 			return nil, ErrUnexpectedWait
 		}
-		delete(eta, exp.x)
+		delete(eta, exp.X)
 		return eval(env, eta, exp.P, z)
 	case nil:
 		return nil, nil
 	default:
-		return nil, errors.New("unexpected exp")
+		return nil, ErrUnexpectedExp
 	}
 }
 
-var ErrUnexpectedWait = errors.New("unexpected wait")
+var (
+	ErrUnexpectedExp  = errors.New("unexpected exp")
+	ErrUnexpectedWait = errors.New("unexpected wait")
+)
 
-// simplified version which based on ExpDec instead of ExpDef
+// Simplified version which based on ExpDec instead of ExpDef
 func eval_call(env env, eta1 eta, P exp) (eta, error) {
 	switch exp := P.(type) {
 	case ExpName:
-		expDec := env.expDecs[exp.f]
+		expDec := env.expDecs[exp.F]
 		ys := make([]channel, len(expDec.antecedents))
 		for i, ant := range expDec.antecedents {
 			ys[i] = ant.ch
 		}
-		if len(exp.ys) != len(ys) {
+		if len(exp.Ys) != len(ys) {
 			return nil, errors.New("lenghts should be equal")
 		}
 		eta2 := make(eta, len(ys))
-		for i, y := range exp.ys {
+		for i, y := range exp.Ys {
 			eta2[ys[i]] = eta1[y]
 			delete(eta1, y)
 		}
@@ -293,9 +296,18 @@ func eval_call(env env, eta1 eta, P exp) (eta, error) {
 		if err != nil {
 			return nil, err
 		}
-		eta2[exp.x] = v
+		eta2[exp.X] = v
 		return eta2, nil
 	default:
-		return nil, errors.New("unexpected exp")
+		return nil, ErrUnexpectedExp
 	}
+}
+
+type Rastovod interface {
+	eval() (error)
+}
+
+type rastovodImpl struct {
+	env env
+	eta eta
 }
