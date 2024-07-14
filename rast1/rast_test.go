@@ -81,11 +81,3 @@ func TestEvalErr(t *testing.T) {
 		})
 	}
 }
-
-func TestFoo(t *testing.T) {
-	var foo exp = nil
-	switch foo.(type) {
-	case nil:
-		t.Errorf("nil")
-	}
-}
