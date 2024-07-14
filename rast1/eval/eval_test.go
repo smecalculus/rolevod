@@ -33,7 +33,7 @@ func TestEvalSucc(t *testing.T) {
 		eta      Eta
 		exp      a.Exp
 		z        a.Channel
-		expected value
+		expected Value
 	}{
 		"Id1":    {Eta{y: closeV}, a.Id{x, y}, x, closeV},
 		"Id2":    {Eta{y: closeV}, a.Id{x, y}, z, closeV},

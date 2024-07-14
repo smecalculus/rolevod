@@ -13,11 +13,27 @@ const (
 )
 
 type Label string
+type Tpname string
+type Expname string
 type Choices map[Label]Stype
+
 type Chan struct {
 	Name string
 	Mode
 }
+
+type Stype interface {
+	stype()
+}
+
+func (Plus) stype()   {}
+func (With) stype()   {}
+func (Tensor) stype() {}
+func (Lolli) stype()  {}
+func (One) stype()    {}
+func (TpName) stype() {}
+func (Up) stype()     {}
+func (Down) stype()   {}
 
 type Plus struct {
 	Choices
@@ -41,7 +57,9 @@ type Lolli struct {
 
 type One struct{}
 
-type TpName string
+type TpName struct {
+	Tpname
+}
 
 type Up struct {
 	St Stype
@@ -50,19 +68,6 @@ type Up struct {
 type Down struct {
 	St Stype
 }
-
-type Stype interface {
-	stype()
-}
-
-func (Plus) stype()   {}
-func (With) stype()   {}
-func (Tensor) stype() {}
-func (Lolli) stype()  {}
-func (One) stype()    {}
-func (TpName) stype() {}
-func (Up) stype()     {}
-func (Down) stype()   {}
 
 type ChanTp struct {
 	Z Chan
@@ -102,14 +107,14 @@ type Fwd struct {
 
 type Spawn struct {
 	X  Chan
-	F  string
+	F  Expname
 	Xs []Chan
 	Q  Expression
 }
 
 type ExpName struct {
 	X  Chan
-	F  string
+	F  Expname
 	Xs []Chan
 }
 
@@ -179,7 +184,7 @@ func (ExpDecDef) decl() {}
 func (Exec) decl()      {}
 
 type TpDef struct {
-	TpName
+	Tpname
 	Stype
 }
 
@@ -189,7 +194,7 @@ type TpEq struct {
 }
 
 type ExpDecDef struct {
-	F      string
+	F      Expname
 	M      Mode
 	Ctx    Context
 	ChanTp ChanTp
@@ -197,10 +202,10 @@ type ExpDecDef struct {
 }
 
 type Exec struct {
-	ExpName
+	F Expname
 }
 
-type Environment map[string]Decl
+type Environment map[Expname]Decl
 
 type Msg interface {
 	msg()

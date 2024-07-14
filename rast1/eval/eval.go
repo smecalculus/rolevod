@@ -5,7 +5,7 @@ import (
 	a "smecalculus/rolevod/rast1/ast"
 )
 
-type value interface {
+type Value interface {
 	value()
 }
 
@@ -17,12 +17,12 @@ func (CloRecv) value() {}
 
 type Lab struct {
 	K a.Label
-	V value
+	V Value
 }
 
 type Send struct {
-	W value
-	V value
+	W Value
+	V Value
 }
 
 type Close struct{}
@@ -33,24 +33,24 @@ type CloCase struct {
 	Z        a.Channel
 }
 
-type ChanExp struct {
-	X a.Channel
-	P a.Exp
-}
-
 type CloRecv struct {
 	Eta     Eta
 	ChanExp ChanExp
 	Z       a.Channel
 }
 
-type Eta map[a.Channel]value
+type ChanExp struct {
+	X a.Channel
+	P a.Exp
+}
 
-func Evaluate(env a.Env, P a.Exp, z a.Channel) (value, error) {
+type Eta map[a.Channel]Value
+
+func Evaluate(env a.Env, P a.Exp, z a.Channel) (Value, error) {
 	return Eval(env, make(Eta), P, z)
 }
 
-func Eval(env a.Env, eta Eta, P a.Exp, z a.Channel) (value, error) {
+func Eval(env a.Env, eta Eta, P a.Exp, z a.Channel) (Value, error) {
 	switch exp := P.(type) {
 	case a.Id:
 		return eta[exp.Y], nil

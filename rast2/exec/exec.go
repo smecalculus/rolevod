@@ -199,7 +199,7 @@ func expand(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	return false, ErrExecImpossible
 }
 
-func expdDef(env a.Environment, x a.Chan, f string, xs []a.Chan) (a.Expression, error) {
+func expdDef(env a.Environment, x a.Chan, f a.Expname, xs []a.Chan) (a.Expression, error) {
 	declaration, ok := env[f]
 	if !ok {
 		return nil, ErrUndefinedProcess
@@ -245,7 +245,7 @@ func findMsg(c1 a.Chan, config *Configuration, dual Pol) (Sem, error) {
 	}
 }
 
-func Exec(env a.Environment, f string) *Configuration {
+func Exec(env a.Environment, f a.Expname) *Configuration {
 	c := lfresh()
 	sem := Proc{c, a.ExpName{c, f, []a.Chan{}}}
 	config, err := step(env, createConfig(sem))
