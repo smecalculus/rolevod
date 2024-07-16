@@ -52,7 +52,7 @@ func TestEvalSucc(t *testing.T) {
 	}
 	for name, tc := range tcs {
 		t.Run(name, func(t *testing.T) {
-			actual, err := Eval(a.Env{}, tc.eta, tc.exp, tc.z)
+			actual, err := eval(&a.Env{}, tc.eta, tc.exp, tc.z)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -75,7 +75,7 @@ func TestEvalErr(t *testing.T) {
 	}
 	for name, tc := range tcs {
 		t.Run(name, func(t *testing.T) {
-			_, actual := Eval(a.Env{}, tc.eta, tc.exp, z)
+			_, actual := eval(&a.Env{}, tc.eta, tc.exp, z)
 			if !errors.Is(actual, tc.expected) {
 				t.Errorf("\nactual: %#v,\nexpected: %#v",
 					actual, tc.expected)

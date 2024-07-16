@@ -179,18 +179,12 @@ type Decl interface {
 }
 
 func (TpDef) decl()     {}
-func (TpEq) decl()      {}
 func (ExpDecDef) decl() {}
 func (Exec) decl()      {}
 
 type TpDef struct {
-	Tpname
-	Stype
-}
-
-type TpEq struct {
-	St1 Stype
-	St2 Stype
+	A  Tpname
+	St Stype
 }
 
 type ExpDecDef struct {
@@ -205,7 +199,10 @@ type Exec struct {
 	F Expname
 }
 
-type Environment map[Expname]Decl
+type Environment struct {
+	TpDefs     map[Tpname]TpDef
+	ExpDecDefs map[Expname]ExpDecDef
+}
 
 type Msg interface {
 	msg()

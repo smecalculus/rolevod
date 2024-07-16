@@ -9,6 +9,7 @@ func (With) tp()   {}
 func (Tensor) tp() {}
 func (Lolli) tp()  {}
 func (One) tp()    {}
+func (TpName) tp()    {}
 
 type Plus struct {
 	Choices
@@ -30,6 +31,11 @@ type Lolli struct {
 
 type One struct{}
 
+type TpName struct {
+	A   Tpname
+	Tps []Tp
+}
+
 type Label string
 type Tpname string
 type Expname string
@@ -49,17 +55,25 @@ type Decl interface {
 
 func (TpDef) decl()  {}
 func (ExpDec) decl() {}
+func (ExpDef) decl() {}
 func (Exec) decl()   {}
 
 type TpDef struct {
-	Name Tpname
-	Tp   Tp
+	A  Tpname
+	Tp Tp
 }
 
 type ExpDec struct {
-	F           Expname
-	Antecedents Context
-	Succedent   ChanTp
+	F     Expname
+	Delta Context
+	Zc    ChanTp
+}
+
+type ExpDef struct {
+	F  Expname
+	Ys []Channel
+	P  Exp
+	X  Channel
 }
 
 type Exec struct {
@@ -69,6 +83,7 @@ type Exec struct {
 type Env struct {
 	TpDefs  map[Tpname]TpDef
 	ExpDecs map[Expname]ExpDec
+	ExpDefs map[Expname]ExpDef
 }
 
 type Exp interface {

@@ -3,6 +3,7 @@ package exec
 import (
 	"errors"
 	"fmt"
+	"maps"
 	a "smecalculus/rolevod/rast2/ast"
 )
 
@@ -50,12 +51,11 @@ func createConfig(sem Sem) *Configuration {
 	return &Configuration{conf, make(map[a.Chan]a.Chan), make(map[a.Chan]a.Chan)}
 }
 
-func step(env a.Environment, config *Configuration) (*Configuration, error) {
+func step(env *a.Environment, config *Configuration) (*Configuration, error) {
 	stepped := true
 	for stepped {
 		stepped = false
-		// итерируем по тому, что меняется на лету
-		for _, sem := range config.conf {
+		for _, sem := range maps.Clone(config.conf) {
 			changed, err := matchAndOneStep(env, sem, config)
 			if err != nil {
 				return nil, err
@@ -68,7 +68,7 @@ func step(env a.Environment, config *Configuration) (*Configuration, error) {
 	return config, nil
 }
 
-func matchAndOneStep(env a.Environment, sem Sem, config *Configuration) (bool, error) {
+func matchAndOneStep(env *a.Environment, sem Sem, config *Configuration) (bool, error) {
 	switch s := sem.(type) {
 	case Proc:
 		switch s.P.(type) {
@@ -78,12 +78,14 @@ func matchAndOneStep(env a.Environment, sem Sem, config *Configuration) (bool, e
 			return spawn(env, s.C, config)
 		case a.ExpName:
 			return expand(env, s.C, config)
+		default:
+			panic(a.ErrUnexpectedExp)
 		}
-		panic(a.ErrUnexpectedExp)
 	case Msg:
 		return false, nil
+	default:
+		panic(ErrUnexpectedSem)
 	}
-	panic(ErrUnexpectedSem)
 }
 
 func fwd(ch a.Chan, config *Configuration) (bool, error) {
@@ -91,13 +93,13 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 	if !ok {
 		return false, ErrExecImpossible
 	}
-	switch proc := s.(type) {
+	switch sem := s.(type) {
 	case Proc:
-		fwd, ok := proc.P.(a.Fwd)
+		fwd, ok := sem.P.(a.Fwd)
 		if !ok {
 			return false, ErrExecImpossible
 		}
-		if proc.C != fwd.X {
+		if sem.C != fwd.X {
 			return false, ErrChannelMismatch
 		}
 		// try to apply fwd+ rule
@@ -107,7 +109,7 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 		}
 		if msgp == nil {
 			// try to apply fwd- rule
-			msgn, err := findMsg(proc.C, config, Neg)
+			msgn, err := findMsg(sem.C, config, Neg)
 			if err != nil {
 				return false, err
 			}
@@ -115,17 +117,19 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 			case Msg:
 				switch m := msg.M.(type) {
 				case a.MLabI, a.MSendL, a.MClose:
-					delete(config.conf, proc.C)
-					e, ok := config.conts[proc.C]
+					delete(config.conf, sem.C)
+					e, ok := config.conts[sem.C]
 					if !ok {
 						return false, ErrExecImpossible
 					}
 					delete(config.conf, e)
-					msg := Msg{e, a.Msubst(fwd.Y, proc.C, m)}
+					msg := Msg{e, a.Msubst(fwd.Y, sem.C, m)}
 					config.conf[e] = msg
-					delete(config.conts, proc.C)
+					delete(config.conts, sem.C)
 					addCont(fwd.Y, e, config)
 					return true, nil
+				default:
+					return false, nil
 				}
 			default:
 				return false, nil
@@ -135,26 +139,29 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 		case Msg:
 			switch m := msg.M.(type) {
 			case a.MLabI, a.MSendL:
-				delete(config.conf, proc.C)
+				delete(config.conf, sem.C)
 				delete(config.conf, fwd.Y)
-				msg := Msg{proc.C, a.Msubst(proc.C, fwd.Y, m)}
-				config.conf[proc.C] = msg
+				msg := Msg{sem.C, a.Msubst(sem.C, fwd.Y, m)}
+				config.conf[sem.C] = msg
 				d, ok := config.conts[fwd.Y]
 				if !ok {
 					return false, ErrExecImpossible
 				}
 				delete(config.conts, fwd.Y)
-				addCont(proc.C, d, config)
+				addCont(sem.C, d, config)
 				return true, nil
+			default:
+				return false, nil
 			}
 		default:
 			return false, nil
 		}
+	default:
+		return false, ErrExecImpossible
 	}
-	return false, ErrUnexpectedSem
 }
 
-func spawn(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
+func spawn(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	s, ok := config.conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
@@ -172,11 +179,12 @@ func spawn(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 		config.conf[c] = proc1
 		config.conf[sem.C] = proc2
 		return true, nil
+	default:
+		return false, ErrExecImpossible
 	}
-	return false, ErrExecImpossible
 }
 
-func expand(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
+func expand(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	s, ok := config.conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
@@ -195,22 +203,18 @@ func expand(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 		proc := Proc{sem.C, a.Subst(sem.C, exp.X, p)}
 		config.conf[sem.C] = proc
 		return true, nil
+	default:
+		return false, ErrExecImpossible
 	}
-	return false, ErrExecImpossible
 }
 
-func expdDef(env a.Environment, x a.Chan, f a.Expname, xs []a.Chan) (a.Expression, error) {
-	declaration, ok := env[f]
+func expdDef(env *a.Environment, x a.Chan, f a.Expname, xs []a.Chan) (a.Expression, error) {
+	decdef, ok := env.ExpDecDefs[f]
 	if !ok {
 		return nil, ErrUndefinedProcess
 	}
-	decdef, ok := declaration.(a.ExpDecDef)
-	if !ok {
-		return nil, ErrExecImpossible
-	}
 	exp := a.Subst(x, decdef.ChanTp.Z, decdef.P)
-	exp = a.SubstCtx(xs, fst(decdef.Ctx.Ordered), exp)
-	return exp, nil
+	return a.SubstCtx(xs, fst(decdef.Ctx.Ordered), exp), nil
 }
 
 func fst(as []a.ChanTp) []a.Chan {
@@ -245,7 +249,7 @@ func findMsg(c1 a.Chan, config *Configuration, dual Pol) (Sem, error) {
 	}
 }
 
-func Exec(env a.Environment, f a.Expname) *Configuration {
+func Exec(env *a.Environment, f a.Expname) *Configuration {
 	c := lfresh()
 	sem := Proc{c, a.ExpName{c, f, []a.Chan{}}}
 	config, err := step(env, createConfig(sem))
