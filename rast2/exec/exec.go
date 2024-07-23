@@ -18,16 +18,16 @@ type Msg struct {
 }
 
 type Sem interface {
-	c() a.Chan
+	sem()
 }
 
-func (p Proc) c() a.Chan { return p.C }
-func (m Msg) c() a.Chan  { return m.D }
+func (Proc) sem() {}
+func (Msg) sem()  {}
 
 type Configuration struct {
-	conf   map[a.Chan]Sem
-	conts  map[a.Chan]a.Chan
-	shared map[a.Chan]a.Chan
+	Conf   map[a.Chan]Sem
+	Conts  map[a.Chan]a.Chan
+	Shared map[a.Chan]a.Chan
 }
 
 type Pol string
@@ -42,20 +42,27 @@ var chanNum uint32 = 0
 func lfresh() a.Chan {
 	n := chanNum
 	chanNum += 1
-	return a.Chan{fmt.Sprintf("ch%d", n), a.Unknown}
+	return a.Chan{Id: fmt.Sprintf("ch%d", n)}
 }
 
 func createConfig(sem Sem) *Configuration {
 	conf := make(map[a.Chan]Sem)
-	conf[sem.c()] = sem
+	switch s := sem.(type) {
+	case Proc:
+		conf[s.C] = sem
+	case Msg:
+		conf[s.D] = sem
+	default:
+		panic(ErrUnexpectedSem)
+	}
 	return &Configuration{conf, make(map[a.Chan]a.Chan), make(map[a.Chan]a.Chan)}
 }
 
-func step(env *a.Environment, config *Configuration) (*Configuration, error) {
+func step(env a.Environment, config *Configuration) (*Configuration, error) {
 	stepped := true
 	for stepped {
 		stepped = false
-		for _, sem := range maps.Clone(config.conf) {
+		for _, sem := range maps.Clone(config.Conf) {
 			changed, err := matchAndOneStep(env, sem, config)
 			if err != nil {
 				return nil, err
@@ -68,7 +75,7 @@ func step(env *a.Environment, config *Configuration) (*Configuration, error) {
 	return config, nil
 }
 
-func matchAndOneStep(env *a.Environment, sem Sem, config *Configuration) (bool, error) {
+func matchAndOneStep(env a.Environment, sem Sem, config *Configuration) (bool, error) {
 	switch s := sem.(type) {
 	case Proc:
 		switch s.P.(type) {
@@ -78,6 +85,10 @@ func matchAndOneStep(env *a.Environment, sem Sem, config *Configuration) (bool, 
 			return spawn(env, s.C, config)
 		case a.ExpName:
 			return expand(env, s.C, config)
+		case a.Close:
+			return oneS(s.C, config)
+		case a.Wait:
+			return oneR(s.C, config)
 		default:
 			panic(a.ErrUnexpectedExp)
 		}
@@ -89,7 +100,7 @@ func matchAndOneStep(env *a.Environment, sem Sem, config *Configuration) (bool, 
 }
 
 func fwd(ch a.Chan, config *Configuration) (bool, error) {
-	s, ok := config.conf[ch]
+	s, ok := config.Conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
 	}
@@ -117,15 +128,15 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 			case Msg:
 				switch m := msg.M.(type) {
 				case a.MLabI, a.MSendL, a.MClose:
-					delete(config.conf, sem.C)
-					e, ok := config.conts[sem.C]
+					delete(config.Conf, sem.C)
+					e, ok := config.Conts[sem.C]
 					if !ok {
 						return false, ErrExecImpossible
 					}
-					delete(config.conf, e)
+					delete(config.Conf, e)
 					msg := Msg{e, a.Msubst(fwd.Y, sem.C, m)}
-					config.conf[e] = msg
-					delete(config.conts, sem.C)
+					config.Conf[e] = msg
+					delete(config.Conts, sem.C)
 					addCont(fwd.Y, e, config)
 					return true, nil
 				default:
@@ -139,15 +150,15 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 		case Msg:
 			switch m := msg.M.(type) {
 			case a.MLabI, a.MSendL:
-				delete(config.conf, sem.C)
-				delete(config.conf, fwd.Y)
+				delete(config.Conf, sem.C)
+				delete(config.Conf, fwd.Y)
 				msg := Msg{sem.C, a.Msubst(sem.C, fwd.Y, m)}
-				config.conf[sem.C] = msg
-				d, ok := config.conts[fwd.Y]
+				config.Conf[sem.C] = msg
+				d, ok := config.Conts[fwd.Y]
 				if !ok {
 					return false, ErrExecImpossible
 				}
-				delete(config.conts, fwd.Y)
+				delete(config.Conts, fwd.Y)
 				addCont(sem.C, d, config)
 				return true, nil
 			default:
@@ -161,12 +172,12 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 	}
 }
 
-func spawn(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) {
-	s, ok := config.conf[ch]
+func spawn(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
+	s, ok := config.Conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
 	}
-	delete(config.conf, ch)
+	delete(config.Conf, ch)
 	switch sem := s.(type) {
 	case Proc:
 		exp, ok := sem.P.(a.Spawn)
@@ -174,22 +185,22 @@ func spawn(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 			return false, ErrExecImpossible
 		}
 		c := lfresh()
-		proc1 := Proc{c, a.ExpName{c, exp.F, exp.Xs}}
+		proc1 := Proc{c, a.ExpName{X: c, F: exp.F, Xs: exp.Xs}}
 		proc2 := Proc{sem.C, a.Subst(c, exp.X, exp.Q)}
-		config.conf[c] = proc1
-		config.conf[sem.C] = proc2
+		config.Conf[c] = proc1
+		config.Conf[sem.C] = proc2
 		return true, nil
 	default:
 		return false, ErrExecImpossible
 	}
 }
 
-func expand(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) {
-	s, ok := config.conf[ch]
+func expand(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
+	s, ok := config.Conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
 	}
-	delete(config.conf, ch)
+	delete(config.Conf, ch)
 	switch sem := s.(type) {
 	case Proc:
 		exp, ok := sem.P.(a.ExpName)
@@ -201,62 +212,130 @@ func expand(env *a.Environment, ch a.Chan, config *Configuration) (bool, error) 
 			return false, err
 		}
 		proc := Proc{sem.C, a.Subst(sem.C, exp.X, p)}
-		config.conf[sem.C] = proc
+		config.Conf[sem.C] = proc
 		return true, nil
 	default:
 		return false, ErrExecImpossible
 	}
 }
 
-func expdDef(env *a.Environment, x a.Chan, f a.Expname, xs []a.Chan) (a.Expression, error) {
-	decdef, ok := env.ExpDecDefs[f]
+func oneS(ch a.Chan, config *Configuration) (bool, error) {
+	s, ok := config.Conf[ch]
+	if !ok {
+		return false, ErrExecImpossible
+	}
+	delete(config.Conf, ch)
+	switch sem := s.(type) {
+	case Proc:
+		exp, ok := sem.P.(a.Close)
+		if !ok {
+			return false, ErrExecImpossible
+		}
+		if sem.C != exp.X {
+			return false, ErrChannelMismatch
+		}
+		msg := Msg{sem.C, a.MClose{X: sem.C}}
+		config.Conf[sem.C] = msg
+		return true, nil
+	default:
+		return false, ErrExecImpossible
+	}
+}
+
+func oneR(ch a.Chan, config *Configuration) (bool, error) {
+	s, ok := config.Conf[ch]
+	if !ok {
+		return false, ErrExecImpossible
+	}
+	switch sem := s.(type) {
+	case Proc:
+		exp, ok := sem.P.(a.Wait)
+		if !ok {
+			return false, ErrExecImpossible
+		}
+		if sem.C == exp.X {
+			return false, ErrChannelMismatch
+		}
+		m, err := findMsg(exp.X, config, Pos)
+		if err != nil {
+			return false, err
+		}
+		switch msg := m.(type) {
+		case Msg:
+			if msg.D != exp.X {
+				return false, ErrChannelMismatch
+			}
+			_, ok := msg.M.(a.MClose)
+			if !ok {
+				return false, nil
+			}
+			proc := Proc{sem.C, exp.P}
+			delete(config.Conf, ch)
+			delete(config.Conf, exp.X)
+			config.Conf[sem.C] = proc
+			return true, nil
+		default:
+			return false, nil
+		}
+		return true, nil
+	default:
+		return false, ErrExecImpossible
+	}
+}
+
+func expdDef(env a.Environment, x a.Chan, f a.Expname, xs []a.Chan) (a.Expression, error) {
+	decl, ok := env[f]
 	if !ok {
 		return nil, ErrUndefinedProcess
 	}
-	exp := a.Subst(x, decdef.ChanTp.Z, decdef.P)
-	return a.SubstCtx(xs, fst(decdef.Ctx.Ordered), exp), nil
+	defdec, ok := decl.(a.ExpDecDef)
+	if !ok {
+		return nil, ErrExecImpossible
+	}
+	exp := a.Subst(x, defdec.Zc.X, defdec.P)
+	return a.SubstCtx(xs, fst(defdec.Ctx.Ordered), exp), nil
 }
 
 func fst(as []a.ChanTp) []a.Chan {
 	bs := make([]a.Chan, len(as))
 	for _, a := range as {
-		bs = append(bs, a.Z)
+		bs = append(bs, a.X)
 	}
 	return bs
 }
 
 func addCont(c1 a.Chan, c2 a.Chan, config *Configuration) {
-	cs, ok := config.shared[c1]
+	cs, ok := config.Shared[c1]
 	if ok {
-		delete(config.shared, c1)
-		config.shared[c2] = cs
+		delete(config.Shared, c1)
+		config.Shared[c2] = cs
 	}
-	config.conts[c1] = c2
+	config.Conts[c1] = c2
 }
 
 func findMsg(c1 a.Chan, config *Configuration, dual Pol) (Sem, error) {
 	switch dual {
 	case Neg:
-		c2, ok := config.conts[c1]
+		c2, ok := config.Conts[c1]
 		if !ok {
 			return nil, nil
 		}
-		return config.conf[c2], nil
+		return config.Conf[c2], nil
 	case Pos:
-		return config.conf[c1], nil
+		return config.Conf[c1], nil
 	default:
 		return nil, ErrExecImpossible
 	}
 }
 
-func Exec(env *a.Environment, f a.Expname) *Configuration {
+func Exec(env a.Environment, f a.Expname) (*Configuration, error) {
 	c := lfresh()
-	sem := Proc{c, a.ExpName{c, f, []a.Chan{}}}
+	sem := Proc{c, a.ExpName{X: c, F: f, Xs: []a.Chan{}}}
 	config, err := step(env, createConfig(sem))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return config
+	return config, nil
 }
 
 var (

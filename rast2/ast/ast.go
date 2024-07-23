@@ -14,12 +14,11 @@ const (
 
 type Label string
 type Tpname string
-type Expname string
+type Expname = string
 type Choices map[Label]Stype
 
 type Chan struct {
-	Name string
-	Mode
+	Id string
 }
 
 type Stype interface {
@@ -46,19 +45,17 @@ type With struct {
 type Tensor struct {
 	St1 Stype
 	St2 Stype
-	Mode
 }
 
 type Lolli struct {
 	St1 Stype
 	St2 Stype
-	Mode
 }
 
 type One struct{}
 
 type TpName struct {
-	Tpname
+	A Tpname
 }
 
 type Up struct {
@@ -70,8 +67,8 @@ type Down struct {
 }
 
 type ChanTp struct {
-	Z Chan
-	C Stype
+	X Chan
+	A Stype
 }
 
 type Context struct {
@@ -142,12 +139,12 @@ type Recv struct {
 }
 
 type Close struct {
-	Chan
+	X Chan
 }
 
 type Wait struct {
-	Chan
-	Expression
+	X Chan
+	P Expression
 }
 
 type Acquire struct {
@@ -188,21 +185,17 @@ type TpDef struct {
 }
 
 type ExpDecDef struct {
-	F      Expname
-	M      Mode
-	Ctx    Context
-	ChanTp ChanTp
-	P      Expression
+	F   Expname
+	Ctx Context
+	Zc  ChanTp
+	P   Expression
 }
 
 type Exec struct {
 	F Expname
 }
 
-type Environment struct {
-	TpDefs     map[Tpname]TpDef
-	ExpDecDefs map[Expname]ExpDecDef
-}
+type Environment map[string]Decl
 
 type Msg interface {
 	msg()
@@ -243,7 +236,7 @@ type MClose struct {
 }
 
 func sub(new Chan, old Chan, x Chan) Chan {
-	if x.Name == old.Name {
+	if x.Id == old.Id {
 		return new
 	}
 	return x
@@ -257,8 +250,13 @@ func Subst(new Chan, old Chan, expr Expression) Expression {
 		return Spawn{exp.X, exp.F, SubstList(new, old, exp.Xs), Subst(new, old, exp.Q)}
 	case ExpName:
 		return ExpName{exp.X, exp.F, SubstList(new, old, exp.Xs)}
+	case Close:
+		return Close{sub(new, old, exp.X)}
+	case Wait:
+		return Wait{sub(new, old, exp.X), Subst(new, old, exp.P)}
+	default:
+		panic(ErrUnexpectedExp)
 	}
-	panic(ErrUnexpectedExp)
 }
 
 func Msubst(new Chan, old Chan, m Msg) Msg {
@@ -273,8 +271,9 @@ func Msubst(new Chan, old Chan, m Msg) Msg {
 		return MSendT{sub(new, old, msg.X), msg.W, sub(new, old, msg.Y)}
 	case MClose:
 		return MClose{sub(new, old, msg.X)}
+	default:
+		panic(ErrUnexpectedMsg)
 	}
-	panic(ErrUnexpectedMsg)
 }
 
 func SubstList(new Chan, old Chan, xs []Chan) []Chan {
