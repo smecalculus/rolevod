@@ -172,7 +172,7 @@ func fwd(ch a.Chan, config *Configuration) (bool, error) {
 	}
 }
 
-func spawn(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
+func spawn(_ a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	s, ok := config.Conf[ch]
 	if !ok {
 		return false, ErrExecImpossible
@@ -180,13 +180,13 @@ func spawn(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	delete(config.Conf, ch)
 	switch sem := s.(type) {
 	case Proc:
-		exp, ok := sem.P.(a.Spawn)
+		spawn, ok := sem.P.(a.Spawn)
 		if !ok {
 			return false, ErrExecImpossible
 		}
 		c := lfresh()
-		proc1 := Proc{c, a.ExpName{X: c, F: exp.F, Xs: exp.Xs}}
-		proc2 := Proc{sem.C, a.Subst(c, exp.X, exp.Q)}
+		proc1 := Proc{c, a.ExpName{X: c, F: spawn.F, Xs: spawn.Xs}}
+		proc2 := Proc{sem.C, a.Subst(c, spawn.X, spawn.Q)}
 		config.Conf[c] = proc1
 		config.Conf[sem.C] = proc2
 		return true, nil
@@ -203,15 +203,15 @@ func expand(env a.Environment, ch a.Chan, config *Configuration) (bool, error) {
 	delete(config.Conf, ch)
 	switch sem := s.(type) {
 	case Proc:
-		exp, ok := sem.P.(a.ExpName)
+		en, ok := sem.P.(a.ExpName)
 		if !ok {
 			return false, ErrExecImpossible
 		}
-		p, err := expdDef(env, exp.X, exp.F, exp.Xs)
+		p, err := expdDef(env, en.X, en.F, en.Xs)
 		if err != nil {
 			return false, err
 		}
-		proc := Proc{sem.C, a.Subst(sem.C, exp.X, p)}
+		proc := Proc{sem.C, a.Subst(sem.C, en.X, p)}
 		config.Conf[sem.C] = proc
 		return true, nil
 	default:
@@ -227,11 +227,11 @@ func oneS(ch a.Chan, config *Configuration) (bool, error) {
 	delete(config.Conf, ch)
 	switch sem := s.(type) {
 	case Proc:
-		exp, ok := sem.P.(a.Close)
+		close, ok := sem.P.(a.Close)
 		if !ok {
 			return false, ErrExecImpossible
 		}
-		if sem.C != exp.X {
+		if sem.C != close.X {
 			return false, ErrChannelMismatch
 		}
 		msg := Msg{sem.C, a.MClose{X: sem.C}}
@@ -249,35 +249,34 @@ func oneR(ch a.Chan, config *Configuration) (bool, error) {
 	}
 	switch sem := s.(type) {
 	case Proc:
-		exp, ok := sem.P.(a.Wait)
+		wait, ok := sem.P.(a.Wait)
 		if !ok {
 			return false, ErrExecImpossible
 		}
-		if sem.C == exp.X {
+		if sem.C == wait.X {
 			return false, ErrChannelMismatch
 		}
-		m, err := findMsg(exp.X, config, Pos)
+		m, err := findMsg(wait.X, config, Pos)
 		if err != nil {
 			return false, err
 		}
 		switch msg := m.(type) {
 		case Msg:
-			if msg.D != exp.X {
+			if msg.D != wait.X {
 				return false, ErrChannelMismatch
 			}
 			_, ok := msg.M.(a.MClose)
 			if !ok {
 				return false, nil
 			}
-			proc := Proc{sem.C, exp.P}
+			proc := Proc{sem.C, wait.P}
 			delete(config.Conf, ch)
-			delete(config.Conf, exp.X)
+			delete(config.Conf, wait.X)
 			config.Conf[sem.C] = proc
 			return true, nil
 		default:
 			return false, nil
 		}
-		return true, nil
 	default:
 		return false, ErrExecImpossible
 	}
