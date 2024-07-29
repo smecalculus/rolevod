@@ -19,6 +19,7 @@ type Choices map[Label]Stype
 
 type Chan struct {
 	Id string
+	M  Mode
 }
 
 type Stype interface {
@@ -43,13 +44,13 @@ type With struct {
 }
 
 type Tensor struct {
-	St1 Stype
-	St2 Stype
+	S Stype
+	T Stype
 }
 
 type Lolli struct {
-	St1 Stype
-	St2 Stype
+	S Stype
+	T Stype
 }
 
 type One struct{}
@@ -59,11 +60,11 @@ type TpName struct {
 }
 
 type Up struct {
-	St Stype
+	A Stype
 }
 
 type Down struct {
-	St Stype
+	A Stype
 }
 
 type ChanTp struct {
@@ -294,6 +295,18 @@ func SubstCtx(ctx1 []Chan, ctx2 []Chan, expr Expression) Expression {
 		exp = Subst(c1, c2, exp)
 	}
 	return exp
+}
+
+func IsShared(env Environment, c Stype) bool {
+	return false
+}
+
+func ExpdTp(env Environment, v string) (Stype, error) {
+	decl, ok := env[v].(TpDef)
+	if !ok {
+		return nil, ErrAstImpossible
+	}
+	return decl.St, nil
 }
 
 var (
