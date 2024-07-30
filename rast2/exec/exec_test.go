@@ -30,7 +30,7 @@ func TestExecSucc(t *testing.T) {
 	t.Run("close", func(t *testing.T) {
 		setupSubtest()
 
-		z := a.Chan{Id: "z"}
+		z := a.Chan{V: "z"}
 		main := "main"
 		env := map[string]a.Decl{
 			main: a.ExpDecDef{
@@ -42,7 +42,7 @@ func TestExecSucc(t *testing.T) {
 				P: a.Close{X: z},
 			},
 		}
-		ch0 := a.Chan{Id: "ch0"}
+		ch0 := a.Chan{V: "ch0"}
 		config := &Configuration{
 			Conf: map[a.Chan]Sem{
 				ch0: Msg{D: ch0, M: a.MClose{X: ch0}},
@@ -55,9 +55,9 @@ func TestExecSucc(t *testing.T) {
 		setupSubtest()
 
 		foo := "foo"
-		z := a.Chan{Id: "z"}
+		z := a.Chan{V: "z"}
 		main := "main"
-		d := a.Chan{Id: "d"}
+		d := a.Chan{V: "d"}
 		env := map[string]a.Decl{
 			foo: a.ExpDecDef{
 				F: foo,
@@ -80,7 +80,7 @@ func TestExecSucc(t *testing.T) {
 				},
 			},
 		}
-		ch0 := a.Chan{Id: "ch0"}
+		ch0 := a.Chan{V: "ch0"}
 		config := &Configuration{
 			Conf: map[a.Chan]Sem{
 				ch0: Msg{D: ch0, M: a.MClose{X: ch0}},

@@ -3,24 +3,26 @@ package elab
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	a "smecalculus/rolevod/rast2/ast"
 	tc "smecalculus/rolevod/rast2/typecheck"
 )
 
 func ElabTps(env a.Environment, dcls map[string]a.Decl) error {
-	for _, v := range dcls {
-		switch dcl := v.(type) {
+	for _, d := range maps.Clone(dcls) {
+		switch dcl := d.(type) {
 		case a.TpDef:
-			if !tc.Contractive(dcl.St) {
-				return ErrTypeNotContractive(dcl.St)
+			if !tc.Contractive(dcl.A) {
+				return ErrTypeNotContractive(dcl.A)
 			}
-			err := tc.EsyncTp(env, dcl.St)
+			err := tc.EsyncTp(env, dcl.A)
 			if err != nil {
 				return err
 			}
+			env[dcl.V] = dcl
 		case a.ExpDecDef:
-			delta := slices.Clone(dcl.Ctx.Linear)
+			delta := dcl.Ctx.Linear
 			if dups(append(delta, dcl.Zc)) {
 				return ErrDuplicateVariable
 			}
@@ -28,6 +30,7 @@ func ElabTps(env a.Environment, dcls map[string]a.Decl) error {
 			if err != nil {
 				return err
 			}
+			env[dcl.F] = dcl
 		default:
 			continue
 		}
@@ -36,16 +39,17 @@ func ElabTps(env a.Environment, dcls map[string]a.Decl) error {
 }
 
 func ElabExps(env a.Environment, dcls map[string]a.Decl) error {
-	for _, v := range dcls {
-		switch dcl := v.(type) {
+	for _, d := range maps.Clone(dcls) {
+		switch dcl := d.(type) {
 		case a.TpDef:
 			// already checked validity during first pass
-			continue
+			env[dcl.V] = dcl
 		case a.ExpDecDef:
 			err := tc.CheckExp(env, dcl.Ctx, dcl.P, dcl.Zc)
 			if err != nil {
 				return err
 			}
+			env[dcl.F] = dcl
 		case a.Exec:
 			dec, ok := env[dcl.F].(a.ExpDecDef)
 			if !ok {
@@ -54,8 +58,9 @@ func ElabExps(env a.Environment, dcls map[string]a.Decl) error {
 			if len(dec.Ctx.Ordered) > 0 {
 				return ErrProcessNonEmptyContext(dcl.F)
 			}
+			env[dcl.F] = dcl
 		default:
-			return ErrElabImpossible
+			panic(ErrUnexpectedDecl)
 		}
 	}
 	return nil
@@ -77,12 +82,12 @@ func ElabDecls(env a.Environment, dcls map[string]a.Decl) error {
 
 func dups(delta []a.ChanTp) bool {
 	var xs []string
-	for _, v := range delta {
-		xs = append(xs, v.X.Id)
+	for _, d := range delta {
+		xs = append(xs, d.X.V)
 	}
 	slices.Sort(xs)
-	for i, v := range xs {
-		if slices.Contains(xs[i:], v) {
+	for i, x := range xs {
+		if slices.Contains(xs[i:], x) {
 			return true
 		}
 	}
@@ -92,6 +97,7 @@ func dups(delta []a.ChanTp) bool {
 var (
 	ErrElabImpossible    = errors.New("elab impossible")
 	ErrDuplicateVariable = errors.New("duplicate variable in process declaration")
+	ErrUnexpectedDecl    = errors.New("unexpected decl")
 )
 
 func ErrProcessUndefined(f string) error {

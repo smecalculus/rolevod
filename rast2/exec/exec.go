@@ -42,7 +42,7 @@ var chanNum uint32 = 0
 func lfresh() a.Chan {
 	n := chanNum
 	chanNum += 1
-	return a.Chan{Id: fmt.Sprintf("ch%d", n)}
+	return a.Chan{V: fmt.Sprintf("ch%d", n)}
 }
 
 func createConfig(sem Sem) *Configuration {

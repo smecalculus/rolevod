@@ -63,7 +63,7 @@ func CheckExp(env a.Environment, delta a.Context, exp a.Expression, zc a.ChanTp)
 
 func checkTp(c a.Chan, delta []a.ChanTp) bool {
 	for _, d := range delta {
-		if d.X.Id == c.Id {
+		if d.X.V == c.V {
 			return true
 		}
 	}
@@ -72,7 +72,7 @@ func checkTp(c a.Chan, delta []a.ChanTp) bool {
 
 func findTp(c a.Chan, delta []a.ChanTp) (a.Stype, error) {
 	for _, d := range delta {
-		if d.X.Id == c.Id {
+		if d.X.V == c.V {
 			return d.A, nil
 		}
 	}
@@ -81,7 +81,7 @@ func findTp(c a.Chan, delta []a.ChanTp) (a.Stype, error) {
 
 func findStp(c a.Chan, delta a.Context) (a.Stype, error) {
 	if !modS(c) {
-		return nil, fmt.Errorf("mode of channel %q not S", c.Id)
+		return nil, fmt.Errorf("mode of channel %q not S", c.V)
 	}
 	return findTp(c, delta.Shared)
 }
@@ -139,21 +139,21 @@ func eqTp(env a.Environment, tp1, tp2 a.Stype) bool {
 	case a.TpName:
 		tp2, ok := tp2.(a.TpName)
 		if !ok {
-			tp1, err := a.ExpdTp(env, string(tp1.A))
+			tp1, err := a.ExpdTp(env, tp1.A)
 			if err != nil {
-				return false
+				panic(err)
 			}
 			return eqTp(env, tp1, tp2)
 		}
 		return eqNameName(env, tp1.A, tp2.A)
 	default:
-		tp, ok := tp2.(a.TpName)
+		tbd, ok := tp2.(a.TpName)
 		if !ok {
 			return false
 		}
-		tp2, err := a.ExpdTp(env, string(tp.A))
+		tp2, err := a.ExpdTp(env, tbd.A)
 		if err != nil {
-			return false
+			panic(err)
 		}
 		return eqTp(env, tp1, tp2)
 	}
@@ -172,9 +172,9 @@ var (
 )
 
 func ErrUnknownVarRight(ch a.Chan) error {
-	return fmt.Errorf("unbound variable %q on the right", ch.Id)
+	return fmt.Errorf("unbound variable %q on the right", ch.V)
 }
 
 func ErrUnknownVarCtx(ch a.Chan) error {
-	return fmt.Errorf("unbound variable %q in the context", ch.Id)
+	return fmt.Errorf("unbound variable %q in the context", ch.V)
 }

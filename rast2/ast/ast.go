@@ -13,13 +13,13 @@ const (
 )
 
 type Label string
-type Tpname string
+type Tpname = string
 type Expname = string
 type Choices map[Label]Stype
 
 type Chan struct {
-	Id string
-	M  Mode
+	V string
+	M Mode
 }
 
 type Stype interface {
@@ -181,8 +181,8 @@ func (ExpDecDef) decl() {}
 func (Exec) decl()      {}
 
 type TpDef struct {
-	A  Tpname
-	St Stype
+	V Tpname
+	A Stype
 }
 
 type ExpDecDef struct {
@@ -237,7 +237,7 @@ type MClose struct {
 }
 
 func sub(new Chan, old Chan, x Chan) Chan {
-	if x.Id == old.Id {
+	if x.V == old.V {
 		return new
 	}
 	return x
@@ -306,7 +306,7 @@ func ExpdTp(env Environment, v string) (Stype, error) {
 	if !ok {
 		return nil, ErrAstImpossible
 	}
-	return decl.St, nil
+	return decl.A, nil
 }
 
 var (
