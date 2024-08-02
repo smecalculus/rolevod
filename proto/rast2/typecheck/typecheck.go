@@ -3,7 +3,7 @@ package typecheck
 import (
 	"errors"
 	"fmt"
-	a "smecalculus/rolevod/rast2/ast"
+	a "smecalculus/rolevod/proto/rast2/ast"
 )
 
 func Contractive(tp a.Stype) bool {

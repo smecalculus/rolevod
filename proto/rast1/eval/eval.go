@@ -2,7 +2,7 @@ package eval
 
 import (
 	"errors"
-	a "smecalculus/rolevod/rast1/ast"
+	a "smecalculus/rolevod/proto/rast1/ast"
 )
 
 type Value interface {

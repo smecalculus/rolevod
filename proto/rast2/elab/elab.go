@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	a "smecalculus/rolevod/rast2/ast"
-	tc "smecalculus/rolevod/rast2/typecheck"
+	a "smecalculus/rolevod/proto/rast2/ast"
+	tc "smecalculus/rolevod/proto/rast2/typecheck"
 )
 
 func ElabTps(env a.Environment, dcls map[string]a.Decl) error {
