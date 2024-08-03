@@ -3,6 +3,7 @@ package msg
 import (
 	"context"
 	"fmt"
+	"smecalculus/rolevod/lib/cfg"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
@@ -10,22 +11,21 @@ import (
 
 var Module = fx.Module("msg",
 	fx.Provide(
-		newConf,
+		newCfg,
 		newEcho,
 	),
 )
 
-func newConf() props {
-	return props{
-		Protocol: protocol{
-			Http: http{
-				Port: 8080,
-			},
-		},
+func newCfg(keeper cfg.Keeper) (*props, error) {
+	props := &props{}
+	err := keeper.Load("msg", props)
+	if err != nil {
+		return nil, err
 	}
+	return props, nil
 }
 
-func newEcho(props props, lc fx.Lifecycle) *echo.Echo {
+func newEcho(props *props, lc fx.Lifecycle) *echo.Echo {
 	echo := echo.New()
 	lc.Append(
 		fx.Hook{

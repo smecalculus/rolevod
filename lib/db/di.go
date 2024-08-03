@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"smecalculus/rolevod/lib/cfg"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
@@ -9,22 +10,21 @@ import (
 
 var Module = fx.Module("db",
 	fx.Provide(
-		newConf,
+		newCfg,
 		newPgx,
 	),
 )
 
-func newConf() props {
-	return props{
-		Protocol: protocol{
-			Postgres: postgres{
-				Url: "postgres://postgres:password@localhost:5432/postgres",
-			},
-		},
+func newCfg(keeper cfg.Keeper) (*props, error) {
+	props := &props{}
+	err := keeper.Load("db", props)
+	if err != nil {
+		return nil, err
 	}
+	return props, nil
 }
 
-func newPgx(props props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
+func newPgx(props *props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
 	pgx, err := pgxpool.New(context.Background(), props.Protocol.Postgres.Url)
 	if err != nil {
 		return nil, err

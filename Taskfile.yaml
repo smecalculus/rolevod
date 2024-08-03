@@ -12,13 +12,17 @@ includes:
     dir: ./stack
 
 tasks:
-  binaries:
+  part:binaries:
+    aliases: [pb]
     cmds:
       - task: app:binaries
-  images:
+  part:packages:
+    aliases: [pp]
     cmds:
-      - task: app:images
       - task: db:images
-  stacks:
+      - task: app:images
+  whole:packages:
+    aliases: [wp]
+    # deps: [part:packages]
     cmds:
       - task: stack:images

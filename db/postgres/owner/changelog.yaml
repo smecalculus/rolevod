@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - logical-file-path: changelog.yaml
+  - property:
+      name: author
+      value: owner
+  - changeSet:
+      id: sepulkarium
+      author: ${author}
+      changes:
+        - sqlFile:
+            path: sepulkarium/schema.sql
+            relativeToChangeLogFile: true
+            splitStatements: true
+        - sqlFile:
+            path: sepulkarium/tables.sql
+            relativeToChangeLogFile: true
+            splitStatements: true

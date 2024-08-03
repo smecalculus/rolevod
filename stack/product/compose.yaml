@@ -22,31 +22,55 @@ services:
       timeout: 5s
       retries: 5
 
-  # database:
-  #   image: rolevod/postgres:latest
-  #   networks:
-  #     - product
-  #   depends_on:
-  #     storage:
-  #       condition: service_healthy
+  database:
+    image: rolevod/postgres:latest
+    networks:
+      - product
+    depends_on:
+      storage:
+        condition: service_healthy
+    command: >-
+      --show-banner=false
+      --classpath=/liquibase/changelog
+      --changelog-file=dba/changelog.yaml
+      --url=jdbc:postgresql://storage:5432/postgres
+      --liquibase-schema-name=public
+      --default-schema-name=public
+      --username=postgres
+      --password=password
+      update
+      -Ddatabase.name=rolevod
+      -Downer.username=rolevod
+      -Downer.password=rolevod
 
-  # schema:
-  #   image: rolevod/postgres:latest
-  #   networks:
-  #     - product
-  #   depends_on:
-  #     database:
-  #       condition: service_completed_successfully
+  schema:
+    image: rolevod/postgres:latest
+    networks:
+      - product
+    depends_on:
+      database:
+        condition: service_completed_successfully
+    command: >-
+      --show-banner=false
+      --classpath=/liquibase/changelog
+      --changelog-file=owner/changelog.yaml
+      --url=jdbc:postgresql://storage:5432/rolevod
+      --liquibase-schema-name=public
+      --default-schema-name=rolevod
+      --username=rolevod
+      --password=rolevod
+      update
+      -Dschema.name=rolevod
 
   app:
     image: rolevod/app:latest
     networks:
       - product
     depends_on:
-      storage:
-        condition: service_healthy
-      # schema:
-        # condition: service_completed_successfully
+      # storage:
+      #   condition: service_healthy
+      schema:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
  

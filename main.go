@@ -2,6 +2,7 @@ package main
 
 import (
 	"smecalculus/rolevod/app/env"
+	"smecalculus/rolevod/lib/cfg"
 	"smecalculus/rolevod/lib/db"
 	"smecalculus/rolevod/lib/msg"
 
@@ -10,8 +11,11 @@ import (
 
 func main() {
 	fx.New(
-		env.Module,
+		// lib
+		cfg.Module,
 		msg.Module,
 		db.Module,
+		// app
+		env.Module,
 	).Run()
 }
