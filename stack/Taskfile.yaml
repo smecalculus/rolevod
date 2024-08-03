@@ -1,0 +1,16 @@
+version: '3'
+
+vars:
+  REPO_MODE: n/a  # n/a, ro, rw
+
+tasks:
+  images:
+    dir: product
+    cmd: >-
+      docker compose
+      --file compose.yaml
+      up
+      --remove-orphans
+      --pull missing
+      --quiet-pull
+      --detach

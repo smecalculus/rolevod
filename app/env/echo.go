@@ -12,12 +12,12 @@ type handlerEcho struct {
 }
 
 func (h *handlerEcho) post(c echo.Context) error {
-	var req EnvSpec
-	err1 := c.Bind(&req)
+	var es EnvSpec
+	err1 := c.Bind(&es)
 	if err1 != nil {
 		return c.String(http.StatusBadRequest, "bad request")
 	}
-	_, err2 := h.api.Create(req)
+	_, err2 := h.api.Create(es)
 	if err2 != nil {
 		return c.String(http.StatusBadRequest, "bad request")
 	}

@@ -1,0 +1,11 @@
+version: '3'
+
+vars:
+  REPO_MODE: n/a  # n/a, ro, rw
+
+tasks:
+  images:
+    cmd: >-
+      docker build .
+      --file Dockerfile
+      --tag rolevod/db:latest

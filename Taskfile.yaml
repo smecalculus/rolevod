@@ -1,0 +1,24 @@
+version: '3'
+
+includes:
+  db:
+    taskfile: ./db/Taskfile.yaml
+    dir: ./db
+  app:
+    taskfile: ./app/Taskfile.yaml
+    dir: ./app
+  stack:
+    taskfile: ./stack/Taskfile.yaml
+    dir: ./stack
+
+tasks:
+  binaries:
+    cmds:
+      - task: app:binaries
+  images:
+    cmds:
+      - task: app:images
+      - task: db:images
+  stacks:
+    cmds:
+      - task: stack:images

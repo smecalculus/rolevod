@@ -1,0 +1,52 @@
+---
+name: rolevod
+
+networks:
+  product:
+    name: product
+    external: false
+
+services:
+  storage:
+    image: postgres:alpine
+    networks:
+      - product
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "password"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # database:
+  #   image: rolevod/postgres:latest
+  #   networks:
+  #     - product
+  #   depends_on:
+  #     storage:
+  #       condition: service_healthy
+
+  # schema:
+  #   image: rolevod/postgres:latest
+  #   networks:
+  #     - product
+  #   depends_on:
+  #     database:
+  #       condition: service_completed_successfully
+
+  app:
+    image: rolevod/app:latest
+    networks:
+      - product
+    depends_on:
+      storage:
+        condition: service_healthy
+      # schema:
+        # condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+ 

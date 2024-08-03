@@ -9,12 +9,23 @@ import (
 
 var Module = fx.Module("db",
 	fx.Provide(
+		newConf,
 		newPgx,
 	),
 )
 
-func newPgx(lc fx.Lifecycle) (*pgxpool.Pool, error) {
-	pgx, err := pgxpool.New(context.Background(), "")
+func newConf() props {
+	return props{
+		Protocol: protocol{
+			Postgres: postgres{
+				Url: "postgres://postgres:password@localhost:5432/postgres",
+			},
+		},
+	}
+}
+
+func newPgx(props props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
+	pgx, err := pgxpool.New(context.Background(), props.Protocol.Postgres.Url)
 	if err != nil {
 		return nil, err
 	}
