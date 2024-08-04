@@ -10,6 +10,9 @@ includes:
   stack:
     taskfile: ./stack/Taskfile.yaml
     dir: ./stack
+  image:
+    taskfile: ./orch/task/Image.yaml
+    internal: true
 
 tasks:
   component:binaries:

@@ -1,0 +1,27 @@
+version: '3'
+
+tasks:
+  clean:
+    requires:
+      vars:
+        - IMAGE_KEY
+    cmds:
+      - docker container rm -fv $(docker ps -aq --filter=label=image.key={{.IMAGE_KEY}}) &> /dev/null
+      - docker volume rm -f $(docker volume ls -q --filter label=image.key={{.IMAGE_KEY}}) &> /dev/null
+      - docker image rm -f $(docker images -q --filter=label=image.key={{.IMAGE_KEY}}) &> /dev/null
+    ignore_error: true
+
+  build:
+    requires:
+      vars:
+        - IMAGE_KEY
+        - IMAGE_HOME
+        - IMAGE_NAME
+        - IMAGE_TAG
+    dir: '{{.IMAGE_HOME}}'
+    cmd: >-
+      docker build .
+      --file Dockerfile
+      --label image.key={{.IMAGE_KEY}}
+      --tag {{.IMAGE_NAME}}:latest
+      --tag {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
