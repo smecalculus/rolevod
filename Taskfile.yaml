@@ -12,17 +12,19 @@ includes:
     dir: ./stack
 
 tasks:
-  part:binaries:
-    aliases: [pb]
+  component:binaries:
+    aliases: [cbs]
     cmds:
       - task: app:binaries
-  part:packages:
-    aliases: [pp]
+
+  component:packages:
+    aliases: [cps]
     cmds:
       - task: db:images
       - task: app:images
-  whole:packages:
-    aliases: [wp]
-    # deps: [part:packages]
+
+  solution:packages:
+    aliases: [sps]
+    deps: [component:packages]
     cmds:
       - task: stack:images

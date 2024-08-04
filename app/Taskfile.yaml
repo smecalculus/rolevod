@@ -2,12 +2,44 @@ version: '3'
 
 vars:
   REPO_MODE: n/a  # n/a, ro, rw
+  IMAGE: rolevod/app
+  CID:
+    sh: >-
+      find ../lib .
+      -name "*.go" -exec md5sum {} + -o
+      -name "Dockerfile" -exec md5sum {} +
+      | LC_ALL=C sort -k 2
+      | md5sum
+      | head -c 7
 
 tasks:
   binaries:
     cmd: go build -o rolevod main.go
+
   images:
+    # sources:
+    #   - ./**/*.go
+    #   - ../lib/**/*.go
+    #   - Dockerfile
+    status:
+      - docker image inspect {{.IMAGE}}:{{.CID}}
+    cmds:
+      - task: clean
+      - task: build
+
+  clean:
+    ignore_error: true
+    internal: true
+    cmds:
+      - docker container rm -fv $(docker ps -aq --filter=label=causality.key={{.IMAGE}}) &> /dev/null
+      - docker volume rm -f $(docker volume ls -q --filter label=causality.key={{.IMAGE}}) &> /dev/null
+      - docker image rm -f $(docker images -q --filter=label=causality.key={{.IMAGE}}) &> /dev/null
+
+  build:
+    internal: true
     cmd: >-
       docker build ..
       --file Dockerfile
-      --tag rolevod/app:latest
+      --label causality.key={{.IMAGE}}
+      --tag {{.IMAGE}}:latest
+      --tag {{.IMAGE}}:{{.CID}}

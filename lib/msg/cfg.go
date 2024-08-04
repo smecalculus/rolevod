@@ -1,19 +1,19 @@
 package msg
 
 type props struct {
-	Protocol protocol
-	Mapping  mapping
+	Protocol protocol `mapstructure:"protocol"`
+	Mapping  mapping  `mapstructure:"mapping"`
 }
 
 type protocol struct {
-	Modes []string
-	Http  http
+	Modes []string `mapstructure:"modes"`
+	Http  http     `mapstructure:"http"`
 }
 
 type mapping struct {
-	Modes []string
+	Modes []string `mapstructure:"modes"`
 }
 
 type http struct {
-	Port int
+	Port int `mapstructure:"port"`
 }

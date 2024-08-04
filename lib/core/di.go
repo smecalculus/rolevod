@@ -1,11 +1,11 @@
-package cfg
+package core
 
 import (
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 )
 
-var Module = fx.Module("cfg",
+var Module = fx.Module("core",
 	fx.Provide(
 		fx.Annotate(newKeeper, fx.As(new(Keeper))),
 	),

@@ -4,7 +4,7 @@ WORKDIR /build
 
 COPY . .
 
-RUN go build -o rolevod main.go
+RUN go build -o rolevod app/main.go
 
 FROM alpine
 

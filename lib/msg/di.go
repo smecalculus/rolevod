@@ -3,22 +3,26 @@ package msg
 import (
 	"context"
 	"fmt"
-	"smecalculus/rolevod/lib/cfg"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
+
+	"smecalculus/rolevod/lib/core"
 )
 
 var Module = fx.Module("msg",
 	fx.Provide(
-		newCfg,
 		newEcho,
+	),
+	fx.Provide(
+		fx.Private,
+		newCfg,
 	),
 )
 
-func newCfg(keeper cfg.Keeper) (*props, error) {
+func newCfg(k core.Keeper) (*props, error) {
 	props := &props{}
-	err := keeper.Load("msg", props)
+	err := k.Load("msg", props)
 	if err != nil {
 		return nil, err
 	}

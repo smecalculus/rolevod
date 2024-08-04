@@ -2,22 +2,26 @@ package db
 
 import (
 	"context"
-	"smecalculus/rolevod/lib/cfg"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
+
+	"smecalculus/rolevod/lib/core"
 )
 
 var Module = fx.Module("db",
 	fx.Provide(
-		newCfg,
 		newPgx,
+	),
+	fx.Provide(
+		fx.Private,
+		newCfg,
 	),
 )
 
-func newCfg(keeper cfg.Keeper) (*props, error) {
+func newCfg(k core.Keeper) (*props, error) {
 	props := &props{}
-	err := keeper.Load("db", props)
+	err := k.Load("db", props)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    labels:
+      causality.key: rolevod/postgres
 
   database:
     image: rolevod/postgres:latest
@@ -42,6 +44,8 @@ services:
       -Ddatabase.name=rolevod
       -Downer.username=rolevod
       -Downer.password=rolevod
+    labels:
+      causality.key: rolevod/postgres
 
   schema:
     image: rolevod/postgres:latest
@@ -61,16 +65,18 @@ services:
       --password=rolevod
       update
       -Dschema.name=rolevod
+    labels:
+      causality.key: rolevod/postgres
 
   app:
     image: rolevod/app:latest
     networks:
       - product
     depends_on:
-      # storage:
-      #   condition: service_healthy
       schema:
         condition: service_completed_successfully
     ports:
       - "8080:8080"
+    labels:
+      causality.key: rolevod/app
  

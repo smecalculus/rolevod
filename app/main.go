@@ -1,18 +1,18 @@
 package main
 
 import (
+	"go.uber.org/fx"
+
 	"smecalculus/rolevod/app/env"
-	"smecalculus/rolevod/lib/cfg"
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/db"
 	"smecalculus/rolevod/lib/msg"
-
-	"go.uber.org/fx"
 )
 
 func main() {
 	fx.New(
 		// lib
-		cfg.Module,
+		core.Module,
 		msg.Module,
 		db.Module,
 		// app
