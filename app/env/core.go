@@ -1,5 +1,7 @@
 package env
 
+import "log/slog"
+
 // message
 type EnvSpec struct {
 	Id string `json:"id"`
@@ -22,7 +24,8 @@ type Api interface {
 
 // core
 type service struct {
-	repo repo
+	repo   repo
+	logger *slog.Logger
 }
 
 func (s *service) Create(es EnvSpec) (Env, error) {

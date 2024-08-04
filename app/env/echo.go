@@ -1,6 +1,7 @@
 package env
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -8,7 +9,8 @@ import (
 
 // adapter
 type handlerEcho struct {
-	api Api
+	api    Api
+	logger *slog.Logger
 }
 
 func (h *handlerEcho) post(c echo.Context) error {

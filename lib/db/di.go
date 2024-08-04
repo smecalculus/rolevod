@@ -28,8 +28,8 @@ func newCfg(k core.Keeper) (*props, error) {
 	return props, nil
 }
 
-func newPgx(props *props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
-	pgx, err := pgxpool.New(context.Background(), props.Protocol.Postgres.Url)
+func newPgx(p *props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
+	pgx, err := pgxpool.New(context.Background(), p.Protocol.Postgres.Url)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 package env
 
 import (
+	"log/slog"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
@@ -20,16 +22,19 @@ var Module = fx.Module("env",
 	),
 )
 
-func newHandler(api Api) *handlerEcho {
-	return &handlerEcho{api}
+func newHandler(a Api, l *slog.Logger) *handlerEcho {
+	t := slog.String("t", "env.handlerEcho")
+	return &handlerEcho{a, l.With(t)}
 }
 
-func newService(repo repo) *service {
-	return &service{repo}
+func newService(r repo, l *slog.Logger) *service {
+	t := slog.String("t", "env.service")
+	return &service{r, l.With(t)}
 }
 
-func newRepo(pgx *pgxpool.Pool) *repoPgx {
-	return &repoPgx{pgx}
+func newRepo(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+	t := slog.String("t", "env.repoPgx")
+	return &repoPgx{p, l.With(t)}
 }
 
 func configureEcho(e *echo.Echo, h *handlerEcho) error {
