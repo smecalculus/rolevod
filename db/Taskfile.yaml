@@ -17,10 +17,9 @@ tasks:
     cmds:
       - task: :image:clean
         vars:
-          IMAGE_KEY: '{{.IMAGE}}'
+          IMAGE_KEY: "{{.IMAGE}}"
       - task: :image:build
         vars:
-          IMAGE_KEY: '{{.IMAGE}}'
           IMAGE_HOME: db/postgres
-          IMAGE_NAME: '{{.IMAGE}}'
-          IMAGE_TAG: '{{.CID}}'
+          IMAGE_NAME: "{{.IMAGE}}"
+          IMAGE_TAG: "{{.CID}}"

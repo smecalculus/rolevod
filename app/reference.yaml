@@ -1,0 +1,9 @@
+messaging:
+  protocol:
+    http:
+      port: 8080
+
+storage:
+  protocol:
+    postgres:
+      url: postgres://rolevod:rolevod@localhost:5432/rolevod

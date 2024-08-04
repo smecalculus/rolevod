@@ -21,7 +21,7 @@ var Module = fx.Module("db",
 
 func newCfg(k core.Keeper) (*props, error) {
 	props := &props{}
-	err := k.Load("db", props)
+	err := k.Load("storage", props)
 	if err != nil {
 		return nil, err
 	}

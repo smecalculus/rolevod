@@ -14,8 +14,10 @@ var Module = fx.Module("core",
 func newKeeper() *keeperViper {
 	viper := viper.New()
 	viper.AddConfigPath(".")
-	viper.SetConfigName("rolevod")
 	viper.SetConfigType("yaml")
+	viper.SetConfigName("reference")
 	viper.ReadInConfig()
+	viper.SetConfigName("application")
+	viper.MergeInConfig()
 	return &keeperViper{viper}
 }

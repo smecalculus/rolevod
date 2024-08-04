@@ -22,10 +22,10 @@ tasks:
     cmds:
       - task: :image:clean
         vars:
-          IMAGE_KEY: '{{.IMAGE}}'
+          IMAGE_KEY: "{{.IMAGE}}"
       - task: :image:build
         vars:
-          IMAGE_KEY: '{{.IMAGE}}'
           IMAGE_HOME: app
-          IMAGE_NAME: '{{.IMAGE}}'
-          IMAGE_TAG: '{{.CID}}'
+          IMAGE_CTX: ..
+          IMAGE_NAME: "{{.IMAGE}}"
+          IMAGE_TAG: "{{.CID}}"

@@ -14,14 +14,13 @@ tasks:
   build:
     requires:
       vars:
-        - IMAGE_KEY
         - IMAGE_HOME
         - IMAGE_NAME
         - IMAGE_TAG
-    dir: '{{.IMAGE_HOME}}'
+    dir: "{{.IMAGE_HOME}}"
     cmd: >-
-      docker build .
+      docker build {{.IMAGE_CTX | default "."}}
       --file Dockerfile
-      --label image.key={{.IMAGE_KEY}}
+      --label image.key={{.IMAGE_KEY | default .IMAGE_NAME}}
       --tag {{.IMAGE_NAME}}:latest
       --tag {{.IMAGE_NAME}}:{{.IMAGE_TAG}}

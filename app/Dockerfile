@@ -10,6 +10,8 @@ FROM alpine
 
 WORKDIR /app
 
-COPY --from=builder /build/rolevod /app/rolevod
+COPY --from=builder /build/rolevod .
+
+COPY ./app/reference.yaml .
 
 ENTRYPOINT ["/app/rolevod"]

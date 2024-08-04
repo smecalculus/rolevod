@@ -22,7 +22,7 @@ var Module = fx.Module("msg",
 
 func newCfg(k core.Keeper) (*props, error) {
 	props := &props{}
-	err := k.Load("msg", props)
+	err := k.Load("messaging", props)
 	if err != nil {
 		return nil, err
 	}

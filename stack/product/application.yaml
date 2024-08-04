@@ -1,0 +1,4 @@
+storage:
+  protocol:
+    postgres:
+      url: postgres://rolevod:rolevod@storage:5432/rolevod
