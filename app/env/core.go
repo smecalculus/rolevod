@@ -24,8 +24,8 @@ type Api interface {
 
 // core
 type service struct {
-	repo   repo
-	logger *slog.Logger
+	repo repo
+	log  *slog.Logger
 }
 
 func (s *service) Create(es EnvSpec) (Env, error) {

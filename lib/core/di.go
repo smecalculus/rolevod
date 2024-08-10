@@ -14,6 +14,10 @@ var Module = fx.Module("core",
 	),
 )
 
+func newLogger() *slog.Logger {
+	return slog.Default()
+}
+
 func newKeeper(l *slog.Logger) *keeperViper {
 	viper := viper.New()
 	viper.AddConfigPath(".")
@@ -24,8 +28,4 @@ func newKeeper(l *slog.Logger) *keeperViper {
 	viper.MergeInConfig()
 	t := slog.String("t", "core.keeperViper")
 	return &keeperViper{viper, l.With(t)}
-}
-
-func newLogger() *slog.Logger {
-	return slog.Default()
 }

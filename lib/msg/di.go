@@ -31,6 +31,7 @@ func newCfg(k core.Keeper) (*props, error) {
 
 func newEcho(props *props, lc fx.Lifecycle) *echo.Echo {
 	echo := echo.New()
+	echo.Debug = true
 	lc.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {

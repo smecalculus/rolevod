@@ -4,6 +4,7 @@ import (
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/app/env"
+	"smecalculus/rolevod/app/web"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/db"
 	"smecalculus/rolevod/lib/msg"
@@ -16,6 +17,7 @@ func main() {
 		msg.Module,
 		db.Module,
 		// app
+		web.Module,
 		env.Module,
 	).Run()
 }
