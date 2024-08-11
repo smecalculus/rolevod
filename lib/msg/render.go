@@ -6,6 +6,11 @@ import (
 	"log/slog"
 )
 
+const (
+	MIMEAnyAny  = "*/*"
+	MIMETextAny = "text/*"
+)
+
 // port
 type Renderer interface {
 	Render(string, any) ([]byte, error)
@@ -13,15 +18,20 @@ type Renderer interface {
 
 // adapter
 type RendererStdlib struct {
-	Registry *template.Template
-	Log      *slog.Logger
+	registry *template.Template
+	log      *slog.Logger
+}
+
+func NewRendererStdlib(t *template.Template, l *slog.Logger) *RendererStdlib {
+	name := slog.String("name", "msg.rendererStdlib")
+	return &RendererStdlib{t, l.With(name)}
 }
 
 func (r *RendererStdlib) Render(name string, data any) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	err := r.Registry.ExecuteTemplate(buf, name, data)
+	err := r.registry.ExecuteTemplate(buf, name, data)
 	if err != nil {
-		r.Log.Error("rendering failed", slog.Any("reason", err))
+		r.log.Error("rendering failed", slog.Any("reason", err))
 	}
 	return buf.Bytes(), err
 }

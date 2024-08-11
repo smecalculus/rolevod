@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        {{ template "navbar" }}
+        <div class="container text-center">
+            <form action="/envs" method="post" x-data="{ kind: 'tpdef' }" hx-boost="true">
+                <div class="row row-cols-auto">
+                    <div class="col">
+                        <select x-model="kind" class="form-select" aria-label="Select a kind">
+                            <option value="tpdef" selected>Type</option>
+                            <option value="expdec">Expression</option>
+                        </select>
+                    </div>
+                    <template x-if="kind == 'tpdef'">
+                        <div class="col">
+                            <input type="text" class="form-control" placeholder="Name" aria-label="Name">
+                        </div>
+                    </template>
+                </div>
+                <template x-if="kind == 'tpdef'">
+                    <div class="row row-cols-auto" x-data="{ stype: 'plus' }">
+                        <div class="col">
+                            <select class="form-select" aria-label="Stype">
+                            <option value="plus" selected>Plus</option>
+                            <option value="with">With</option>
+                            <option value="tensor">Tensor</option>
+                            <option value="lolli">Lolli</option>
+                            <option value="one">One</option>
+                            <option value="tpname">TpName</option>
+                            <option value="up">Up</option>
+                            <option value="down">Down</option>
+                            </select>
+                        </div>
+                    </div>
+                </template>
+            </form>
+        </div>
+    </body>
+</html>

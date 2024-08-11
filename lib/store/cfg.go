@@ -1,4 +1,4 @@
-package db
+package store
 
 type props struct {
 	Protocol protocol `mapstructure:"protocol"`

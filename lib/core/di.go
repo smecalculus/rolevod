@@ -7,7 +7,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var Module = fx.Module("core",
+var Module = fx.Module("lib/core",
 	fx.Provide(
 		newLogger,
 		fx.Annotate(newKeeper, fx.As(new(Keeper))),

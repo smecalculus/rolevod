@@ -10,7 +10,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-var Module = fx.Module("msg",
+var Module = fx.Module("lib/msg",
 	fx.Provide(
 		newEcho,
 	),

@@ -4,7 +4,10 @@ go 1.22.3
 
 require github.com/google/go-cmp v0.6.0
 
-require github.com/jackc/puddle/v2 v2.2.1 // indirect
+require (
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/rs/xid v1.5.0
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
