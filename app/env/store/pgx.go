@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/app/core/env"
+	env "smecalculus/rolevod/app/env/core"
 )
 
 // adapter

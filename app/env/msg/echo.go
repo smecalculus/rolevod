@@ -11,7 +11,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/msg"
 
-	"smecalculus/rolevod/app/core/env"
+	env "smecalculus/rolevod/app/env/core"
 )
 
 // adapter

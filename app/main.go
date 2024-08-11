@@ -3,26 +3,22 @@ package main
 import (
 	"go.uber.org/fx"
 
-	lc "smecalculus/rolevod/lib/core"
-	lm "smecalculus/rolevod/lib/msg"
-	ls "smecalculus/rolevod/lib/store"
+	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/msg"
+	"smecalculus/rolevod/lib/store"
 
-	ac "smecalculus/rolevod/app/core"
-	am "smecalculus/rolevod/app/msg"
-	as "smecalculus/rolevod/app/store"
-	aw "smecalculus/rolevod/app/web"
+	"smecalculus/rolevod/app/env"
+	"smecalculus/rolevod/app/web"
 )
 
 func main() {
 	fx.New(
 		// lib
-		lc.Module,
-		lm.Module,
-		ls.Module,
+		core.Module,
+		msg.Module,
+		store.Module,
 		// app
-		ac.Module,
-		am.Module,
-		as.Module,
-		aw.Module,
+		env.Module,
+		web.Module,
 	).Run()
 }

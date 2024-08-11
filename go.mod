@@ -2,14 +2,9 @@ module smecalculus/rolevod
 
 go 1.22.3
 
-require github.com/google/go-cmp v0.6.0
-
 require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/rs/xid v1.5.0
-)
-
-require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -44,4 +39,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	// test
+	github.com/google/go-cmp v0.6.0
 )

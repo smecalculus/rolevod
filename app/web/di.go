@@ -9,30 +9,32 @@ import (
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/lib/msg"
+
+	web "smecalculus/rolevod/app/web/msg"
 )
 
-var Module = fx.Module("web",
+var Module = fx.Module("app/web",
 	fx.Provide(
 		fx.Private,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		newHandlerEcho,
+		web.NewHandlerEcho,
 	),
 	fx.Invoke(
 		cfgEcho,
 	),
 )
 
-//go:embed all:feature all:component
+//go:embed all:msg/feature all:msg/component
 var webFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.ParseFS(webFs, "feature/*.go.html", "component/*.go.html")
+	t, err := template.ParseFS(webFs, "*/*/*.go.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgEcho(e *echo.Echo, h *handlerEcho) {
-	e.GET("/", h.home)
+func cfgEcho(e *echo.Echo, h *web.HandlerEcho) {
+	e.GET("/", h.Home)
 }
