@@ -10,24 +10,23 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/msg"
-
-	env "smecalculus/rolevod/app/env/core"
 )
 
 // adapter
-type HandlerEcho struct {
-	api  env.Api
+type handlerEcho struct {
+	api  Api
+	json msgConverter
 	html msg.Renderer
 	log  *slog.Logger
 }
 
-func NewHandlerEcho(a env.Api, r msg.Renderer, l *slog.Logger) *HandlerEcho {
-	name := slog.String("name", "env.HandlerEcho")
-	return &HandlerEcho{a, r, l.With(name)}
+func newHandlerEcho(a Api, c msgConverter, r msg.Renderer, l *slog.Logger) *handlerEcho {
+	name := slog.String("name", "env.handlerEcho")
+	return &handlerEcho{a, c, r, l.With(name)}
 }
 
-func (h *HandlerEcho) Post(c echo.Context) error {
-	var spec env.Spec
+func (h *handlerEcho) Post(c echo.Context) error {
+	var spec Spec
 	err1 := c.Bind(&spec)
 	if err1 != nil {
 		return c.String(http.StatusBadRequest, "bad request")
@@ -39,16 +38,16 @@ func (h *HandlerEcho) Post(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *HandlerEcho) Get(c echo.Context) error {
+func (h *handlerEcho) Get(c echo.Context) error {
 	mediaType, _, err := mime.ParseMediaType(c.Request().Header.Get(echo.HeaderAccept))
 	if err != nil {
 		return err
 	}
 	switch mediaType {
 	case echo.MIMEApplicationJSON, echo.MIMETextPlain, msg.MIMEAnyAny:
-		return c.JSON(http.StatusOK, env.Env{Id: core.New[env.Id]()})
+		return c.JSON(http.StatusOK, Root{Id: core.New[Id]()})
 	case echo.MIMETextHTML, echo.MIMETextHTMLCharsetUTF8:
-		blob, err := h.html.Render("env", env.Env{Id: core.New[env.Id]()})
+		blob, err := h.html.Render("env", Root{Id: core.New[Id]()})
 		if err != nil {
 			return err
 		}

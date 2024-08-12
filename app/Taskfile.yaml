@@ -13,10 +13,17 @@ vars:
       | head -c 7
 
 tasks:
-  binaries:
+  binary:
+    aliases: [bin]
     cmd: go build -o rolevod main.go
 
-  images:
+  process:
+    aliases: [proc, run]
+    cmds:
+      - go run github.com/jmattheis/goverter/cmd/goverter gen ./...
+      - go run main.go
+
+  image:
     status:
       - docker image inspect {{.IMAGE}}:{{.CID}}
     cmds:

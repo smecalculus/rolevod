@@ -18,13 +18,13 @@ tasks:
   component:binaries:
     aliases: [cbs]
     cmds:
-      - task: app:binaries
+      - task: app:binary
 
   component:packages:
     aliases: [cps]
     cmds:
       - task: db:images
-      - task: app:images
+      - task: app:image
 
   solution:packages:
     aliases: [sps]

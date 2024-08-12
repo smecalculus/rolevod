@@ -6,26 +6,19 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-// message
 type Spec struct {
-	Id string `json:"id"`
+	Name string
 }
 
 type Id core.Kind
 
-// domain
-type Env struct {
-	Id core.Id[Id]
-}
-
-// state
 type Root struct {
-	Id string
+	Id core.Id[Id]
 }
 
 // port
 type Api interface {
-	Create(Spec) (Env, error)
+	Create(Spec) (Root, error)
 }
 
 // core
@@ -34,21 +27,29 @@ type Service struct {
 	log  *slog.Logger
 }
 
-func NewService(repo Repo, log *slog.Logger) *Service {
+func NewService(r Repo, l *slog.Logger) *Service {
 	name := slog.String("name", "env.Service")
-	return &Service{repo, log.With(name)}
+	return &Service{r, l.With(name)}
 }
 
-func (s *Service) Create(spec Spec) (Env, error) {
+func (s *Service) Create(spec Spec) (Root, error) {
 	root := Root{}
 	err := s.repo.Insert(root)
 	if err != nil {
-		return Env{}, err
+		return root, err
 	}
-	return Env{}, nil
+	return root, nil
 }
 
 // port
 type Repo interface {
 	Insert(Root) error
+}
+
+func toCore(id string) (core.Id[Id], error) {
+	return core.FromString[Id](id)
+}
+
+func toEdge(id core.Id[Id]) string {
+	return core.ToString(id)
 }
