@@ -5,7 +5,6 @@ type RootData struct {
 }
 
 // goverter:converter
-// goverter:output:file ./generated.go
 // goverter:output:package smecalculus/rolevod/app/env
 // goverter:extend smecalculus/rolevod/app/env:to.*
 type dataConverter interface {

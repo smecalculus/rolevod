@@ -15,7 +15,7 @@ var Module = fx.Module("app/web",
 	fx.Provide(
 		fx.Private,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		NewHandlerEcho,
+		hewHandlerEcho,
 	),
 	fx.Invoke(
 		cfgEcho,
@@ -26,13 +26,13 @@ var Module = fx.Module("app/web",
 var webFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.ParseFS(webFs, "*/*.go.html")
+	t, err := template.ParseFS(webFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgEcho(e *echo.Echo, h *HandlerEcho) {
+func cfgEcho(e *echo.Echo, h *handlerEcho) {
 	e.GET("/", h.Home)
 }

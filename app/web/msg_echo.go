@@ -10,18 +10,18 @@ import (
 )
 
 // adapter
-type HandlerEcho struct {
+type handlerEcho struct {
 	renderer msg.Renderer
 	log      *slog.Logger
 }
 
-func NewHandlerEcho(r msg.Renderer, l *slog.Logger) *HandlerEcho {
-	name := slog.String("name", "web.HandlerEcho")
-	return &HandlerEcho{r, l.With(name)}
+func hewHandlerEcho(r msg.Renderer, l *slog.Logger) *handlerEcho {
+	name := slog.String("name", "web.handlerEcho")
+	return &handlerEcho{r, l.With(name)}
 }
 
-func (h *HandlerEcho) Home(c echo.Context) error {
-	blob, err := h.renderer.Render("home.go.html", nil)
+func (h *handlerEcho) Home(c echo.Context) error {
+	blob, err := h.renderer.Render("home.html", nil)
 	if err != nil {
 		return err
 	}
