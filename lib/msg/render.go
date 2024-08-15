@@ -23,7 +23,7 @@ type RendererStdlib struct {
 }
 
 func NewRendererStdlib(t *template.Template, l *slog.Logger) *RendererStdlib {
-	name := slog.String("name", "msg.rendererStdlib")
+	name := slog.String("name", "msg.RendererStdlib")
 	return &RendererStdlib{t, l.With(name)}
 }
 

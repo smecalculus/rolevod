@@ -3,8 +3,10 @@ package msg
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/lib/core"
@@ -29,19 +31,35 @@ func newCfg(k core.Keeper) (*props, error) {
 	return props, nil
 }
 
-func newEcho(props *props, lc fx.Lifecycle) *echo.Echo {
-	echo := echo.New()
-	echo.Debug = true
+func newEcho(p *props, l *slog.Logger, lc fx.Lifecycle) *echo.Echo {
+	e := echo.New()
+	log := l.With(slog.String("name", "echo.Echo"))
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogURI:      true,
+		LogError:    true,
+		HandleError: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			if v.Error != nil {
+				log.Error("handling failed",
+					slog.String("uri", v.URI),
+					slog.Int("status", v.Status),
+					slog.String("reason", v.Error.Error()),
+				)
+			}
+			return nil
+		},
+	}))
 	lc.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				go echo.Start(fmt.Sprintf(":%v", props.Protocol.Http.Port))
+				go e.Start(fmt.Sprintf(":%v", p.Protocol.Http.Port))
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				return echo.Shutdown(ctx)
+				return e.Shutdown(ctx)
 			},
 		},
 	)
-	return echo
+	return e
 }

@@ -20,6 +20,7 @@ tasks:
   process:
     aliases: [proc, run]
     cmds:
+      # -g 'useUnderlyingTypeMethods yes'
       - go run github.com/jmattheis/goverter/cmd/goverter gen -g 'output:file ./generated.go' ./...
       - go run main.go
 

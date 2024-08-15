@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
 
@@ -22,11 +23,11 @@ var Module = fx.Module("app/web",
 	),
 )
 
-//go:embed all:msg
+//go:embed all:view
 var webFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.ParseFS(webFs, "*/*.html")
+	t, err := template.New("web").Funcs(sprig.FuncMap()).ParseFS(webFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}

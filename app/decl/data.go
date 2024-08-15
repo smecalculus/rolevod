@@ -1,4 +1,4 @@
-package env
+package decl
 
 type RootData struct {
 	ID   string
@@ -6,10 +6,9 @@ type RootData struct {
 }
 
 // goverter:converter
-// goverter:output:package smecalculus/rolevod/app/env
-// goverter:extend smecalculus/rolevod/app/env:to.*
+// goverter:output:package smecalculus/rolevod/app/decl
+// goverter:extend smecalculus/rolevod/app/decl:To.*
 type dataConverter interface {
-	// goverter:ignore Decls
 	ToRoot(RootData) (Root, error)
 	ToRootData(Root) RootData
 }

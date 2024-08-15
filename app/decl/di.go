@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package env
+package decl
 
 import (
 	"embed"
@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/env",
+var Module = fx.Module("app/decl",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(Api))),
 		fx.Annotate(newMsgConverter, fx.As(new(MsgConverter))),
@@ -32,10 +32,10 @@ var Module = fx.Module("app/env",
 )
 
 //go:embed all:view
-var envFs embed.FS
+var declFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("env").Funcs(sprig.FuncMap()).ParseFS(envFs, "*/*.html")
+	t, err := template.New("decl").Funcs(sprig.FuncMap()).ParseFS(declFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -43,16 +43,16 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 }
 
 func newMsgConverter() MsgConverter {
+	// return nil
 	return &MsgConverterImpl{}
 }
 
 func newDataConverter() dataConverter {
+	// return nil
 	return &dataConverterImpl{}
 }
 
 func cfgEcho(e *echo.Echo, h *handlerEcho) error {
-	e.POST("/api/v1/envs", h.ApiPostOne)
-	e.GET("/api/v1/envs/:id", h.ApiGetOne)
-	e.GET("/gui/envs/:id", h.GuiGetOne)
+	e.GET("/gui/decls/:id", h.GuiGetOne)
 	return nil
 }

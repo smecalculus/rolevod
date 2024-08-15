@@ -15,45 +15,79 @@ import (
 // adapter
 type handlerEcho struct {
 	api  Api
-	json msgConverter
-	html msg.Renderer
+	conv MsgConverter
+	view msg.Renderer
 	log  *slog.Logger
 }
 
-func newHandlerEcho(a Api, c msgConverter, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a Api, c MsgConverter, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "env.handlerEcho")
 	return &handlerEcho{a, c, r, l.With(name)}
 }
 
-func (h *handlerEcho) Post(c echo.Context) error {
+func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	var spec Spec
-	err1 := c.Bind(&spec)
-	if err1 != nil {
-		return c.String(http.StatusBadRequest, "bad request")
+	err := c.Bind(&spec)
+	if err != nil {
+		return err
 	}
-	_, err2 := h.api.Create(spec)
-	if err2 != nil {
-		return c.String(http.StatusBadRequest, "bad request")
+	root, err := h.api.Create(spec)
+	if err != nil {
+		return err
 	}
-	return c.NoContent(http.StatusOK)
-}
-
-func (h *handlerEcho) Get(c echo.Context) error {
 	mediaType, _, err := mime.ParseMediaType(c.Request().Header.Get(echo.HeaderAccept))
 	if err != nil {
 		return err
 	}
 	switch mediaType {
 	case echo.MIMEApplicationJSON, echo.MIMETextPlain, msg.MIMEAnyAny:
-		return c.JSON(http.StatusOK, Root{Id: core.New[Id]()})
+		return c.JSON(http.StatusOK, h.conv.ToRootMsg(root))
 	case echo.MIMETextHTML, echo.MIMETextHTMLCharsetUTF8:
-		blob, err := h.html.Render("env", Root{Id: core.New[Id]()})
+		html, err := h.view.Render("root", root)
 		if err != nil {
 			return err
 		}
-		return c.HTMLBlob(http.StatusOK, blob)
+		return c.HTMLBlob(http.StatusOK, html)
 	default:
 		return echo.NewHTTPError(http.StatusUnsupportedMediaType,
 			fmt.Sprintf("unsupported media type: %v", mediaType))
 	}
+}
+
+func (h *handlerEcho) ApiGetOne(c echo.Context) error {
+	var params GetMsg
+	err := c.Bind(&params)
+	if err != nil {
+		return err
+	}
+	id, err := core.FromString[Env](params.ID)
+	if err != nil {
+		return err
+	}
+	root, err := h.api.Retrieve(id)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, h.conv.ToRootMsg(root))
+}
+
+func (h *handlerEcho) GuiGetOne(c echo.Context) error {
+	var params GetMsg
+	err := c.Bind(&params)
+	if err != nil {
+		return err
+	}
+	id, err := core.FromString[Env](params.ID)
+	if err != nil {
+		return err
+	}
+	root, err := h.api.Retrieve(id)
+	if err != nil {
+		return err
+	}
+	html, err := h.view.Render("envRoot", h.conv.ToRootMsg(root))
+	if err != nil {
+		return err
+	}
+	return c.HTMLBlob(http.StatusOK, html)
 }

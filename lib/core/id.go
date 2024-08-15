@@ -4,22 +4,22 @@ import (
 	"github.com/rs/xid"
 )
 
-type Kind interface{}
+type Entity interface{}
 
-type Id[T Kind] xid.ID
+type ID[T Entity] xid.ID
 
-func New[T Kind]() Id[T] {
-	return Id[T](xid.New())
+func New[T Entity]() ID[T] {
+	return ID[T](xid.New())
 }
 
-func ToString[T Kind](id Id[T]) string {
+func ToString[T Entity](id ID[T]) string {
 	return xid.ID(id).String()
 }
 
-func FromString[T Kind](sid string) (Id[T], error) {
+func FromString[T Entity](sid string) (ID[T], error) {
 	cid, err := xid.FromString(sid)
 	if err != nil {
-		return Id[T]{}, err
+		return ID[T]{}, err
 	}
-	return Id[T](cid), nil
+	return ID[T](cid), nil
 }

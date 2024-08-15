@@ -1,3 +1,4 @@
+{{$url := "/gui/envs"}}
 <!DOCTYPE html>
 <html>
     <head>
@@ -8,8 +9,21 @@
     </head>
     <body>
         {{ template "navbar" }}
-        <div class="container text-center">
-            <form action="/envs" method="post" x-data="{ kind: 'tpdef' }" hx-boost="true">
+        <div class="container">
+            <table class="table" id="envs">
+                <tbody>
+                {{range .}}
+                    <tr>
+                        <td>
+                            <a href="{{ $url }}/{{ .ID }}" hx-get="{{ $url }}/{{ .ID }}" hx-target="#envs" hx-swap="outerHTML" hx-push-url="true">{{ .Name }}</a>
+                        </td>
+                        <td>Decls: <a href="#">0</a></td>
+                    </tr>
+                {{end}}
+                </tbody>
+            </table>
+
+            <form>
                 <div class="row row-cols-auto">
                     <div class="col">
                         <select x-model="kind" class="form-select" aria-label="Select a kind">

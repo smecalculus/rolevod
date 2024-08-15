@@ -1,9 +1,8 @@
-package env
+package decl
 
 import (
 	"log/slog"
 
-	"smecalculus/rolevod/app/decl"
 	"smecalculus/rolevod/lib/core"
 )
 
@@ -11,18 +10,17 @@ type Spec struct {
 	Name string
 }
 
-type Env core.Entity
+type Decl core.Entity
 
 type Root struct {
-	ID    core.ID[Env]
-	Name  string
-	Decls []decl.Root
+	ID   core.ID[Decl]
+	Name string
 }
 
 // port
 type Api interface {
 	Create(Spec) (Root, error)
-	Retrieve(core.ID[Env]) (Root, error)
+	Retrieve(core.ID[Decl]) (Root, error)
 	RetreiveAll() ([]Root, error)
 }
 
@@ -33,13 +31,13 @@ type service struct {
 }
 
 func newService(r repo, l *slog.Logger) *service {
-	name := slog.String("name", "env.service")
+	name := slog.String("name", "decl.service")
 	return &service{r, l.With(name)}
 }
 
 func (s *service) Create(spec Spec) (Root, error) {
 	root := Root{
-		ID:   core.New[Env](),
+		ID:   core.New[Decl](),
 		Name: spec.Name,
 	}
 	err := s.repo.Insert(root)
@@ -49,7 +47,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 	return root, nil
 }
 
-func (s *service) Retrieve(id core.ID[Env]) (Root, error) {
+func (s *service) Retrieve(id core.ID[Decl]) (Root, error) {
 	root, err := s.repo.SelectById(id)
 	if err != nil {
 		return root, err
@@ -68,14 +66,14 @@ func (s *service) RetreiveAll() ([]Root, error) {
 // port
 type repo interface {
 	Insert(Root) error
-	SelectById(core.ID[Env]) (Root, error)
+	SelectById(core.ID[Decl]) (Root, error)
 	SelectAll() ([]Root, error)
 }
 
-func toCore(id string) (core.ID[Env], error) {
-	return core.FromString[Env](id)
+func ToCore(id string) (core.ID[Decl], error) {
+	return core.FromString[Decl](id)
 }
 
-func toEdge(id core.ID[Env]) string {
+func ToEdge(id core.ID[Decl]) string {
 	return core.ToString(id)
 }
