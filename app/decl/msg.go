@@ -19,7 +19,7 @@ type GetMsg struct {
 type MsgConverter interface {
 	ToSpec(SpecMsg) Spec
 	ToSpecMsg(Spec) SpecMsg
-	ToRoot(RootMsg) (Root, error)
-	ToRootMsg(Root) RootMsg
-	ToRootMsgs([]Root) []RootMsg
+	ToRoot(RootMsg) (TpDef, error)
+	ToRootMsg(TpDef) RootMsg
+	ToRootMsgs([]TpDef) []RootMsg
 }

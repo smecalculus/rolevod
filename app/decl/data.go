@@ -9,6 +9,6 @@ type RootData struct {
 // goverter:output:package smecalculus/rolevod/app/decl
 // goverter:extend smecalculus/rolevod/app/decl:To.*
 type dataConverter interface {
-	ToRoot(RootData) (Root, error)
-	ToRootData(Root) RootData
+	ToRoot(RootData) (TpDef, error)
+	ToRootData(TpDef) RootData
 }

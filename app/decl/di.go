@@ -53,6 +53,6 @@ func newDataConverter() dataConverter {
 }
 
 func cfgEcho(e *echo.Echo, h *handlerEcho) error {
-	e.GET("/gui/decls/:id", h.GuiGetOne)
+	e.GET("/ssr/decls/:id", h.SsrGetOne)
 	return nil
 }

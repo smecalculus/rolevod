@@ -29,7 +29,7 @@ type MsgConverter interface {
 	ToRootMsg(Root) RootMsg
 	ToRootMsgs([]Root) []RootMsg
 	// see https://github.com/jmattheis/goverter/issues/159
-	ToDeclRoot(decl.RootMsg) (decl.Root, error)
-	ToDeclRootMsg(decl.Root) decl.RootMsg
-	ToDeclRootMsgs([]decl.Root) []decl.RootMsg
+	ToDeclRoot(decl.RootMsg) (decl.TpDef, error)
+	ToDeclRootMsg(decl.TpDef) decl.RootMsg
+	ToDeclRootMsgs([]decl.TpDef) []decl.RootMsg
 }

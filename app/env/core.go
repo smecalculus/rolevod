@@ -16,7 +16,7 @@ type Env core.Entity
 type Root struct {
 	ID    core.ID[Env]
 	Name  string
-	Decls []decl.Root
+	Decls []decl.TpDef
 }
 
 // port

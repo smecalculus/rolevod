@@ -71,7 +71,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	return c.JSON(http.StatusOK, h.conv.ToRootMsg(root))
 }
 
-func (h *handlerEcho) GuiGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var params GetMsg
 	err := c.Bind(&params)
 	if err != nil {

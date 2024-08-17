@@ -28,10 +28,10 @@ func (r *repoPgx) Insert(root Root) error {
 }
 
 func (r *repoPgx) SelectById(id core.ID[Env]) (Root, error) {
-	decls := make([]decl.Root, 5)
+	decls := make([]decl.TpDef, 5)
 	for i := range 5 {
-		decls[i] = decl.Root{
-			ID:   core.New[decl.Decl](),
+		decls[i] = decl.TpDef{
+			ID:   core.New[decl.Dcl](),
 			Name: fmt.Sprintf("Foo%v", i)}
 	}
 	return Root{id, "Foo", decls}, nil
@@ -40,7 +40,7 @@ func (r *repoPgx) SelectById(id core.ID[Env]) (Root, error) {
 func (r *repoPgx) SelectAll() ([]Root, error) {
 	roots := make([]Root, 5)
 	for i := range 5 {
-		roots[i] = Root{core.New[Env](), fmt.Sprintf("Foo%v", i), []decl.Root{}}
+		roots[i] = Root{core.New[Env](), fmt.Sprintf("Foo%v", i), []decl.TpDef{}}
 	}
 	return roots, nil
 }

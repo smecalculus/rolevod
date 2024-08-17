@@ -1,4 +1,3 @@
-{{$url := "/gui/envs"}}
 <!DOCTYPE html>
 <html>
     <head>
@@ -12,10 +11,11 @@
         <div class="container">
             <table class="table" id="envs">
                 <tbody>
+                {{$url := "/ssr/envs"}}
                 {{range .}}
                     <tr>
                         <td>
-                            <a href="{{ $url }}/{{ .ID }}" hx-get="{{ $url }}/{{ .ID }}" hx-target="#envs" hx-swap="outerHTML" hx-push-url="true">{{ .Name }}</a>
+                            <a href="{{ $url }}/{{ .ID }}" hx-boost="true" hx-target="#envs" hx-swap="outerHTML">{{ .Name }}</a>
                         </td>
                         <td>Decls: <a href="#">0</a></td>
                     </tr>

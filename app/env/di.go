@@ -53,6 +53,6 @@ func newDataConverter() dataConverter {
 func cfgEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/envs", h.ApiPostOne)
 	e.GET("/api/v1/envs/:id", h.ApiGetOne)
-	e.GET("/gui/envs/:id", h.GuiGetOne)
+	e.GET("/ssr/envs/:id", h.SsrGetOne)
 	return nil
 }

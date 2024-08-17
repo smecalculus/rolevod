@@ -23,13 +23,13 @@ func newHandlerEcho(a Api, c MsgConverter, r msg.Renderer, l *slog.Logger) *hand
 	return &handlerEcho{a, c, r, l.With(name)}
 }
 
-func (h *handlerEcho) GuiGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var params GetMsg
 	err := c.Bind(&params)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Decl](params.ID)
+	id, err := core.FromString[Dcl](params.ID)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,11 @@ func (h *handlerEcho) GuiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("declRoot", h.conv.ToRootMsg(root))
+	var html []byte
+	switch decl := root.(type) {
+	case TpDef:
+		html, err = h.view.Render("declRoot", h.conv.ToRootMsg(decl))
+	}
 	if err != nil {
 		return err
 	}
