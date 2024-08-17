@@ -1,4 +1,4 @@
-package decl
+package dcl
 
 import (
 	"log/slog"
@@ -153,5 +153,13 @@ func ToCore(id string) (core.ID[Dcl], error) {
 }
 
 func ToEdge(id core.ID[Dcl]) string {
+	return core.ToString(id)
+}
+
+func toCore(id string) (core.ID[Dcl], error) {
+	return core.FromString[Dcl](id)
+}
+
+func toEdge(id core.ID[Dcl]) string {
 	return core.ToString(id)
 }

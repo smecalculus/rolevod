@@ -15,14 +15,13 @@ import (
 // adapter
 type handlerEcho struct {
 	api  Api
-	conv MsgConverter
 	view msg.Renderer
 	log  *slog.Logger
 }
 
-func newHandlerEcho(a Api, c MsgConverter, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "env.handlerEcho")
-	return &handlerEcho{a, c, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
 func (h *handlerEcho) ApiPostOne(c echo.Context) error {
@@ -41,7 +40,7 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	}
 	switch mediaType {
 	case echo.MIMEApplicationJSON, echo.MIMETextPlain, msg.MIMEAnyAny:
-		return c.JSON(http.StatusOK, h.conv.ToRootMsg(root))
+		return c.JSON(http.StatusOK, ToRootMsg(root))
 	case echo.MIMETextHTML, echo.MIMETextHTMLCharsetUTF8:
 		html, err := h.view.Render("root", root)
 		if err != nil {
@@ -68,7 +67,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, h.conv.ToRootMsg(root))
+	return c.JSON(http.StatusOK, ToRootMsg(root))
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
@@ -85,7 +84,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("envRoot", h.conv.ToRootMsg(root))
+	html, err := h.view.Render("envRoot", ToRootMsg(root))
 	if err != nil {
 		return err
 	}

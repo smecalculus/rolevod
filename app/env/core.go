@@ -3,7 +3,7 @@ package env
 import (
 	"log/slog"
 
-	"smecalculus/rolevod/app/decl"
+	"smecalculus/rolevod/app/dcl"
 	"smecalculus/rolevod/lib/core"
 )
 
@@ -16,7 +16,7 @@ type Env core.Entity
 type Root struct {
 	ID    core.ID[Env]
 	Name  string
-	Decls []decl.TpDef
+	Decls []dcl.TpDef
 }
 
 // port

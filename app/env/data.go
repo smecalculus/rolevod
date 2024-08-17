@@ -5,11 +5,11 @@ type RootData struct {
 	Name string
 }
 
-// goverter:converter
-// goverter:output:package smecalculus/rolevod/app/env
+// goverter:variables
+// goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/app/env:to.*
-type dataConverter interface {
+var (
 	// goverter:ignore Decls
-	ToRoot(RootData) (Root, error)
-	ToRootData(Root) RootData
-}
+	FromRootData func(RootData) (Root, error)
+	ToRootData   func(Root) RootData
+)

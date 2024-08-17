@@ -1,4 +1,4 @@
-package decl
+package dcl
 
 import (
 	"log/slog"
@@ -13,14 +13,13 @@ import (
 // adapter
 type handlerEcho struct {
 	api  Api
-	conv MsgConverter
 	view msg.Renderer
 	log  *slog.Logger
 }
 
-func newHandlerEcho(a Api, c MsgConverter, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "decl.handlerEcho")
-	return &handlerEcho{a, c, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
@@ -40,7 +39,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var html []byte
 	switch decl := root.(type) {
 	case TpDef:
-		html, err = h.view.Render("declRoot", h.conv.ToRootMsg(decl))
+		html, err = h.view.Render("declRoot", ToRootMsg(decl))
 	}
 	if err != nil {
 		return err

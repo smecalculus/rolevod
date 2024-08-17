@@ -23,3 +23,11 @@ func FromString[T Entity](sid string) (ID[T], error) {
 	}
 	return ID[T](cid), nil
 }
+
+func ToString1(id xid.ID) string {
+	return id.String()
+}
+
+func FromString1(id string) (xid.ID, error) {
+	return xid.FromString(id)
+}

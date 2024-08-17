@@ -1,4 +1,4 @@
-package decl
+package dcl
 
 import (
 	"fmt"
@@ -11,14 +11,13 @@ import (
 
 // adapter
 type repoPgx struct {
-	conv dataConverter
 	conn *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newRepoPgx(c dataConverter, p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "decl.repoPgx")
-	return &repoPgx{c, p, l.With(name)}
+	return &repoPgx{p, l.With(name)}
 }
 
 func (r *repoPgx) Insert(tpDef TpDef) error {
