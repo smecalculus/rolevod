@@ -1,9 +1,14 @@
 package dcl
 
 import (
+	"errors"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/core"
+)
+
+var (
+	ErrUnexpectedSt = errors.New("unexpected session type")
 )
 
 type Tpname = string
@@ -22,6 +27,25 @@ type TpSpec struct {
 }
 
 type ExpSpec struct {
+	Name Expname
+}
+
+// Aggregate Root
+type AR interface {
+	dcl()
+}
+
+func (TpRoot) dcl()  {}
+func (ExpRoot) dcl() {}
+
+type TpRoot struct {
+	ID   core.ID[AR]
+	Name Tpname
+	St   Stype
+}
+
+type ExpRoot struct {
+	ID   core.ID[AR]
 	Name Expname
 }
 
@@ -66,7 +90,8 @@ type Lolli struct {
 type One struct{}
 
 type TpName struct {
-	A Tpname
+	ID   core.ID[AR]
+	Name Tpname
 }
 
 type Up struct {
@@ -80,24 +105,6 @@ type Down struct {
 type ChanTp struct {
 	X Chan
 	A Stype
-}
-
-// Aggregate Root
-type AR interface {
-	dcl()
-}
-
-func (TpRoot) dcl()  {}
-func (ExpRoot) dcl() {}
-
-type TpRoot struct {
-	ID   core.ID[AR]
-	Name Tpname
-}
-
-type ExpRoot struct {
-	ID   core.ID[AR]
-	Name Expname
 }
 
 // Port

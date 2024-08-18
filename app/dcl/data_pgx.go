@@ -25,13 +25,31 @@ func (r *tpRepoPgx) Insert(tp TpRoot) error {
 }
 
 func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
-	return TpRoot{id, "TpDef"}, nil
+	fooId := core.New[AR]()
+	queue := With{
+		Choices{
+			"enq": Tensor{
+				TpName{fooId, "Foo"},
+				TpName{id, "Queue"},
+			},
+			"deq": Plus{
+				Choices{
+					"some": Lolli{
+						TpName{fooId, "Foo"},
+						TpName{id, "Queue"},
+					},
+					"none": One{},
+				},
+			},
+		},
+	}
+	return TpRoot{id, "Queue", queue}, nil
 }
 
 func (r *tpRepoPgx) SelectAll() ([]TpRoot, error) {
 	tpDefs := make([]TpRoot, 5)
 	for i := range 5 {
-		tpDefs[i] = TpRoot{core.New[AR](), fmt.Sprintf("TpDef%v", i)}
+		tpDefs[i] = TpRoot{core.New[AR](), fmt.Sprintf("TpRoot%v", i), One{}}
 	}
 	return tpDefs, nil
 }
@@ -52,13 +70,13 @@ func (r *expRepoPgx) Insert(exp ExpRoot) error {
 }
 
 func (r *expRepoPgx) SelectById(id core.ID[AR]) (ExpRoot, error) {
-	return ExpRoot{id, "ExpDec"}, nil
+	return ExpRoot{id, "ExpRoot"}, nil
 }
 
 func (r *expRepoPgx) SelectAll() ([]ExpRoot, error) {
 	expDecs := make([]ExpRoot, 5)
 	for i := range 5 {
-		expDecs[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpDec%v", i)}
+		expDecs[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpRoot%v", i)}
 	}
 	return expDecs, nil
 }

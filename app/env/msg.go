@@ -8,15 +8,15 @@ type SpecMsg struct {
 	Name string `json:"name"`
 }
 
-type RootMsg struct {
-	ID   string        `json:"id"`
-	Name string        `json:"name"`
-	Tps  []dcl.RootMsg `json:"tps"`
-	Exps []dcl.RootMsg `json:"exps"`
+type RefMsg struct {
+	ID string `param:"id" json:"id"`
 }
 
-type GetMsg struct {
-	ID string `param:"id"`
+type RootMsg struct {
+	ID   string           `json:"id"`
+	Name string           `json:"name"`
+	Tps  []dcl.TpRootMsg  `json:"tps"`
+	Exps []dcl.ExpRootMsg `json:"exps"`
 }
 
 // goverter:variables

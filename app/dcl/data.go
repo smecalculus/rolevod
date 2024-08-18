@@ -9,6 +9,7 @@ type RootData struct {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	DataToTpDef   func(RootData) (TpRoot, error)
-	DataFromTpDef func(TpRoot) RootData
+	// goverter:ignore St
+	DataToTpRoot   func(RootData) (TpRoot, error)
+	DataFromTpRoot func(TpRoot) RootData
 )

@@ -23,20 +23,20 @@ func newTpHandlerEcho(a TpApi, r msg.Renderer, l *slog.Logger) *tpHandlerEcho {
 }
 
 func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
-	var params GetMsg
-	err := c.Bind(&params)
+	var ref RefMsg
+	err := c.Bind(&ref)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[AR](params.ID)
+	id, err := core.FromString[AR](ref.ID)
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Retrieve(id)
+	ar, err := h.api.Retrieve(id)
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("dclRoot", MsgFromTpRoot(root))
+	html, err := h.view.Render("dclRoot", MsgFromTpRoot(ar))
 	if err != nil {
 		return err
 	}
@@ -56,20 +56,20 @@ func newExpHandlerEcho(a ExpApi, r msg.Renderer, l *slog.Logger) *expHandlerEcho
 }
 
 func (h *expHandlerEcho) SsrGetOne(c echo.Context) error {
-	var params GetMsg
-	err := c.Bind(&params)
+	var ref RefMsg
+	err := c.Bind(&ref)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[AR](params.ID)
+	id, err := core.FromString[AR](ref.ID)
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Retrieve(id)
+	ar, err := h.api.Retrieve(id)
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("dclRoot", MsgFromExpRoot(root))
+	html, err := h.view.Render("dclRoot", MsgFromExpRoot(ar))
 	if err != nil {
 		return err
 	}

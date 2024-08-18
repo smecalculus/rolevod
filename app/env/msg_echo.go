@@ -54,7 +54,7 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var params GetMsg
+	var params RefMsg
 	err := c.Bind(&params)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var params GetMsg
+	var params RefMsg
 	err := c.Bind(&params)
 	if err != nil {
 		return err

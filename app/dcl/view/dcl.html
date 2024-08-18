@@ -1,17 +1,57 @@
 {{define "dclRoot"}}
-    <fieldset>
-        <div class="row text-start">
-            <legend class="form-label">Decl</legend>
-        </div>
-        <div class="row row-cols-auto">
-            <label class="col-form-label">ID</label>
-            <div class="col">
-                <input disabled type="text" class="form-control" value="{{ .ID }}" aria-label="ID">
+    <div id="dcl">
+        <fieldset>
+            <div class="row text-start">
+                <legend class="form-label">Decl</legend>
             </div>
-            <label class="col-form-label">Name</label>
-            <div class="col">
-                <input disabled type="text" class="form-control" value="{{ .Name }}" aria-label="Name">
+            <div class="row row-cols-auto">
+                <label class="col-form-label">ID</label>
+                <div class="col">
+                    <input disabled type="text" class="form-control" value="{{ .ID }}" aria-label="ID">
+                </div>
+                <label class="col-form-label">Name</label>
+                <div class="col">
+                    <input disabled type="text" class="form-control" value="{{ .Name }}" aria-label="Name">
+                </div>
             </div>
-        </div>
-    </fieldset>
+        </fieldset>
+        <hr />
+        {{ template "st" .St }}
+    </div>
+{{end}}
+
+{{define "st"}}
+    {{ if eq .T "ref"}}
+        <a href="/ssr/tps/{{ .ID }}" hx-target="#dcl" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+    {{ else if or (eq .T "tensor") (eq .T "lolli")}}
+        <ul>
+            <li>
+                {{ template "st" .M }}
+                {{ .T }}
+            {{if eq .S.T "ref"}}
+                {{ template "st" .S }}
+            {{else}}
+                {{.S.T}}
+            {{end}}
+            </li>
+            {{if ne .S.T "ref"}}
+                {{ template "st" .S }}
+            {{end}}
+        </ul>
+    {{ else if or (eq .T "plus") (eq .T "with")}}
+        <ul>
+            <li>
+            {{range $label, $st := .Chs}}
+                <details open>
+                    <summary>{{ $label }}</summary>
+                    <ul>
+                        {{ template "st" $st }}
+                    </ul>
+                </details>
+            {{end}}
+            </li>
+        </ul>
+    {{else}}
+        {{ .T }}
+    {{end}}
 {{end}}

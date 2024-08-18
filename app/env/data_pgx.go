@@ -31,13 +31,13 @@ func (r *repoPgx) SelectById(id core.ID[AR]) (AR, error) {
 	for i := range 5 {
 		tpDefs[i] = dcl.TpRoot{
 			ID:   core.New[dcl.AR](),
-			Name: fmt.Sprintf("TpDef%v", i)}
+			Name: fmt.Sprintf("TpRoot%v", i)}
 	}
 	expDecs := make([]dcl.ExpRoot, 5)
 	for i := range 5 {
 		expDecs[i] = dcl.ExpRoot{
 			ID:   core.New[dcl.AR](),
-			Name: fmt.Sprintf("ExpDec%v", i)}
+			Name: fmt.Sprintf("ExpRoot%v", i)}
 	}
 	return AR{id, "Foo", tpDefs, expDecs}, nil
 }
