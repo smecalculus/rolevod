@@ -11,11 +11,10 @@
         <div class="container">
             <table class="table" id="envs">
                 <tbody>
-                {{$url := "/ssr/envs"}}
                 {{range .}}
                     <tr>
                         <td>
-                            <a href="{{ $url }}/{{ .ID }}" hx-boost="true" hx-target="#envs" hx-swap="outerHTML">{{ .Name }}</a>
+                            <a href="/ssr/envs/{{ .ID }}" hx-target="#envs" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
                         </td>
                         <td>Decls: <a href="#">0</a></td>
                     </tr>

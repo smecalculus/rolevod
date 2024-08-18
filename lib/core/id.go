@@ -4,19 +4,17 @@ import (
 	"github.com/rs/xid"
 )
 
-type Entity interface{}
+type ID[T any] xid.ID
 
-type ID[T Entity] xid.ID
-
-func New[T Entity]() ID[T] {
+func New[T any]() ID[T] {
 	return ID[T](xid.New())
 }
 
-func ToString[T Entity](id ID[T]) string {
+func ToString[T any](id ID[T]) string {
 	return xid.ID(id).String()
 }
 
-func FromString[T Entity](sid string) (ID[T], error) {
+func FromString[T any](sid string) (ID[T], error) {
 	cid, err := xid.FromString(sid)
 	if err != nil {
 		return ID[T]{}, err
@@ -24,10 +22,10 @@ func FromString[T Entity](sid string) (ID[T], error) {
 	return ID[T](cid), nil
 }
 
-func ToString1(id xid.ID) string {
+func toString(id xid.ID) string {
 	return id.String()
 }
 
-func FromString1(id string) (xid.ID, error) {
+func fromString(id string) (xid.ID, error) {
 	return xid.FromString(id)
 }

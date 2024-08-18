@@ -7,26 +7,26 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-type Spec struct {
+// Aggregate Spec
+type AS struct {
 	Name string
 }
 
-type Env core.Entity
-
-type Root struct {
-	ID    core.ID[Env]
-	Name  string
-	Decls []dcl.TpDef
+// Aggregate Root
+type AR struct {
+	ID   core.ID[AR]
+	Name string
+	Tps  []dcl.TpRoot
+	Exps []dcl.ExpRoot
 }
 
-// port
+// Port
 type Api interface {
-	Create(Spec) (Root, error)
-	Retrieve(core.ID[Env]) (Root, error)
-	RetreiveAll() ([]Root, error)
+	Create(AS) (AR, error)
+	Retrieve(core.ID[AR]) (AR, error)
+	RetreiveAll() ([]AR, error)
 }
 
-// core
 type service struct {
 	repo repo
 	log  *slog.Logger
@@ -37,9 +37,9 @@ func newService(r repo, l *slog.Logger) *service {
 	return &service{r, l.With(name)}
 }
 
-func (s *service) Create(spec Spec) (Root, error) {
-	root := Root{
-		ID:   core.New[Env](),
+func (s *service) Create(spec AS) (AR, error) {
+	root := AR{
+		ID:   core.New[AR](),
 		Name: spec.Name,
 	}
 	err := s.repo.Insert(root)
@@ -49,7 +49,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 	return root, nil
 }
 
-func (s *service) Retrieve(id core.ID[Env]) (Root, error) {
+func (s *service) Retrieve(id core.ID[AR]) (AR, error) {
 	root, err := s.repo.SelectById(id)
 	if err != nil {
 		return root, err
@@ -57,7 +57,7 @@ func (s *service) Retrieve(id core.ID[Env]) (Root, error) {
 	return root, nil
 }
 
-func (s *service) RetreiveAll() ([]Root, error) {
+func (s *service) RetreiveAll() ([]AR, error) {
 	roots, err := s.repo.SelectAll()
 	if err != nil {
 		return roots, err
@@ -65,17 +65,17 @@ func (s *service) RetreiveAll() ([]Root, error) {
 	return roots, nil
 }
 
-// port
+// Port
 type repo interface {
-	Insert(Root) error
-	SelectById(core.ID[Env]) (Root, error)
-	SelectAll() ([]Root, error)
+	Insert(AR) error
+	SelectById(core.ID[AR]) (AR, error)
+	SelectAll() ([]AR, error)
 }
 
-func toCore(id string) (core.ID[Env], error) {
-	return core.FromString[Env](id)
+func toCore(id string) (core.ID[AR], error) {
+	return core.FromString[AR](id)
 }
 
-func toEdge(id core.ID[Env]) string {
+func toEdge(id core.ID[AR]) string {
 	return core.ToString(id)
 }

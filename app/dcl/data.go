@@ -7,8 +7,8 @@ type RootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/app/dcl:to.*
+// goverter:extend to.*
 var (
-	FromRootData func(RootData) (TpDef, error)
-	ToRootData   func(TpDef) RootData
+	DataToTpDef   func(RootData) (TpRoot, error)
+	DataFromTpDef func(TpRoot) RootData
 )

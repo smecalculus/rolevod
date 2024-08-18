@@ -10,25 +10,25 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-// adapter
-type handlerEcho struct {
-	api  Api
+// Adapter
+type tpHandlerEcho struct {
+	api  TpApi
 	view msg.Renderer
 	log  *slog.Logger
 }
 
-func newHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *handlerEcho {
-	name := slog.String("name", "decl.handlerEcho")
-	return &handlerEcho{a, r, l.With(name)}
+func newTpHandlerEcho(a TpApi, r msg.Renderer, l *slog.Logger) *tpHandlerEcho {
+	name := slog.String("name", "dcl.tpHandlerEcho")
+	return &tpHandlerEcho{a, r, l.With(name)}
 }
 
-func (h *handlerEcho) SsrGetOne(c echo.Context) error {
+func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
 	var params GetMsg
 	err := c.Bind(&params)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Dcl](params.ID)
+	id, err := core.FromString[AR](params.ID)
 	if err != nil {
 		return err
 	}
@@ -36,11 +36,40 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	var html []byte
-	switch decl := root.(type) {
-	case TpDef:
-		html, err = h.view.Render("declRoot", ToRootMsg(decl))
+	html, err := h.view.Render("dclRoot", MsgFromTpRoot(root))
+	if err != nil {
+		return err
 	}
+	return c.HTMLBlob(http.StatusOK, html)
+}
+
+// Adapter
+type expHandlerEcho struct {
+	api  ExpApi
+	view msg.Renderer
+	log  *slog.Logger
+}
+
+func newExpHandlerEcho(a ExpApi, r msg.Renderer, l *slog.Logger) *expHandlerEcho {
+	name := slog.String("name", "dcl.expHandlerEcho")
+	return &expHandlerEcho{a, r, l.With(name)}
+}
+
+func (h *expHandlerEcho) SsrGetOne(c echo.Context) error {
+	var params GetMsg
+	err := c.Bind(&params)
+	if err != nil {
+		return err
+	}
+	id, err := core.FromString[AR](params.ID)
+	if err != nil {
+		return err
+	}
+	root, err := h.api.Retrieve(id)
+	if err != nil {
+		return err
+	}
+	html, err := h.view.Render("dclRoot", MsgFromExpRoot(root))
 	if err != nil {
 		return err
 	}

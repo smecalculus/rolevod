@@ -9,9 +9,10 @@ type SpecMsg struct {
 }
 
 type RootMsg struct {
-	ID    string        `json:"id"`
-	Name  string        `json:"name"`
-	Decls []dcl.RootMsg `json:"decls"`
+	ID   string        `json:"id"`
+	Name string        `json:"name"`
+	Tps  []dcl.RootMsg `json:"tps"`
+	Exps []dcl.RootMsg `json:"exps"`
 }
 
 type GetMsg struct {
@@ -20,12 +21,11 @@ type GetMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/app/env:to.*
-// goverter:extend smecalculus/rolevod/app/dcl:To.*
+// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/app/dcl:Msg.*
 var (
-	ToSpec     func(SpecMsg) Spec
-	ToSpecMsg  func(Spec) SpecMsg
-	ToRoot     func(RootMsg) (Root, error)
-	ToRootMsg  func(Root) RootMsg
-	ToRootMsgs func([]Root) []RootMsg
+	MsgToSpec    func(SpecMsg) AS
+	MsgFromSpec  func(AS) SpecMsg
+	MsgFromRoot  func(AR) RootMsg
+	MsgFromRoots func([]AR) []RootMsg
 )

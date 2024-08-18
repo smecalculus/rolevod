@@ -11,7 +11,7 @@ import (
 	"smecalculus/rolevod/app/dcl"
 )
 
-// adapter
+// Adapter
 type repoPgx struct {
 	conn *pgxpool.Pool
 	log  *slog.Logger
@@ -22,24 +22,30 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	return &repoPgx{p, l.With(name)}
 }
 
-func (r *repoPgx) Insert(root Root) error {
+func (r *repoPgx) Insert(root AR) error {
 	return nil
 }
 
-func (r *repoPgx) SelectById(id core.ID[Env]) (Root, error) {
-	decls := make([]dcl.TpDef, 5)
+func (r *repoPgx) SelectById(id core.ID[AR]) (AR, error) {
+	tpDefs := make([]dcl.TpRoot, 5)
 	for i := range 5 {
-		decls[i] = dcl.TpDef{
-			ID:   core.New[dcl.Dcl](),
-			Name: fmt.Sprintf("Foo%v", i)}
+		tpDefs[i] = dcl.TpRoot{
+			ID:   core.New[dcl.AR](),
+			Name: fmt.Sprintf("TpDef%v", i)}
 	}
-	return Root{id, "Foo", decls}, nil
+	expDecs := make([]dcl.ExpRoot, 5)
+	for i := range 5 {
+		expDecs[i] = dcl.ExpRoot{
+			ID:   core.New[dcl.AR](),
+			Name: fmt.Sprintf("ExpDec%v", i)}
+	}
+	return AR{id, "Foo", tpDefs, expDecs}, nil
 }
 
-func (r *repoPgx) SelectAll() ([]Root, error) {
-	roots := make([]Root, 5)
+func (r *repoPgx) SelectAll() ([]AR, error) {
+	roots := make([]AR, 5)
 	for i := range 5 {
-		roots[i] = Root{core.New[Env](), fmt.Sprintf("Foo%v", i), []dcl.TpDef{}}
+		roots[i] = AR{core.New[AR](), fmt.Sprintf("Foo%v", i), []dcl.TpRoot{}, []dcl.ExpRoot{}}
 	}
 	return roots, nil
 }

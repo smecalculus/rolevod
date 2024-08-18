@@ -15,11 +15,14 @@ type GetMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/app/dcl:to.*
+// goverter:extend to.*
 var (
-	ToSpec     func(SpecMsg) Spec
-	ToSpecMsg  func(Spec) SpecMsg
-	ToRoot     func(RootMsg) (TpDef, error)
-	ToRootMsg  func(TpDef) RootMsg
-	ToRootMsgs func([]TpDef) []RootMsg
+	MsgToTpSpec     func(SpecMsg) TpSpec
+	MsgFromTpSpec   func(TpSpec) SpecMsg
+	MsgToExpSpec    func(SpecMsg) ExpSpec
+	MsgFromExpSpec  func(ExpSpec) SpecMsg
+	MsgFromTpRoot   func(TpRoot) RootMsg
+	MsgFromTpRoots  func([]TpRoot) []RootMsg
+	MsgFromExpRoot  func(ExpRoot) RootMsg
+	MsgFromExpRoots func([]ExpRoot) []RootMsg
 )

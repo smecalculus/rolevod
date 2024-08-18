@@ -16,16 +16,20 @@ import (
 
 var Module = fx.Module("app/dcl",
 	fx.Provide(
-		fx.Annotate(newService, fx.As(new(Api))),
+		fx.Annotate(newTpService, fx.As(new(TpApi))),
+		fx.Annotate(newExpService, fx.As(new(ExpApi))),
 	),
 	fx.Provide(
 		fx.Private,
-		newHandlerEcho,
+		newTpHandlerEcho,
+		newExpHandlerEcho,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		fx.Annotate(newRepoPgx, fx.As(new(repo))),
+		fx.Annotate(newTpRepoPgx, fx.As(new(repo[TpRoot]))),
+		fx.Annotate(newExpRepoPgx, fx.As(new(repo[ExpRoot]))),
 	),
 	fx.Invoke(
-		cfgEcho,
+		cfgTpEcho,
+		cfgExpEcho,
 	),
 )
 
@@ -33,14 +37,19 @@ var Module = fx.Module("app/dcl",
 var declFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("decl").Funcs(sprig.FuncMap()).ParseFS(declFs, "*/*.html")
+	t, err := template.New("dcl").Funcs(sprig.FuncMap()).ParseFS(declFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgEcho(e *echo.Echo, h *handlerEcho) error {
-	e.GET("/ssr/decls/:id", h.SsrGetOne)
+func cfgTpEcho(e *echo.Echo, h *tpHandlerEcho) error {
+	e.GET("/ssr/tps/:id", h.SsrGetOne)
+	return nil
+}
+
+func cfgExpEcho(e *echo.Echo, h *expHandlerEcho) error {
+	e.GET("/ssr/exps/:id", h.SsrGetOne)
 	return nil
 }

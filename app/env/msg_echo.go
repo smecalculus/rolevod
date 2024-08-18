@@ -12,7 +12,7 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-// adapter
+// Adapter
 type handlerEcho struct {
 	api  Api
 	view msg.Renderer
@@ -25,7 +25,7 @@ func newHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *handlerEcho {
 }
 
 func (h *handlerEcho) ApiPostOne(c echo.Context) error {
-	var spec Spec
+	var spec AS
 	err := c.Bind(&spec)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	}
 	switch mediaType {
 	case echo.MIMEApplicationJSON, echo.MIMETextPlain, msg.MIMEAnyAny:
-		return c.JSON(http.StatusOK, ToRootMsg(root))
+		return c.JSON(http.StatusOK, MsgFromRoot(root))
 	case echo.MIMETextHTML, echo.MIMETextHTMLCharsetUTF8:
 		html, err := h.view.Render("root", root)
 		if err != nil {
@@ -59,7 +59,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Env](params.ID)
+	id, err := core.FromString[AR](params.ID)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, ToRootMsg(root))
+	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
@@ -76,7 +76,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Env](params.ID)
+	id, err := core.FromString[AR](params.ID)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("envRoot", ToRootMsg(root))
+	html, err := h.view.Render("envRoot", MsgFromRoot(root))
 	if err != nil {
 		return err
 	}

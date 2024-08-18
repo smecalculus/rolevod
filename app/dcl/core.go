@@ -6,8 +6,23 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-type Spec struct {
-	Name string
+type Tpname = string
+type Expname = string
+
+// Aggregate Spec
+type AS interface {
+	dcl()
+}
+
+func (TpSpec) dcl()  {}
+func (ExpSpec) dcl() {}
+
+type TpSpec struct {
+	Name Tpname
+}
+
+type ExpSpec struct {
+	Name Expname
 }
 
 type Label string
@@ -67,51 +82,44 @@ type ChanTp struct {
 	A Stype
 }
 
-type Dcl core.Entity
-
-type Root interface {
-	decl()
+// Aggregate Root
+type AR interface {
+	dcl()
 }
 
-func (TpDef) decl()     {}
-func (ExpDecDef) decl() {}
+func (TpRoot) dcl()  {}
+func (ExpRoot) dcl() {}
 
-type Tpname = string
-
-type TpDef struct {
-	ID   core.ID[Dcl]
+type TpRoot struct {
+	ID   core.ID[AR]
 	Name Tpname
 }
 
-type Expname = string
-
-type ExpDecDef struct {
-	ID   core.ID[Dcl]
+type ExpRoot struct {
+	ID   core.ID[AR]
 	Name Expname
-	Zc   ChanTp
 }
 
-// port
-type Api interface {
-	Create(Spec) (Root, error)
-	Retrieve(core.ID[Dcl]) (Root, error)
-	RetreiveAll() ([]Root, error)
+// Port
+type TpApi interface {
+	Create(TpSpec) (TpRoot, error)
+	Retrieve(core.ID[AR]) (TpRoot, error)
+	RetreiveAll() ([]TpRoot, error)
 }
 
-// core
-type service struct {
-	repo repo
+type tpService struct {
+	repo repo[TpRoot]
 	log  *slog.Logger
 }
 
-func newService(r repo, l *slog.Logger) *service {
-	name := slog.String("name", "decl.service")
-	return &service{r, l.With(name)}
+func newTpService(r repo[TpRoot], l *slog.Logger) *tpService {
+	name := slog.String("name", "dcl.tpService")
+	return &tpService{r, l.With(name)}
 }
 
-func (s *service) Create(spec Spec) (Root, error) {
-	root := TpDef{
-		ID:   core.New[Dcl](),
+func (s *tpService) Create(spec TpSpec) (TpRoot, error) {
+	root := TpRoot{
+		ID:   core.New[AR](),
 		Name: spec.Name,
 	}
 	err := s.repo.Insert(root)
@@ -121,7 +129,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 	return root, nil
 }
 
-func (s *service) Retrieve(id core.ID[Dcl]) (Root, error) {
+func (s *tpService) Retrieve(id core.ID[AR]) (TpRoot, error) {
 	root, err := s.repo.SelectById(id)
 	if err != nil {
 		return root, err
@@ -129,37 +137,70 @@ func (s *service) Retrieve(id core.ID[Dcl]) (Root, error) {
 	return root, nil
 }
 
-func (s *service) RetreiveAll() ([]Root, error) {
-	tpDefs, err := s.repo.SelectAll()
+func (s *tpService) RetreiveAll() ([]TpRoot, error) {
+	roots, err := s.repo.SelectAll()
 	if err != nil {
 		return nil, err
-	}
-	roots := make([]Root, len(tpDefs))
-	for i, v := range tpDefs {
-		roots[i] = Root(v)
 	}
 	return roots, nil
 }
 
-// port
-type repo interface {
-	Insert(TpDef) error
-	SelectById(core.ID[Dcl]) (TpDef, error)
-	SelectAll() ([]TpDef, error)
+// Port
+type ExpApi interface {
+	Create(ExpSpec) (ExpRoot, error)
+	Retrieve(core.ID[AR]) (ExpRoot, error)
+	RetreiveAll() ([]ExpRoot, error)
 }
 
-func ToCore(id string) (core.ID[Dcl], error) {
-	return core.FromString[Dcl](id)
+type expService struct {
+	repo repo[ExpRoot]
+	log  *slog.Logger
 }
 
-func ToEdge(id core.ID[Dcl]) string {
-	return core.ToString(id)
+func newExpService(r repo[ExpRoot], l *slog.Logger) *expService {
+	name := slog.String("name", "dcl.expService")
+	return &expService{r, l.With(name)}
 }
 
-func toCore(id string) (core.ID[Dcl], error) {
-	return core.FromString[Dcl](id)
+func (s *expService) Create(spec ExpSpec) (ExpRoot, error) {
+	root := ExpRoot{
+		ID:   core.New[AR](),
+		Name: spec.Name,
+	}
+	err := s.repo.Insert(root)
+	if err != nil {
+		return root, err
+	}
+	return root, nil
 }
 
-func toEdge(id core.ID[Dcl]) string {
+func (s *expService) Retrieve(id core.ID[AR]) (ExpRoot, error) {
+	root, err := s.repo.SelectById(id)
+	if err != nil {
+		return root, err
+	}
+	return root, nil
+}
+
+func (s *expService) RetreiveAll() ([]ExpRoot, error) {
+	roots, err := s.repo.SelectAll()
+	if err != nil {
+		return nil, err
+	}
+	return roots, nil
+}
+
+// Port
+type repo[T AR] interface {
+	Insert(T) error
+	SelectById(core.ID[AR]) (T, error)
+	SelectAll() ([]T, error)
+}
+
+func toCore(id string) (core.ID[AR], error) {
+	return core.FromString[AR](id)
+}
+
+func toEdge(id core.ID[AR]) string {
 	return core.ToString(id)
 }

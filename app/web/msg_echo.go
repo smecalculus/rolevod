@@ -11,7 +11,7 @@ import (
 	"smecalculus/rolevod/app/env"
 )
 
-// adapter
+// Adapter
 type handlerEcho struct {
 	api  env.Api
 	view msg.Renderer
@@ -28,9 +28,9 @@ func (h *handlerEcho) Home(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	blob, err := h.view.Render("home.html", env.ToRootMsgs(roots))
+	html, err := h.view.Render("home.html", env.MsgFromRoots(roots))
 	if err != nil {
 		return err
 	}
-	return c.HTMLBlob(http.StatusOK, blob)
+	return c.HTMLBlob(http.StatusOK, html)
 }
