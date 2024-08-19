@@ -30,7 +30,7 @@ type ExpSpec struct {
 	Name Expname
 }
 
-// Aggregate Root
+// Aggregate Root (aka decl)
 type AR interface {
 	dcl()
 }
@@ -38,12 +38,14 @@ type AR interface {
 func (TpRoot) dcl()  {}
 func (ExpRoot) dcl() {}
 
+// aka TpDef
 type TpRoot struct {
 	ID   core.ID[AR]
 	Name Tpname
 	St   Stype
 }
 
+// aka ExpDecDef
 type ExpRoot struct {
 	ID   core.ID[AR]
 	Name Expname
@@ -60,20 +62,22 @@ type Stype interface {
 	stype()
 }
 
-func (Plus) stype()   {}
 func (With) stype()   {}
+func (Plus) stype()   {}
 func (Tensor) stype() {}
 func (Lolli) stype()  {}
 func (One) stype()    {}
-func (TpName) stype() {}
+func (TpRef) stype()  {}
 func (Up) stype()     {}
 func (Down) stype()   {}
 
-type Plus struct {
+// External Choice
+type With struct {
 	Choices
 }
 
-type With struct {
+// Internal Choice
+type Plus struct {
 	Choices
 }
 
@@ -89,9 +93,10 @@ type Lolli struct {
 
 type One struct{}
 
-type TpName struct {
-	ID   core.ID[AR]
+// aka TpName
+type TpRef struct {
 	Name Tpname
+	ID   core.ID[AR]
 }
 
 type Up struct {

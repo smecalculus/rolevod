@@ -54,12 +54,12 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var params RefMsg
-	err := c.Bind(&params)
+	var ref RefMsg
+	err := c.Bind(&ref)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[AR](params.ID)
+	id, err := core.FromString[AR](ref.ID)
 	if err != nil {
 		return err
 	}
@@ -71,12 +71,12 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var params RefMsg
-	err := c.Bind(&params)
+	var ref RefMsg
+	err := c.Bind(&ref)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[AR](params.ID)
+	id, err := core.FromString[AR](ref.ID)
 	if err != nil {
 		return err
 	}

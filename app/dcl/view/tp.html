@@ -1,0 +1,50 @@
+{{define "tp"}}
+    <div id="dcl" x-data="tp">
+        <section>
+            <div class="row" x-show="!editable" x-on:click="toggle()">
+                {{ .Name }}
+            </div>
+            <form class="row" x-show="editable" hx-patch="/ssr/tps/{{ .ID }}">
+                <input name="name" value="{{ .Name }}" type="text" class="form-control">
+            </form>
+        </section>
+        <hr>
+        {{ template "st" .St }}
+    </div>
+{{end}}
+
+{{define "st"}}
+    {{if or (eq .T "with") (eq .T "plus")}}
+        <ul>
+            <li>
+            {{range $label, $choice := .Chs}}
+                <details open>
+                    <summary>{{ $label }}</summary>
+                    <ul>
+                        {{ template "st" $choice }}
+                    </ul>
+                </details>
+            {{end}}
+            </li>
+        </ul>
+    {{else if or (eq .T "tensor") (eq .T "lolli")}}
+        <ul>
+            <li>
+                {{ template "st" .M }}
+                {{ .T }}
+            {{if eq .S.T "ref"}}
+                {{ template "st" .S }}
+            {{else}}
+                {{.S.T}}
+            {{end}}
+            </li>
+            {{if ne .S.T "ref"}}
+                {{ template "st" .S }}
+            {{end}}
+        </ul>
+    {{else if eq .T "ref"}}
+        <a href="/ssr/tps/{{ .ID }}" hx-target="#dcl" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+    {{else}}
+        {{ .T }}
+    {{end}}
+{{end}}

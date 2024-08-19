@@ -36,7 +36,28 @@ func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("dclRoot", MsgFromTpRoot(ar))
+	html, err := h.view.Render("tp", MsgFromTpRoot(ar))
+	if err != nil {
+		return err
+	}
+	return c.HTMLBlob(http.StatusOK, html)
+}
+
+func (h *tpHandlerEcho) SsrPatchOne(c echo.Context) error {
+	var tp TpRootMsg
+	err := c.Bind(&tp)
+	if err != nil {
+		return err
+	}
+	id, err := core.FromString[AR](tp.ID)
+	if err != nil {
+		return err
+	}
+	ar, err := h.api.Retrieve(id)
+	if err != nil {
+		return err
+	}
+	html, err := h.view.Render("tp", MsgFromTpRoot(ar))
 	if err != nil {
 		return err
 	}
@@ -69,7 +90,7 @@ func (h *expHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("dclRoot", MsgFromExpRoot(ar))
+	html, err := h.view.Render("exp", MsgFromExpRoot(ar))
 	if err != nil {
 		return err
 	}

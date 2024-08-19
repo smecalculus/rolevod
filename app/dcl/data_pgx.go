@@ -29,14 +29,14 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 	queue := With{
 		Choices{
 			"enq": Tensor{
-				TpName{fooId, "Foo"},
-				TpName{id, "Queue"},
+				TpRef{"Foo", fooId},
+				TpRef{"Queue", id},
 			},
 			"deq": Plus{
 				Choices{
 					"some": Lolli{
-						TpName{fooId, "Foo"},
-						TpName{id, "Queue"},
+						TpRef{"Foo", fooId},
+						TpRef{"Queue", id},
 					},
 					"none": One{},
 				},
