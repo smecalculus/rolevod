@@ -73,25 +73,31 @@ func (Down) stype()   {}
 
 // External Choice
 type With struct {
-	Choices
+	ID  core.ID[AR]
+	Chs Choices
 }
 
 // Internal Choice
 type Plus struct {
-	Choices
+	ID  core.ID[AR]
+	Chs Choices
 }
 
 type Tensor struct {
-	S Stype
-	T Stype
+	ID core.ID[AR]
+	S  Stype
+	T  Stype
 }
 
 type Lolli struct {
-	S Stype
-	T Stype
+	ID core.ID[AR]
+	S  Stype
+	T  Stype
 }
 
-type One struct{}
+type One struct {
+	ID core.ID[AR]
+}
 
 // aka TpName
 type TpRef struct {

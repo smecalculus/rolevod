@@ -30,35 +30,35 @@ func (TpRefMsg) stype()   {}
 func (ProductMsg) stype() {}
 func (SumMsg) stype()     {}
 
-type Tag string
+type KindMsg string
 
 const (
-	OneT    = Tag("one")
-	RefT    = Tag("ref")
-	TensorT = Tag("tensor")
-	LolliT  = Tag("lolli")
-	WithT   = Tag("with")
-	PlusT   = Tag("plus")
+	OneK    = KindMsg("one")
+	RefK    = KindMsg("ref")
+	TensorK = KindMsg("tensor")
+	LolliK  = KindMsg("lolli")
+	WithK   = KindMsg("with")
+	PlusK   = KindMsg("plus")
 )
 
 type OneMsg struct {
-	T Tag `json:"tag"`
+	K KindMsg `json:"tag"`
 }
 
 type TpRefMsg struct {
-	T    Tag    `json:"tag"`
+	K    KindMsg   `json:"tag"`
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
 
 type ProductMsg struct {
-	T Tag      `json:"tag"`
+	K KindMsg     `json:"tag"`
 	M StypeMsg `json:"message"`
 	S StypeMsg `json:"state"`
 }
 
 type SumMsg struct {
-	T   Tag                 `json:"tag"`
+	K   KindMsg                `json:"tag"`
 	Chs map[string]StypeMsg `json:"choices"`
 }
 
@@ -80,25 +80,25 @@ var (
 func msgFromStype(stype Stype) StypeMsg {
 	switch st := stype.(type) {
 	case One:
-		return OneMsg{OneT}
+		return OneMsg{OneK}
 	case TpRef:
-		return TpRefMsg{RefT, st.Name, core.ToString[AR](st.ID)}
+		return TpRefMsg{RefK, st.Name, core.ToString[AR](st.ID)}
 	case Tensor:
-		return ProductMsg{TensorT, msgFromStype(st.S), msgFromStype(st.T)}
+		return ProductMsg{TensorK, msgFromStype(st.S), msgFromStype(st.T)}
 	case Lolli:
-		return ProductMsg{LolliT, msgFromStype(st.S), msgFromStype(st.T)}
+		return ProductMsg{LolliK, msgFromStype(st.S), msgFromStype(st.T)}
 	case With:
-		choices := make(map[string]StypeMsg, len(st.Choices))
-		for k, v := range st.Choices {
-			choices[string(k)] = msgFromStype(v)
+		choices := make(map[string]StypeMsg, len(st.Chs))
+		for l, st := range st.Chs {
+			choices[string(l)] = msgFromStype(st)
 		}
-		return SumMsg{WithT, choices}
+		return SumMsg{WithK, choices}
 	case Plus:
-		choices := make(map[string]StypeMsg, len(st.Choices))
-		for k, v := range st.Choices {
-			choices[string(k)] = msgFromStype(v)
+		choices := make(map[string]StypeMsg, len(st.Chs))
+		for l, st := range st.Chs {
+			choices[string(l)] = msgFromStype(st)
 		}
-		return SumMsg{PlusT, choices}
+		return SumMsg{PlusK, choices}
 	case nil:
 		return nil
 	default:

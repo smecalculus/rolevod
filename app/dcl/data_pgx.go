@@ -27,16 +27,16 @@ func (r *tpRepoPgx) Insert(tp TpRoot) error {
 func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 	fooId := core.New[AR]()
 	queue := With{
-		Choices{
+		Chs: Choices{
 			"enq": Tensor{
-				TpRef{"Foo", fooId},
-				TpRef{"Queue", id},
+				S: TpRef{"Foo", fooId},
+				T: TpRef{"Queue", id},
 			},
 			"deq": Plus{
-				Choices{
+				Chs: Choices{
 					"some": Lolli{
-						TpRef{"Foo", fooId},
-						TpRef{"Queue", id},
+						S: TpRef{"Foo", fooId},
+						T: TpRef{"Queue", id},
 					},
 					"none": One{},
 				},
