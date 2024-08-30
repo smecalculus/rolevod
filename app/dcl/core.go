@@ -62,12 +62,12 @@ type Stype interface {
 	stype()
 }
 
-func (With) stype()   {}
-func (Plus) stype()   {}
-func (Tensor) stype() {}
-func (Lolli) stype()  {}
 func (One) stype()    {}
 func (TpRef) stype()  {}
+func (Tensor) stype() {}
+func (Lolli) stype()  {}
+func (With) stype()   {}
+func (Plus) stype()   {}
 func (Up) stype()     {}
 func (Down) stype()   {}
 

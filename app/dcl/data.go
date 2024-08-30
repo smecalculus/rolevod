@@ -67,18 +67,18 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 		return from
 	case With:
 		from := state{K: withK, ID: core.ToString[AR](st.ID)}
-		for label, st := range st.Chs {
+		for l, st := range st.Chs {
 			to := dataFromStype(data, st)
-			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(label)}
+			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(l)}
 			data.States[to.ID] = to
 			data.Trs[from.ID] = append(data.Trs[from.ID], tr)
 		}
 		return from
 	case Plus:
 		from := state{K: plusK, ID: core.ToString[AR](st.ID)}
-		for label, st := range st.Chs {
+		for l, st := range st.Chs {
 			to := dataFromStype(data, st)
-			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(label)}
+			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(l)}
 			data.States[to.ID] = to
 			data.Trs[from.ID] = append(data.Trs[from.ID], tr)
 		}

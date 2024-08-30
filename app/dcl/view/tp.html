@@ -1,50 +1,66 @@
 {{define "tp"}}
+    <script>
+        Alpine.data('tp', () => ({
+            id: "{{.ID}}",
+            name: "{{.Name}}",
+
+            editable: false,
+
+            toggle() {
+                this.editable = !this.editable
+            }
+        }))
+    </script>
     <div id="dcl" x-data="tp">
-        <section>
-            <div class="row" x-show="!editable" x-on:click="toggle()">
-                {{ .Name }}
-            </div>
-            <form class="row" x-show="editable" hx-patch="/ssr/tps/{{ .ID }}">
-                <input name="name" value="{{ .Name }}" type="text" class="form-control">
-            </form>
-        </section>
+        <input x-model="name" type="text" class="form-control">
         <hr>
-        {{ template "st" .St }}
+        {{template "st" (dict "St" .St "Root" .ID)}}
     </div>
 {{end}}
 
 {{define "st"}}
-    {{if or (eq .T "with") (eq .T "plus")}}
+    {{$kinds := list "one" "ref" "tensor" "lolli" "with" "plus"}}
+    {{if or (eq .St.K "with") (eq .St.K "plus")}}
         <ul>
             <li>
-            {{range $label, $choice := .Chs}}
+            {{range $label, $st := .St.Chs}}
                 <details open>
-                    <summary>{{ $label }}</summary>
+                    <summary>
+                        <input value="{{$label}}" type="text" class="form-control">
+                    </summary>
                     <ul>
-                        {{ template "st" $choice }}
+                        {{template "st" (dict "St" $st "Root" $.Root)}}
                     </ul>
                 </details>
             {{end}}
             </li>
         </ul>
-    {{else if or (eq .T "tensor") (eq .T "lolli")}}
+    {{else if or (eq .St.K "tensor") (eq .St.K "lolli")}}
         <ul>
             <li>
-                {{ template "st" .M }}
-                {{ .T }}
-            {{if eq .S.T "ref"}}
-                {{ template "st" .S }}
-            {{else}}
-                {{.S.T}}
-            {{end}}
+                {{template "st" (dict "St" .St.M "Root" .Root)}}
+                <select class="form-select">
+                {{range $k := $kinds}}
+                    <option value="{{$k}}" {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+                {{end}}
+                </select>
+                {{template "st" (dict "St" .St.S "Root" .Root)}}
             </li>
-            {{if ne .S.T "ref"}}
-                {{ template "st" .S }}
+            {{if ne .St.S.K "ref"}}
+                {{template "st" (dict "St" .St.S "Root" .Root)}}
             {{end}}
         </ul>
-    {{else if eq .T "ref"}}
-        <a href="/ssr/tps/{{ .ID }}" hx-target="#dcl" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+    {{else if eq .St.K "ref"}}
+        {{if eq .St.ID .Root}}
+            <span x-text="name"></span>
+        {{else}}
+            <a href="/ssr/tps/{{.St.ID}}" hx-target="#dcl" hx-swap="outerHTML" hx-boost="true">{{.St.Name}}</a>
+        {{end}}
     {{else}}
-        {{ .T }}
+        <select class="form-select">
+        {{range $k := $kinds}}
+            <option value="{{$k}}" {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+        {{end}}
+        </select>
     {{end}}
 {{end}}

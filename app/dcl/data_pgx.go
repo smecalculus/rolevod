@@ -1,9 +1,12 @@
 package dcl
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
@@ -20,8 +23,67 @@ func newTpRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tpRepoPgx {
 	return &tpRepoPgx{p, l.With(name)}
 }
 
-func (r *tpRepoPgx) Insert(tp TpRoot) error {
-	return nil
+func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
+	data := dataFromTpRoot(tp)
+	ctx := context.Background()
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	// states
+	sq := "insert into states (kind, id, name) values (@kind, @id, @name)"
+	sb := pgx.Batch{}
+	for _, s := range data.States {
+		sb.Queue(sq, s)
+	}
+	sbr := tx.SendBatch(ctx, &sb)
+	defer func() {
+		err = errors.Join(err, sbr.Close())
+	}()
+	for _, s := range data.States {
+		_, err = sbr.Exec()
+		if err != nil {
+			r.log.Error("insert failed", slog.Any("reason", err), slog.Any("state", s))
+		}
+	}
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	// transitions
+	tq := "insert into transitions (kind, from_id, to_id, msg_id, label) values (@kind, @from, @to, @msg, @label)"
+	tb := pgx.Batch{}
+	for _, trs := range data.Trs {
+		for _, tr := range trs {
+			sb.Queue(tq, tr)
+		}
+	}
+	tbr := tx.SendBatch(ctx, &tb)
+	defer func() {
+		err = errors.Join(err, tbr.Close())
+	}()
+	for _, trs := range data.Trs {
+		for _, tr := range trs {
+			_, err = tbr.Exec()
+			if err != nil {
+				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("transition", tr))
+			}
+		}
+	}
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	// root
+	rq := "insert into tps (id, name) values (@id, @name)"
+	ra := pgx.NamedArgs{
+		"id":   tp.ID,
+		"name": tp.Name,
+	}
+	_, err = tx.Exec(ctx, rq, ra)
+	if err != nil {
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("tp", ra))
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
@@ -47,11 +109,11 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 }
 
 func (r *tpRepoPgx) SelectAll() ([]TpRoot, error) {
-	tpDefs := make([]TpRoot, 5)
+	roots := make([]TpRoot, 5)
 	for i := range 5 {
-		tpDefs[i] = TpRoot{core.New[AR](), fmt.Sprintf("TpRoot%v", i), One{}}
+		roots[i] = TpRoot{core.New[AR](), fmt.Sprintf("TpRoot%v", i), One{}}
 	}
-	return tpDefs, nil
+	return roots, nil
 }
 
 // Adapter
@@ -74,9 +136,22 @@ func (r *expRepoPgx) SelectById(id core.ID[AR]) (ExpRoot, error) {
 }
 
 func (r *expRepoPgx) SelectAll() ([]ExpRoot, error) {
-	expDecs := make([]ExpRoot, 5)
+	roots := make([]ExpRoot, 5)
 	for i := range 5 {
-		expDecs[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpRoot%v", i)}
+		roots[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpRoot%v", i)}
 	}
-	return expDecs, nil
+	return roots, nil
+}
+
+func (r *tpRepoPgx) WithinTransaction(act func(ctx context.Context) error) error {
+	ctx := context.Background()
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	err = act(context.WithValue(ctx, "tx", tx))
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	return tx.Commit(ctx)
 }

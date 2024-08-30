@@ -42,23 +42,26 @@ const (
 )
 
 type OneMsg struct {
-	K KindMsg `json:"tag"`
+	K  KindMsg `json:"kind"`
+	ID string  `json:"id"`
 }
 
 type TpRefMsg struct {
-	K    KindMsg   `json:"tag"`
-	Name string `json:"name"`
-	ID   string `json:"id"`
+	K    KindMsg `json:"kind"`
+	ID   string  `json:"id"`
+	Name string  `json:"name"`
 }
 
 type ProductMsg struct {
-	K KindMsg     `json:"tag"`
-	M StypeMsg `json:"message"`
-	S StypeMsg `json:"state"`
+	K  KindMsg  `json:"kind"`
+	ID string   `json:"id"`
+	M  StypeMsg `json:"message"`
+	S  StypeMsg `json:"state"`
 }
 
 type SumMsg struct {
-	K   KindMsg                `json:"tag"`
+	K   KindMsg             `json:"kind"`
+	ID  string              `json:"id"`
 	Chs map[string]StypeMsg `json:"choices"`
 }
 
@@ -80,25 +83,35 @@ var (
 func msgFromStype(stype Stype) StypeMsg {
 	switch st := stype.(type) {
 	case One:
-		return OneMsg{OneK}
+		return OneMsg{K: OneK, ID: core.ToString[AR](st.ID)}
 	case TpRef:
-		return TpRefMsg{RefK, st.Name, core.ToString[AR](st.ID)}
+		return TpRefMsg{K: RefK, ID: core.ToString[AR](st.ID), Name: st.Name}
 	case Tensor:
-		return ProductMsg{TensorK, msgFromStype(st.S), msgFromStype(st.T)}
+		return ProductMsg{
+			K:  TensorK,
+			ID: core.ToString[AR](st.ID),
+			M:  msgFromStype(st.S),
+			S:  msgFromStype(st.T),
+		}
 	case Lolli:
-		return ProductMsg{LolliK, msgFromStype(st.S), msgFromStype(st.T)}
+		return ProductMsg{
+			K:  LolliK,
+			ID: core.ToString[AR](st.ID),
+			M:  msgFromStype(st.S),
+			S:  msgFromStype(st.T),
+		}
 	case With:
-		choices := make(map[string]StypeMsg, len(st.Chs))
+		sts := make(map[string]StypeMsg, len(st.Chs))
 		for l, st := range st.Chs {
-			choices[string(l)] = msgFromStype(st)
+			sts[string(l)] = msgFromStype(st)
 		}
-		return SumMsg{WithK, choices}
+		return SumMsg{K: WithK, ID: core.ToString[AR](st.ID), Chs: sts}
 	case Plus:
-		choices := make(map[string]StypeMsg, len(st.Chs))
+		sts := make(map[string]StypeMsg, len(st.Chs))
 		for l, st := range st.Chs {
-			choices[string(l)] = msgFromStype(st)
+			sts[string(l)] = msgFromStype(st)
 		}
-		return SumMsg{PlusK, choices}
+		return SumMsg{K: PlusK, ID: core.ToString[AR](st.ID), Chs: sts}
 	case nil:
 		return nil
 	default:
