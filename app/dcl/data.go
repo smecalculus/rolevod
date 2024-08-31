@@ -12,7 +12,7 @@ type tpRootData struct {
 	Trs    map[string][]transition
 }
 
-type kindData int
+type kind int
 
 const (
 	oneK = iota
@@ -24,7 +24,7 @@ const (
 )
 
 type state struct {
-	K    kindData
+	K    kind
 	ID   string
 	Name string
 }
@@ -37,7 +37,12 @@ type transition struct {
 }
 
 func dataFromTpRoot(root TpRoot) tpRootData {
-	data := &tpRootData{}
+	data := &tpRootData{
+		ID:     core.ToString[AR](root.ID),
+		Name:   root.Name,
+		States: make(map[string]state),
+		Trs:    map[string][]transition{},
+	}
 	state := dataFromStype(data, root.St)
 	data.States[state.ID] = state
 	return *data

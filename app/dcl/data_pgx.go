@@ -34,7 +34,11 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 	sq := "insert into states (kind, id, name) values (@kind, @id, @name)"
 	sb := pgx.Batch{}
 	for _, s := range data.States {
-		sb.Queue(sq, s)
+		sa := pgx.NamedArgs{
+			"kind": s.K,
+			"id":   s.ID,
+		}
+		sb.Queue(sq, sa)
 	}
 	sbr := tx.SendBatch(ctx, &sb)
 	defer func() {
@@ -47,14 +51,24 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		}
 	}
 	if err != nil {
+		return errors.Join(err, sbr.Close(), tx.Rollback(ctx))
+	}
+	err = sbr.Close()
+	if err != nil {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	// transitions
-	tq := "insert into transitions (kind, from_id, to_id, msg_id, label) values (@kind, @from, @to, @msg, @label)"
+	tq := "insert into transitions (from_id, to_id, msg_id, label) values (@from, @to, @msg, @label)"
 	tb := pgx.Batch{}
 	for _, trs := range data.Trs {
 		for _, tr := range trs {
-			sb.Queue(tq, tr)
+			ta := pgx.NamedArgs{
+				"from":  tr.FromID,
+				"to":    tr.ToID,
+				"msg":   tr.MsgID,
+				"label": tr.Label,
+			}
+			tb.Queue(tq, ta)
 		}
 	}
 	tbr := tx.SendBatch(ctx, &tb)
@@ -70,13 +84,17 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		}
 	}
 	if err != nil {
+		return errors.Join(err, tbr.Close(), tx.Rollback(ctx))
+	}
+	err = tbr.Close()
+	if err != nil {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	// root
 	rq := "insert into tps (id, name) values (@id, @name)"
 	ra := pgx.NamedArgs{
-		"id":   tp.ID,
-		"name": tp.Name,
+		"id":   data.ID,
+		"name": data.Name,
 	}
 	_, err = tx.Exec(ctx, rq, ra)
 	if err != nil {
@@ -89,18 +107,22 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 	fooId := core.New[AR]()
 	queue := With{
+		ID: core.New[AR](),
 		Chs: Choices{
 			"enq": Tensor{
-				S: TpRef{"Foo", fooId},
-				T: TpRef{"Queue", id},
+				ID: core.New[AR](),
+				S:  TpRef{"Foo", fooId},
+				T:  TpRef{"Queue", id},
 			},
 			"deq": Plus{
+				ID: core.New[AR](),
 				Chs: Choices{
 					"some": Lolli{
-						S: TpRef{"Foo", fooId},
-						T: TpRef{"Queue", id},
+						ID: core.New[AR](),
+						S:  TpRef{"Foo", fooId},
+						T:  TpRef{"Queue", id},
 					},
-					"none": One{},
+					"none": One{ID: core.New[AR]()},
 				},
 			},
 		},

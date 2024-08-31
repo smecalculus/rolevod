@@ -4,7 +4,8 @@ vars:
   REPO_MODE: n/a  # n/a, ro, rw
 
 tasks:
-  images:
+  stand:
+    alias: [procs]
     dir: product
     cmd: >-
       docker compose

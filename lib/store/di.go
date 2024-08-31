@@ -29,7 +29,12 @@ func newCfg(k core.Keeper) (*props, error) {
 }
 
 func newPgx(p *props, lc fx.Lifecycle) (*pgxpool.Pool, error) {
-	pgx, err := pgxpool.New(context.Background(), p.Protocol.Postgres.Url)
+	config, err := pgxpool.ParseConfig(p.Protocol.Postgres.Url)
+	if err != nil {
+		return nil, err
+	}
+	config.MaxConns = 2
+	pgx, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		return nil, err
 	}

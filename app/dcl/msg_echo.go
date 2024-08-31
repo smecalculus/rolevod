@@ -22,6 +22,23 @@ func newTpHandlerEcho(a TpApi, r msg.Renderer, l *slog.Logger) *tpHandlerEcho {
 	return &tpHandlerEcho{a, r, l.With(name)}
 }
 
+func (h *tpHandlerEcho) ApiPutOne(c echo.Context) error {
+	var tp TpRootRaw
+	err := c.Bind(&tp)
+	if err != nil {
+		return err
+	}
+	root, err := MsgToTpRoot(tp)
+	if err != nil {
+		return err
+	}
+	err = h.api.Update(root)
+	if err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusOK)
+}
+
 func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
 	var ref RefMsg
 	err := c.Bind(&ref)

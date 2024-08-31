@@ -30,4 +30,4 @@ tasks:
     aliases: [sps]
     deps: [component:packages]
     cmds:
-      - task: stack:images
+      - task: stack:stand

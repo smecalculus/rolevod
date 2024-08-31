@@ -1,6 +1,10 @@
 package dcl
 
-import "smecalculus/rolevod/lib/core"
+import (
+	"smecalculus/rolevod/lib/core"
+
+	"golang.org/x/exp/maps"
+)
 
 type SpecMsg struct {
 	Name string `json:"name"`
@@ -16,6 +20,26 @@ type TpRootMsg struct {
 	St   StypeMsg `json:"st"`
 }
 
+type TpRootRaw struct {
+	ID   string   `param:"id" json:"id"`
+	Name string   `json:"name"`
+	St   StypeRaw `json:"st"`
+}
+
+type StypeRaw struct {
+	ID   string      `json:"id"`
+	Name string      `json:"name"`
+	K    Kind        `json:"kind"`
+	M    *StypeRaw   `json:"message"`
+	S    *StypeRaw   `json:"session"`
+	Chs  []ChoiceRaw `json:"choices"`
+}
+
+type ChoiceRaw struct {
+	L string   `json:"label"`
+	S StypeRaw `json:"session"`
+}
+
 type ExpRootMsg struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -25,44 +49,49 @@ type StypeMsg interface {
 	stype()
 }
 
-func (OneMsg) stype()     {}
-func (TpRefMsg) stype()   {}
-func (ProductMsg) stype() {}
-func (SumMsg) stype()     {}
+func (OneMsg) stype()   {}
+func (TpRefMsg) stype() {}
+func (Product) stype()  {}
+func (Sum) stype()      {}
 
-type KindMsg string
+type Kind string
 
 const (
-	OneK    = KindMsg("one")
-	RefK    = KindMsg("ref")
-	TensorK = KindMsg("tensor")
-	LolliK  = KindMsg("lolli")
-	WithK   = KindMsg("with")
-	PlusK   = KindMsg("plus")
+	OneK    = Kind("one")
+	RefK    = Kind("ref")
+	TensorK = Kind("tensor")
+	LolliK  = Kind("lolli")
+	WithK   = Kind("with")
+	PlusK   = Kind("plus")
 )
 
 type OneMsg struct {
-	K  KindMsg `json:"kind"`
-	ID string  `json:"id"`
+	K  Kind   `json:"kind"`
+	ID string `json:"id"`
 }
 
 type TpRefMsg struct {
-	K    KindMsg `json:"kind"`
-	ID   string  `json:"id"`
-	Name string  `json:"name"`
+	K    Kind   `json:"kind"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
-type ProductMsg struct {
-	K  KindMsg  `json:"kind"`
+type Product struct {
+	K  Kind     `json:"kind"`
 	ID string   `json:"id"`
 	M  StypeMsg `json:"message"`
-	S  StypeMsg `json:"state"`
+	S  StypeMsg `json:"session"`
 }
 
-type SumMsg struct {
-	K   KindMsg             `json:"kind"`
-	ID  string              `json:"id"`
-	Chs map[string]StypeMsg `json:"choices"`
+type Sum struct {
+	K   Kind     `json:"kind"`
+	ID  string   `json:"id"`
+	Chs []Choice `json:"choices"`
+}
+
+type Choice struct {
+	L string   `json:"label"`
+	S StypeMsg `json:"session"`
 }
 
 // goverter:variables
@@ -75,7 +104,9 @@ var (
 	MsgToExpSpec    func(SpecMsg) ExpSpec
 	MsgFromExpSpec  func(ExpSpec) SpecMsg
 	MsgFromTpRoot   func(TpRoot) TpRootMsg
+	MsgToTpRoot     func(TpRootRaw) (TpRoot, error)
 	MsgFromTpRoots  func([]TpRoot) []TpRootMsg
+	MsgToTpRoots    func([]TpRootRaw) ([]TpRoot, error)
 	MsgFromExpRoot  func(ExpRoot) ExpRootMsg
 	MsgFromExpRoots func([]ExpRoot) []ExpRootMsg
 )
@@ -87,33 +118,96 @@ func msgFromStype(stype Stype) StypeMsg {
 	case TpRef:
 		return TpRefMsg{K: RefK, ID: core.ToString[AR](st.ID), Name: st.Name}
 	case Tensor:
-		return ProductMsg{
+		return Product{
 			K:  TensorK,
 			ID: core.ToString[AR](st.ID),
 			M:  msgFromStype(st.S),
 			S:  msgFromStype(st.T),
 		}
 	case Lolli:
-		return ProductMsg{
+		return Product{
 			K:  LolliK,
 			ID: core.ToString[AR](st.ID),
 			M:  msgFromStype(st.S),
 			S:  msgFromStype(st.T),
 		}
 	case With:
-		sts := make(map[string]StypeMsg, len(st.Chs))
-		for l, st := range st.Chs {
-			sts[string(l)] = msgFromStype(st)
+		sts := make([]Choice, len(st.Chs))
+		for i, l := range maps.Keys(st.Chs) {
+			sts[i] = Choice{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return SumMsg{K: WithK, ID: core.ToString[AR](st.ID), Chs: sts}
+		return Sum{K: WithK, ID: core.ToString[AR](st.ID), Chs: sts}
 	case Plus:
-		sts := make(map[string]StypeMsg, len(st.Chs))
-		for l, st := range st.Chs {
-			sts[string(l)] = msgFromStype(st)
+		sts := make([]Choice, len(st.Chs))
+		for i, l := range maps.Keys(st.Chs) {
+			sts[i] = Choice{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return SumMsg{K: PlusK, ID: core.ToString[AR](st.ID), Chs: sts}
+		return Sum{K: PlusK, ID: core.ToString[AR](st.ID), Chs: sts}
 	case nil:
 		return nil
+	default:
+		panic(ErrUnexpectedSt)
+	}
+}
+
+func msgToStype(msg StypeRaw) (Stype, error) {
+	id, err := core.FromString[AR](msg.ID)
+	if err != nil {
+		return nil, err
+	}
+	switch msg.K {
+	case OneK:
+		return One{ID: id}, nil
+	case RefK:
+		return TpRef{ID: id, Name: msg.Name}, nil
+	case TensorK:
+		m, err := msgToStype(*msg.M)
+		if err != nil {
+			return nil, err
+		}
+		s, err := msgToStype(*msg.S)
+		if err != nil {
+			return nil, err
+		}
+		return Tensor{
+			ID: id,
+			S:  m,
+			T:  s,
+		}, nil
+	case LolliK:
+		m, err := msgToStype(*msg.M)
+		if err != nil {
+			return nil, err
+		}
+		s, err := msgToStype(*msg.S)
+		if err != nil {
+			return nil, err
+		}
+		return Lolli{
+			ID: id,
+			S:  m,
+			T:  s,
+		}, nil
+	case WithK:
+		sts := make(Choices, len(msg.Chs))
+		for _, ch := range msg.Chs {
+			st, err := msgToStype(ch.S)
+			if err != nil {
+				return nil, err
+			}
+			sts[Label(ch.L)] = st
+		}
+		return With{ID: id, Chs: sts}, nil
+	case PlusK:
+		sts := make(Choices, len(msg.Chs))
+		for _, ch := range msg.Chs {
+			st, err := msgToStype(ch.S)
+			if err != nil {
+				return nil, err
+			}
+			sts[Label(ch.L)] = st
+		}
+		return Plus{ID: id, Chs: sts}, nil
 	default:
 		panic(ErrUnexpectedSt)
 	}

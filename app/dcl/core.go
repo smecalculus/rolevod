@@ -121,6 +121,7 @@ type ChanTp struct {
 // Port
 type TpApi interface {
 	Create(TpSpec) (TpRoot, error)
+	Update(TpRoot) error
 	Retrieve(core.ID[AR]) (TpRoot, error)
 	RetreiveAll() ([]TpRoot, error)
 }
@@ -145,6 +146,14 @@ func (s *tpService) Create(spec TpSpec) (TpRoot, error) {
 		return root, err
 	}
 	return root, nil
+}
+
+func (s *tpService) Update(root TpRoot) error {
+	err := s.repo.Insert(root)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *tpService) Retrieve(id core.ID[AR]) (TpRoot, error) {
