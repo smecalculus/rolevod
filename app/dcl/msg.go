@@ -1,14 +1,14 @@
 package dcl
 
 import (
-	"smecalculus/rolevod/lib/core"
-
 	"golang.org/x/exp/maps"
+
+	"smecalculus/rolevod/lib/core"
 )
 
 type TpSpecMsg struct {
 	Name string   `json:"name"`
-	St   StypeRaw `json:"st"`
+	St   StypeMsg `json:"st"`
 }
 
 type ExpSpecMsg struct {
@@ -30,39 +30,24 @@ type TpRootMsg struct {
 	St   StypeMsg `json:"st"`
 }
 
-type TpRootRaw struct {
-	ID   string   `param:"id" json:"id"`
-	Name string   `json:"name"`
-	St   StypeRaw `json:"st"`
-}
-
-type StypeRaw struct {
+type StypeMsg struct {
 	K    Kind        `json:"kind"`
 	ID   string      `json:"id"`
-	Name string      `json:"name"`
-	M    *StypeRaw   `json:"message"`
-	S    *StypeRaw   `json:"session"`
-	Chs  []ChoiceRaw `json:"choices"`
+	Name string      `json:"name,omitempty"`
+	M    *StypeMsg   `json:"message,omitempty"`
+	S    *StypeMsg   `json:"session,omitempty"`
+	Chs  []ChoiceMsg `json:"choices,omitempty"`
 }
 
-type ChoiceRaw struct {
+type ChoiceMsg struct {
 	L string   `json:"label"`
-	S StypeRaw `json:"session"`
+	S StypeMsg `json:"session"`
 }
 
 type ExpRootMsg struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
-
-type StypeMsg interface {
-	stype()
-}
-
-func (OneMsg) stype()   {}
-func (TpRefMsg) stype() {}
-func (Product) stype()  {}
-func (Sum) stype()      {}
 
 type Kind string
 
@@ -86,24 +71,6 @@ type TpRefMsg struct {
 	Name string `json:"name"`
 }
 
-type Product struct {
-	K  Kind     `json:"kind"`
-	ID string   `json:"id"`
-	M  StypeMsg `json:"message"`
-	S  StypeMsg `json:"session"`
-}
-
-type Sum struct {
-	K   Kind     `json:"kind"`
-	ID  string   `json:"id"`
-	Chs []Choice `json:"choices"`
-}
-
-type Choice struct {
-	L string   `json:"label"`
-	S StypeMsg `json:"session"`
-}
-
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend To.*
@@ -113,9 +80,9 @@ var (
 	MsgToTpSpec     func(TpSpecMsg) (TpSpec, error)
 	MsgFromTpSpec   func(TpSpec) TpSpecMsg
 	MsgFromTpRoot   func(TpRoot) TpRootMsg
-	MsgToTpRoot     func(TpRootRaw) (TpRoot, error)
+	MsgToTpRoot     func(TpRootMsg) (TpRoot, error)
 	MsgFromTpRoots  func([]TpRoot) []TpRootMsg
-	MsgToTpRoots    func([]TpRootRaw) ([]TpRoot, error)
+	MsgToTpRoots    func([]TpRootMsg) ([]TpRoot, error)
 	MsgFromTpTeaser func(TpTeaser) TpTeaserMsg
 	MsgToTpTeaser   func(TpTeaserMsg) (TpTeaser, error)
 	// exp
@@ -129,84 +96,45 @@ var (
 func msgFromStype(stype Stype) StypeMsg {
 	switch st := stype.(type) {
 	case One:
-		return OneMsg{K: OneK, ID: core.ToString[AR](st.ID)}
+		return StypeMsg{K: OneK, ID: core.ToString(st.ID)}
 	case TpRef:
-		return TpRefMsg{K: RefK, ID: core.ToString[AR](st.ID), Name: st.Name}
+		return StypeMsg{K: RefK, ID: core.ToString(st.ID), Name: st.Name}
 	case Tensor:
-		return Product{
-			K:  TensorK,
-			ID: core.ToString[AR](st.ID),
-			M:  msgFromStype(st.S),
-			S:  msgFromStype(st.T),
-		}
-	case Lolli:
-		return Product{
-			K:  LolliK,
-			ID: core.ToString[AR](st.ID),
-			M:  msgFromStype(st.S),
-			S:  msgFromStype(st.T),
-		}
-	case With:
-		sts := make([]Choice, len(st.Chs))
-		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = Choice{L: string(l), S: msgFromStype(st.Chs[l])}
-		}
-		return Sum{K: WithK, ID: core.ToString[AR](st.ID), Chs: sts}
-	case Plus:
-		sts := make([]Choice, len(st.Chs))
-		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = Choice{L: string(l), S: msgFromStype(st.Chs[l])}
-		}
-		return Sum{K: PlusK, ID: core.ToString[AR](st.ID), Chs: sts}
-	case nil:
-		return nil
-	default:
-		panic(ErrUnexpectedSt)
-	}
-}
-
-func msgFromStype1(stype Stype) StypeRaw {
-	switch st := stype.(type) {
-	case One:
-		return StypeRaw{K: OneK, ID: core.ToString(st.ID)}
-	case TpRef:
-		return StypeRaw{K: RefK, ID: core.ToString(st.ID), Name: st.Name}
-	case Tensor:
-		m := msgFromStype1(st.S)
-		s := msgFromStype1(st.T)
-		return StypeRaw{
+		m := msgFromStype(st.S)
+		s := msgFromStype(st.T)
+		return StypeMsg{
 			K:  TensorK,
 			ID: core.ToString(st.ID),
 			M:  &m,
 			S:  &s,
 		}
 	case Lolli:
-		m := msgFromStype1(st.S)
-		s := msgFromStype1(st.T)
-		return StypeRaw{
+		m := msgFromStype(st.S)
+		s := msgFromStype(st.T)
+		return StypeMsg{
 			K:  LolliK,
 			ID: core.ToString[AR](st.ID),
 			M:  &m,
 			S:  &s,
 		}
 	case With:
-		sts := make([]ChoiceRaw, len(st.Chs))
+		sts := make([]ChoiceMsg, len(st.Chs))
 		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = ChoiceRaw{L: string(l), S: msgFromStype1(st.Chs[l])}
+			sts[i] = ChoiceMsg{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return StypeRaw{K: WithK, ID: core.ToString(st.ID), Chs: sts}
+		return StypeMsg{K: WithK, ID: core.ToString(st.ID), Chs: sts}
 	case Plus:
-		sts := make([]ChoiceRaw, len(st.Chs))
+		sts := make([]ChoiceMsg, len(st.Chs))
 		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = ChoiceRaw{L: string(l), S: msgFromStype1(st.Chs[l])}
+			sts[i] = ChoiceMsg{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return StypeRaw{K: PlusK, ID: core.ToString(st.ID), Chs: sts}
+		return StypeMsg{K: PlusK, ID: core.ToString(st.ID), Chs: sts}
 	default:
 		panic(ErrUnexpectedSt)
 	}
 }
 
-func msgToStype(msg StypeRaw) (Stype, error) {
+func msgToStype(msg StypeMsg) (Stype, error) {
 	id, err := core.FromString[AR](msg.ID)
 	if err != nil {
 		return nil, err

@@ -6,7 +6,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 
 	"smecalculus/rolevod/app/dcl"
-	ws "smecalculus/rolevod/app/env"
+	ws "smecalculus/rolevod/app/ws"
 )
 
 // Adapter
@@ -27,8 +27,8 @@ func (c *envClient) Create(spec ws.EnvSpec) (ws.EnvRoot, error) {
 	req := ws.MsgFromEnvSpec(spec)
 	var res ws.EnvRootMsg
 	_, err := c.resty.R().
-		SetBody(req).
 		SetResult(&res).
+		SetBody(&req).
 		Post("/envs")
 	if err != nil {
 		return ws.EnvRoot{}, err
@@ -39,8 +39,8 @@ func (c *envClient) Create(spec ws.EnvSpec) (ws.EnvRoot, error) {
 func (c *envClient) Retrieve(id core.ID[ws.AR]) (ws.EnvRoot, error) {
 	var res ws.EnvRootMsg
 	_, err := c.resty.R().
-		SetPathParam("id", id.String()).
 		SetResult(&res).
+		SetPathParam("id", id.String()).
 		Get("/envs/{id}")
 	if err != nil {
 		return ws.EnvRoot{}, err
@@ -54,10 +54,10 @@ func (c *envClient) RetreiveAll() ([]ws.EnvRoot, error) {
 }
 
 func (c *envClient) Introduce(intro ws.TpIntro) error {
-	req := ws.MsgFromIntro(intro)
+	req := ws.MsgFromTpIntro(intro)
 	_, err := c.resty.R().
+		SetBody(&req).
 		SetPathParam("id", req.EnvID).
-		SetBody(req).
 		Post("/envs/{id}/intros")
 	return err
 }
@@ -78,10 +78,10 @@ func NewTpApi() dcl.TpApi {
 
 func (c *tpClient) Create(spec dcl.TpSpec) (dcl.TpRoot, error) {
 	req := dcl.MsgFromTpSpec(spec)
-	var res dcl.TpRootRaw
+	var res dcl.TpRootMsg
 	_, err := c.resty.R().
-		SetBody(req).
 		SetResult(&res).
+		SetBody(&req).
 		Post("/tps")
 	if err != nil {
 		return dcl.TpRoot{}, err

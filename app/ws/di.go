@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package env
+package ws
 
 import (
 	"embed"
@@ -14,9 +14,9 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/env",
+var Module = fx.Module("app/ws",
 	fx.Provide(
-		fx.Annotate(newService, fx.As(new(EnvApi))),
+		fx.Annotate(newEnvService, fx.As(new(EnvApi))),
 	),
 	fx.Provide(
 		fx.Private,
@@ -36,7 +36,7 @@ var Module = fx.Module("app/env",
 var envFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("env").Funcs(sprig.FuncMap()).ParseFS(envFs, "*/*.html")
+	t, err := template.New("ws").Funcs(sprig.FuncMap()).ParseFS(envFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +51,7 @@ func cfgEnvEcho(e *echo.Echo, h *envHandlerEcho) error {
 }
 
 func cfgIntroEcho(e *echo.Echo, h *introHandlerEcho) error {
+	e.POST("/api/v1/intros", h.ApiPostOne)
 	e.POST("/api/v1/envs/:id/intros", h.ApiPostOne)
 	return nil
 }

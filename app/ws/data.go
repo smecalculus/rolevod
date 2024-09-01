@@ -1,4 +1,4 @@
-package env
+package ws
 
 type envRootData struct {
 	ID   string `db:"id"`

@@ -14,9 +14,9 @@ CREATE TABLE introductions (
 );
 
 CREATE TABLE states (
+	kind smallint,
 	id varchar(20) UNIQUE,
-	name varchar(20),
-	kind smallint
+	name varchar(20)
 );
 
 CREATE TABLE transitions (

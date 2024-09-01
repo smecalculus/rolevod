@@ -1,4 +1,4 @@
-package env
+package ws
 
 import (
 	"log/slog"
@@ -46,18 +46,18 @@ type EnvApi interface {
 	Introduce(TpIntro) error
 }
 
-type service struct {
+type envService struct {
 	envRepo envRepo
 	tpRepo  tpRepo
 	log     *slog.Logger
 }
 
-func newService(er envRepo, tr tpRepo, l *slog.Logger) *service {
-	name := slog.String("name", "env.service")
-	return &service{er, tr, l.With(name)}
+func newEnvService(er envRepo, tr tpRepo, l *slog.Logger) *envService {
+	name := slog.String("name", "ws.envService")
+	return &envService{er, tr, l.With(name)}
 }
 
-func (s *service) Create(spec EnvSpec) (EnvRoot, error) {
+func (s *envService) Create(spec EnvSpec) (EnvRoot, error) {
 	root := EnvRoot{
 		ID:   core.New[AR](),
 		Name: spec.Name,
@@ -69,24 +69,23 @@ func (s *service) Create(spec EnvSpec) (EnvRoot, error) {
 	return root, nil
 }
 
-func (s *service) Retrieve(id core.ID[AR]) (EnvRoot, error) {
+func (s *envService) Retrieve(id core.ID[AR]) (EnvRoot, error) {
 	root, err := s.envRepo.SelectById(id)
 	if err != nil {
 		return root, err
 	}
 	root.Tps, err = s.tpRepo.SelectById(id)
-	s.log.Error("tps", slog.Any("tps", root.Tps))
 	if err != nil {
 		return root, err
 	}
 	return root, nil
 }
 
-func (s *service) RetreiveAll() ([]EnvRoot, error) {
+func (s *envService) RetreiveAll() ([]EnvRoot, error) {
 	return s.envRepo.SelectAll()
 }
 
-func (s *service) Introduce(intro TpIntro) error {
+func (s *envService) Introduce(intro TpIntro) error {
 	return s.tpRepo.Insert(intro)
 }
 

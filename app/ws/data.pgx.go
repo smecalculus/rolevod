@@ -1,4 +1,4 @@
-package env
+package ws
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type envRepoPgx struct {
 }
 
 func newEnvRepoPgx(p *pgxpool.Pool, l *slog.Logger) *envRepoPgx {
-	name := slog.String("name", "env.envRepoPgx")
+	name := slog.String("name", "ws.envRepoPgx")
 	return &envRepoPgx{p, l.With(name)}
 }
 
@@ -87,7 +87,7 @@ type tpRepoPgx struct {
 }
 
 func newTpRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tpRepoPgx {
-	name := slog.String("name", "env.tpRepoPgx")
+	name := slog.String("name", "ws.tpRepoPgx")
 	return &tpRepoPgx{p, l.With(name)}
 }
 
@@ -124,9 +124,9 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) ([]dcl.TpTeaser, error) {
 			tp.id,
 			tp.name
 		FROM tps tp
-		LEFT JOIN introductions rel
-			ON tp.id = rel.tp_id
-		WHERE rel.env_id = $1`
+		LEFT JOIN introductions intro
+			ON tp.id = intro.tp_id
+		WHERE intro.env_id = $1`
 	ctx := context.Background()
 	rows, err := r.conn.Query(ctx, query, id.String())
 	if err != nil {

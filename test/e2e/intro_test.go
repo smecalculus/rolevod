@@ -7,7 +7,7 @@ import (
 
 	"smecalculus/rolevod/app/client"
 	"smecalculus/rolevod/app/dcl"
-	ws "smecalculus/rolevod/app/env"
+	ws "smecalculus/rolevod/app/ws"
 )
 
 var (

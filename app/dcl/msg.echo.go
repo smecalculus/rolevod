@@ -36,16 +36,16 @@ func (h *tpHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromTpRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromTpRoot(root))
 }
 
 func (h *tpHandlerEcho) ApiPutOne(c echo.Context) error {
-	var tp TpRootRaw
-	err := c.Bind(&tp)
+	var msg TpRootMsg
+	err := c.Bind(&msg)
 	if err != nil {
 		return err
 	}
-	root, err := MsgToTpRoot(tp)
+	root, err := MsgToTpRoot(msg)
 	if err != nil {
 		return err
 	}
@@ -57,20 +57,20 @@ func (h *tpHandlerEcho) ApiPutOne(c echo.Context) error {
 }
 
 func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
-	var ref RefMsg
-	err := c.Bind(&ref)
+	var msg RefMsg
+	err := c.Bind(&msg)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[AR](ref.ID)
+	id, err := core.FromString[AR](msg.ID)
 	if err != nil {
 		return err
 	}
-	ar, err := h.api.Retrieve(id)
+	root, err := h.api.Retrieve(id)
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("tp", MsgFromTpRoot(ar))
+	html, err := h.ssr.Render("tp", MsgFromTpRoot(root))
 	if err != nil {
 		return err
 	}
@@ -99,11 +99,11 @@ func (h *expHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	ar, err := h.api.Retrieve(id)
+	root, err := h.api.Retrieve(id)
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("exp", MsgFromExpRoot(ar))
+	html, err := h.view.Render("exp", MsgFromExpRoot(root))
 	if err != nil {
 		return err
 	}

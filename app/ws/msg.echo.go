@@ -1,4 +1,4 @@
-package env
+package ws
 
 import (
 	"log/slog"
@@ -32,7 +32,7 @@ func (h *envHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromEnvRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromEnvRoot(root))
 }
 
 func (h *envHandlerEcho) ApiGetOne(c echo.Context) error {
@@ -85,12 +85,12 @@ func newIntroHandlerEcho(a EnvApi, l *slog.Logger) *introHandlerEcho {
 }
 
 func (h *introHandlerEcho) ApiPostOne(c echo.Context) error {
-	var msg IntroMsg
+	var msg TpIntroMsg
 	err := c.Bind(&msg)
 	if err != nil {
 		return err
 	}
-	intro, err := MsgToIntro(msg)
+	intro, err := MsgToTpIntro(msg)
 	if err != nil {
 		return err
 	}
@@ -98,5 +98,5 @@ func (h *introHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.NoContent(http.StatusOK)
+	return c.NoContent(http.StatusCreated)
 }

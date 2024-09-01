@@ -1,4 +1,4 @@
-package env
+package ws
 
 import (
 	"smecalculus/rolevod/app/dcl"
@@ -12,8 +12,8 @@ type RefMsg struct {
 	ID string `param:"id" json:"id"`
 }
 
-type IntroMsg struct {
-	EnvID string `param:"id"`
+type TpIntroMsg struct {
+	EnvID string `param:"id" json:"env_id"`
 	TpID  string `json:"tp_id"`
 }
 
@@ -37,6 +37,6 @@ var (
 	MsgFromEnvRoot  func(EnvRoot) EnvRootMsg
 	MsgFromEnvRoots func([]EnvRoot) []EnvRootMsg
 	// intro
-	MsgToIntro   func(IntroMsg) (TpIntro, error)
-	MsgFromIntro func(TpIntro) IntroMsg
+	MsgToTpIntro   func(TpIntroMsg) (TpIntro, error)
+	MsgFromTpIntro func(TpIntro) TpIntroMsg
 )
