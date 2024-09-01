@@ -7,7 +7,8 @@ import (
 )
 
 type TpSpecMsg struct {
-	Name string `json:"name"`
+	Name string   `json:"name"`
+	St   StypeRaw `json:"st"`
 }
 
 type ExpSpecMsg struct {
@@ -36,9 +37,9 @@ type TpRootRaw struct {
 }
 
 type StypeRaw struct {
+	K    Kind        `json:"kind"`
 	ID   string      `json:"id"`
 	Name string      `json:"name"`
-	K    Kind        `json:"kind"`
 	M    *StypeRaw   `json:"message"`
 	S    *StypeRaw   `json:"session"`
 	Chs  []ChoiceRaw `json:"choices"`
@@ -105,11 +106,11 @@ type Choice struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend To.*
 // goverter:extend msg.*
 var (
 	// tp
-	MsgToTpSpec     func(TpSpecMsg) TpSpec
+	MsgToTpSpec     func(TpSpecMsg) (TpSpec, error)
 	MsgFromTpSpec   func(TpSpec) TpSpecMsg
 	MsgFromTpRoot   func(TpRoot) TpRootMsg
 	MsgToTpRoot     func(TpRootRaw) (TpRoot, error)
@@ -120,6 +121,7 @@ var (
 	// exp
 	MsgToExpSpec    func(ExpSpecMsg) ExpSpec
 	MsgFromExpSpec  func(ExpSpec) ExpSpecMsg
+	MsgToExpRoot    func(ExpRootMsg) (ExpRoot, error)
 	MsgFromExpRoot  func(ExpRoot) ExpRootMsg
 	MsgFromExpRoots func([]ExpRoot) []ExpRootMsg
 )
@@ -158,6 +160,47 @@ func msgFromStype(stype Stype) StypeMsg {
 		return Sum{K: PlusK, ID: core.ToString[AR](st.ID), Chs: sts}
 	case nil:
 		return nil
+	default:
+		panic(ErrUnexpectedSt)
+	}
+}
+
+func msgFromStype1(stype Stype) StypeRaw {
+	switch st := stype.(type) {
+	case One:
+		return StypeRaw{K: OneK, ID: core.ToString(st.ID)}
+	case TpRef:
+		return StypeRaw{K: RefK, ID: core.ToString(st.ID), Name: st.Name}
+	case Tensor:
+		m := msgFromStype1(st.S)
+		s := msgFromStype1(st.T)
+		return StypeRaw{
+			K:  TensorK,
+			ID: core.ToString(st.ID),
+			M:  &m,
+			S:  &s,
+		}
+	case Lolli:
+		m := msgFromStype1(st.S)
+		s := msgFromStype1(st.T)
+		return StypeRaw{
+			K:  LolliK,
+			ID: core.ToString[AR](st.ID),
+			M:  &m,
+			S:  &s,
+		}
+	case With:
+		sts := make([]ChoiceRaw, len(st.Chs))
+		for i, l := range maps.Keys(st.Chs) {
+			sts[i] = ChoiceRaw{L: string(l), S: msgFromStype1(st.Chs[l])}
+		}
+		return StypeRaw{K: WithK, ID: core.ToString(st.ID), Chs: sts}
+	case Plus:
+		sts := make([]ChoiceRaw, len(st.Chs))
+		for i, l := range maps.Keys(st.Chs) {
+			sts[i] = ChoiceRaw{L: string(l), S: msgFromStype1(st.Chs[l])}
+		}
+		return StypeRaw{K: PlusK, ID: core.ToString(st.ID), Chs: sts}
 	default:
 		panic(ErrUnexpectedSt)
 	}

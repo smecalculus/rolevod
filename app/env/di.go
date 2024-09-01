@@ -20,13 +20,15 @@ var Module = fx.Module("app/env",
 	),
 	fx.Provide(
 		fx.Private,
-		newHandlerEcho,
+		newEnvHandlerEcho,
+		newIntroHandlerEcho,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 		fx.Annotate(newEnvRepoPgx, fx.As(new(envRepo))),
 		fx.Annotate(newTpRepoPgx, fx.As(new(tpRepo))),
 	),
 	fx.Invoke(
-		cfgEcho,
+		cfgEnvEcho,
+		cfgIntroEcho,
 	),
 )
 
@@ -41,9 +43,14 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgEcho(e *echo.Echo, h *handlerEcho) error {
+func cfgEnvEcho(e *echo.Echo, h *envHandlerEcho) error {
 	e.POST("/api/v1/envs", h.ApiPostOne)
 	e.GET("/api/v1/envs/:id", h.ApiGetOne)
 	e.GET("/ssr/envs/:id", h.SsrGetOne)
+	return nil
+}
+
+func cfgIntroEcho(e *echo.Echo, h *introHandlerEcho) error {
+	e.POST("/api/v1/envs/:id/intros", h.ApiPostOne)
 	return nil
 }

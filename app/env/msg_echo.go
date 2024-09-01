@@ -11,18 +11,18 @@ import (
 )
 
 // Adapter
-type handlerEcho struct {
+type envHandlerEcho struct {
 	api EnvApi
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newHandlerEcho(a EnvApi, r msg.Renderer, l *slog.Logger) *handlerEcho {
-	name := slog.String("name", "env.handlerEcho")
-	return &handlerEcho{a, r, l.With(name)}
+func newEnvHandlerEcho(a EnvApi, r msg.Renderer, l *slog.Logger) *envHandlerEcho {
+	name := slog.String("name", "ws.envHandlerEcho")
+	return &envHandlerEcho{a, r, l.With(name)}
 }
 
-func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+func (h *envHandlerEcho) ApiPostOne(c echo.Context) error {
 	var spec EnvSpec
 	err := c.Bind(&spec)
 	if err != nil {
@@ -35,7 +35,7 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	return c.JSON(http.StatusOK, MsgFromEnvRoot(root))
 }
 
-func (h *handlerEcho) ApiGetOne(c echo.Context) error {
+func (h *envHandlerEcho) ApiGetOne(c echo.Context) error {
 	var ref RefMsg
 	err := c.Bind(&ref)
 	if err != nil {
@@ -52,7 +52,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	return c.JSON(http.StatusOK, MsgFromEnvRoot(root))
 }
 
-func (h *handlerEcho) SsrGetOne(c echo.Context) error {
+func (h *envHandlerEcho) SsrGetOne(c echo.Context) error {
 	var ref RefMsg
 	err := c.Bind(&ref)
 	if err != nil {
@@ -71,4 +71,32 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 		return err
 	}
 	return c.HTMLBlob(http.StatusOK, html)
+}
+
+// Adapter
+type introHandlerEcho struct {
+	api EnvApi
+	log *slog.Logger
+}
+
+func newIntroHandlerEcho(a EnvApi, l *slog.Logger) *introHandlerEcho {
+	name := slog.String("name", "ws.introHandlerEcho")
+	return &introHandlerEcho{a, l.With(name)}
+}
+
+func (h *introHandlerEcho) ApiPostOne(c echo.Context) error {
+	var msg IntroMsg
+	err := c.Bind(&msg)
+	if err != nil {
+		return err
+	}
+	intro, err := MsgToIntro(msg)
+	if err != nil {
+		return err
+	}
+	err = h.api.Introduce(intro)
+	if err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusOK)
 }

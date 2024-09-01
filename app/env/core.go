@@ -33,11 +33,17 @@ type EnvRoot struct {
 	Exps []dcl.ExpRoot
 }
 
+type TpIntro struct {
+	EnvID core.ID[AR]
+	TpID  core.ID[dcl.AR]
+}
+
 // Port
 type EnvApi interface {
 	Create(EnvSpec) (EnvRoot, error)
 	Retrieve(core.ID[AR]) (EnvRoot, error)
 	RetreiveAll() ([]EnvRoot, error)
+	Introduce(TpIntro) error
 }
 
 type service struct {
@@ -69,6 +75,7 @@ func (s *service) Retrieve(id core.ID[AR]) (EnvRoot, error) {
 		return root, err
 	}
 	root.Tps, err = s.tpRepo.SelectById(id)
+	s.log.Error("tps", slog.Any("tps", root.Tps))
 	if err != nil {
 		return root, err
 	}
@@ -76,11 +83,11 @@ func (s *service) Retrieve(id core.ID[AR]) (EnvRoot, error) {
 }
 
 func (s *service) RetreiveAll() ([]EnvRoot, error) {
-	roots, err := s.envRepo.SelectAll()
-	if err != nil {
-		return roots, err
-	}
-	return roots, nil
+	return s.envRepo.SelectAll()
+}
+
+func (s *service) Introduce(intro TpIntro) error {
+	return s.tpRepo.Insert(intro)
 }
 
 // Port
@@ -92,6 +99,7 @@ type envRepo interface {
 
 // Port
 type tpRepo interface {
+	Insert(TpIntro) error
 	SelectById(core.ID[AR]) ([]dcl.TpTeaser, error)
 }
 

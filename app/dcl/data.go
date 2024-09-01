@@ -44,14 +44,14 @@ type transition struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend To.*
 // goverter:extend data.*
 var (
 	DataToTpTeaser    func(TpTeaserData) (TpTeaser, error)
 	DataFromTpTeaser  func(TpTeaser) TpTeaserData
 	DataToTpTeasers   func([]TpTeaserData) ([]TpTeaser, error)
 	DataFromTpTeasers func([]TpTeaser) []TpTeaserData
-	dataToTpRoots     func([]tpRootData) ([]TpRoot, error)
+	DataToTpRoots     func([]tpRootData) ([]TpRoot, error)
 )
 
 func dataFromTpRoot(root TpRoot) tpRootData {
@@ -111,16 +111,16 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 	}
 }
 
-func dataToTpRoot(data tpRootData) TpRoot {
+func dataToTpRoot(data tpRootData) (TpRoot, error) {
 	id, err := core.FromString[AR](data.ID)
 	if err != nil {
-		panic(errInvalidID)
+		return TpRoot{}, nil
 	}
 	return TpRoot{
 		ID:   id,
 		Name: data.Name,
 		St:   dataToStype(data, data.States[data.ID]),
-	}
+	}, nil
 }
 
 func dataToStype(data tpRootData, from state) Stype {

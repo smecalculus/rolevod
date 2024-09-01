@@ -10,6 +10,10 @@ func New[T any]() ID[T] {
 	return ID[T](xid.New())
 }
 
+func (id ID[T]) String() string {
+	return xid.ID(id).String()
+}
+
 func ToString[T any](id ID[T]) string {
 	return xid.ID(id).String()
 }

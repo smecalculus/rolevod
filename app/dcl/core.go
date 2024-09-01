@@ -24,6 +24,7 @@ func (ExpSpec) as() {}
 
 type TpSpec struct {
 	Name Tpname
+	St   Stype
 }
 
 type ExpSpec struct {
@@ -145,6 +146,7 @@ func (s *tpService) Create(spec TpSpec) (TpRoot, error) {
 	root := TpRoot{
 		ID:   core.New[AR](),
 		Name: spec.Name,
+		St:   elab(spec.St),
 	}
 	err := s.repo.Insert(root)
 	if err != nil {
@@ -222,6 +224,17 @@ func (s *expService) RetreiveAll() ([]ExpRoot, error) {
 	return roots, nil
 }
 
+func elab(stype Stype) Stype {
+	switch st := stype.(type) {
+	case One:
+		return One{ID: core.New[AR]()}
+	case TpRef:
+		return TpRef{ID: core.New[AR](), Name: st.Name}
+	default:
+		panic(ErrUnexpectedSt)
+	}
+}
+
 // Port
 type repo[T AR] interface {
 	Insert(T) error
@@ -229,10 +242,21 @@ type repo[T AR] interface {
 	SelectAll() ([]T, error)
 }
 
-func toCore(id string) (core.ID[AR], error) {
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend To.*
+var (
+	TpTeaserFromTpRoot func(TpRoot) TpTeaser
+)
+
+func ToSame(id core.ID[AR]) core.ID[AR] {
+	return id
+}
+
+func ToCore(id string) (core.ID[AR], error) {
 	return core.FromString[AR](id)
 }
 
-func toEdge(id core.ID[AR]) string {
+func ToEdge(id core.ID[AR]) string {
 	return core.ToString(id)
 }

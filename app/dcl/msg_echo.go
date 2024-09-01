@@ -22,6 +22,23 @@ func newTpHandlerEcho(a TpApi, r msg.Renderer, l *slog.Logger) *tpHandlerEcho {
 	return &tpHandlerEcho{a, r, l.With(name)}
 }
 
+func (h *tpHandlerEcho) ApiPostOne(c echo.Context) error {
+	var msg TpSpecMsg
+	err := c.Bind(&msg)
+	if err != nil {
+		return err
+	}
+	spec, err := MsgToTpSpec(msg)
+	if err != nil {
+		return err
+	}
+	root, err := h.api.Create(spec)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, MsgFromTpRoot(root))
+}
+
 func (h *tpHandlerEcho) ApiPutOne(c echo.Context) error {
 	var tp TpRootRaw
 	err := c.Bind(&tp)

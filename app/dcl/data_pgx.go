@@ -24,14 +24,19 @@ func newTpRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tpRepoPgx {
 }
 
 func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
-	data := dataFromTpRoot(tp)
 	ctx := context.Background()
 	tx, err := r.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	data := dataFromTpRoot(tp)
 	// states
-	sq := "insert into states (kind, id, name) values (@kind, @id, @name)"
+	sq := `
+		INSERT INTO states (
+			kind, id, name
+		) VALUES (
+			@kind, @id, @name
+		)`
 	sb := pgx.Batch{}
 	for _, s := range data.States {
 		sa := pgx.NamedArgs{
@@ -59,15 +64,20 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	// transitions
-	tq := "insert into transitions (from_id, to_id, msg_id, msg_key) values (@from, @to, @msg, @key)"
+	tq := `
+		INSERT INTO transitions (
+			from_id, to_id, msg_id, msg_key
+		) VALUES (
+			@from_id, @to_id, @msg_id, @msg_key
+		)`
 	tb := pgx.Batch{}
 	for _, trs := range data.Trs {
 		for _, tr := range trs {
 			ta := pgx.NamedArgs{
-				"from": tr.FromID,
-				"to":   tr.ToID,
-				"msg":  tr.MsgID,
-				"key":  tr.MsgKey,
+				"from_id": tr.FromID,
+				"to_id":   tr.ToID,
+				"msg_id":  tr.MsgID,
+				"msg_key": tr.MsgKey,
 			}
 			tb.Queue(tq, ta)
 		}
@@ -92,7 +102,12 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	// root
-	rq := "insert into tps (id, name) values (@id, @name)"
+	rq := `
+		INSERT INTO tps (
+			id, name
+		) VALUES (
+			@id, @name
+		)`
 	ra := pgx.NamedArgs{
 		"id":   data.ID,
 		"name": data.Name,
@@ -132,13 +147,13 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 }
 
 func (r *tpRepoPgx) SelectAll() ([]TpRoot, error) {
-	ctx := context.Background()
-	rq := `
+	query := `
 		SELECT
 			id,
 			name
 		FROM tps`
-	rows, err := r.conn.Query(ctx, rq)
+	ctx := context.Background()
+	rows, err := r.conn.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +162,7 @@ func (r *tpRepoPgx) SelectAll() ([]TpRoot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return dataToTpRoots(tps)
+	return DataToTpRoots(tps)
 }
 
 // Adapter

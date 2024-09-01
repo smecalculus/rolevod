@@ -91,6 +91,33 @@ func newTpRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tpRepoPgx {
 	return &tpRepoPgx{p, l.With(name)}
 }
 
+func (r *tpRepoPgx) Insert(intro TpIntro) error {
+	query := `
+		INSERT INTO introductions (
+			env_id,
+			tp_id
+		) values (
+			@env_id,
+			@tp_id
+		)`
+	data := dataFromTpIntro(intro)
+	args := pgx.NamedArgs{
+		"env_id": data.EnvID,
+		"tp_id":  data.TpID,
+	}
+	ctx := context.Background()
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, query, args)
+	if err != nil {
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("intro", args))
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	return tx.Commit(ctx)
+}
+
 func (r *tpRepoPgx) SelectById(id core.ID[AR]) ([]dcl.TpTeaser, error) {
 	query := `
 		SELECT
@@ -101,7 +128,7 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) ([]dcl.TpTeaser, error) {
 			ON tp.id = rel.tp_id
 		WHERE rel.env_id = $1`
 	ctx := context.Background()
-	rows, err := r.conn.Query(ctx, query, core.ToString(id))
+	rows, err := r.conn.Query(ctx, query, id.String())
 	if err != nil {
 		return nil, err
 	}
