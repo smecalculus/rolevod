@@ -6,8 +6,8 @@ import (
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/msg"
-	"smecalculus/rolevod/lib/store"
 
 	"smecalculus/rolevod/app/dcl"
 	"smecalculus/rolevod/app/env"
@@ -18,8 +18,8 @@ func main() {
 	fx.New(
 		// lib
 		core.Module,
+		data.Module,
 		msg.Module,
-		store.Module,
 		// app
 		web.Module,
 		env.Module,

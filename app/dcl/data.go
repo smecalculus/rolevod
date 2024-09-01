@@ -2,14 +2,20 @@ package dcl
 
 import (
 	"errors"
+
 	"smecalculus/rolevod/lib/core"
 )
 
 type tpRootData struct {
-	ID     string
-	Name   string
-	States map[string]state
-	Trs    map[string][]transition
+	ID     string                  `db:"id"`
+	Name   string                  `db:"name"`
+	States map[string]state        `db:"-"`
+	Trs    map[string][]transition `db:"-"`
+}
+
+type TpTeaserData struct {
+	ID   string `db:"id"`
+	Name string `db:"name"`
 }
 
 type kind int
@@ -24,23 +30,35 @@ const (
 )
 
 type state struct {
-	K    kind
-	ID   string
-	Name string
+	K    kind   `db:"kind"`
+	ID   string `db:"id"`
+	Name string `db:"name"`
 }
 
 type transition struct {
-	FromID string
-	ToID   string
-	MsgID  string
-	Label  string
+	FromID string `db:"from_id"`
+	ToID   string `db:"to_id"`
+	MsgID  string `db:"msg_id"`
+	MsgKey string `db:"msg_key"`
 }
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend to.*
+// goverter:extend data.*
+var (
+	DataToTpTeaser    func(TpTeaserData) (TpTeaser, error)
+	DataFromTpTeaser  func(TpTeaser) TpTeaserData
+	DataToTpTeasers   func([]TpTeaserData) ([]TpTeaser, error)
+	DataFromTpTeasers func([]TpTeaser) []TpTeaserData
+	dataToTpRoots     func([]tpRootData) ([]TpRoot, error)
+)
 
 func dataFromTpRoot(root TpRoot) tpRootData {
 	data := &tpRootData{
 		ID:     core.ToString[AR](root.ID),
 		Name:   root.Name,
-		States: make(map[string]state),
+		States: map[string]state{},
 		Trs:    map[string][]transition{},
 	}
 	state := dataFromStype(data, root.St)
@@ -53,7 +71,7 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 	case One:
 		return state{K: oneK, ID: core.ToString[AR](st.ID)}
 	case TpRef:
-		return state{K: refK, ID: core.ToString[AR](st.ID)}
+		return state{K: refK, ID: core.ToString[AR](st.ID), Name: st.Name}
 	case Tensor:
 		from := state{K: tensorK, ID: core.ToString[AR](st.ID)}
 		msg := dataFromStype(data, st.S)
@@ -74,7 +92,7 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 		from := state{K: withK, ID: core.ToString[AR](st.ID)}
 		for l, st := range st.Chs {
 			to := dataFromStype(data, st)
-			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(l)}
+			tr := transition{FromID: from.ID, ToID: to.ID, MsgKey: string(l)}
 			data.States[to.ID] = to
 			data.Trs[from.ID] = append(data.Trs[from.ID], tr)
 		}
@@ -83,7 +101,7 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 		from := state{K: plusK, ID: core.ToString[AR](st.ID)}
 		for l, st := range st.Chs {
 			to := dataFromStype(data, st)
-			tr := transition{FromID: from.ID, ToID: to.ID, Label: string(l)}
+			tr := transition{FromID: from.ID, ToID: to.ID, MsgKey: string(l)}
 			data.States[to.ID] = to
 			data.Trs[from.ID] = append(data.Trs[from.ID], tr)
 		}
@@ -132,13 +150,13 @@ func dataToStype(data tpRootData, from state) Stype {
 	case withK:
 		st := With{ID: id}
 		for _, tr := range data.Trs[from.ID] {
-			st.Chs[Label(tr.Label)] = dataToStype(data, data.States[tr.ToID])
+			st.Chs[Label(tr.MsgKey)] = dataToStype(data, data.States[tr.ToID])
 		}
 		return st
 	case plusK:
 		st := Plus{ID: id}
 		for _, tr := range data.Trs[from.ID] {
-			st.Chs[Label(tr.Label)] = dataToStype(data, data.States[tr.ToID])
+			st.Chs[Label(tr.MsgKey)] = dataToStype(data, data.States[tr.ToID])
 		}
 		return st
 	default:

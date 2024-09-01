@@ -6,12 +6,21 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-type SpecMsg struct {
+type TpSpecMsg struct {
+	Name string `json:"name"`
+}
+
+type ExpSpecMsg struct {
 	Name string `json:"name"`
 }
 
 type RefMsg struct {
 	ID string `param:"id" query:"id" json:"id"`
+}
+
+type TpTeaserMsg struct {
+	ID   string `param:"id" json:"id"`
+	Name string `json:"name"`
 }
 
 type TpRootMsg struct {
@@ -99,14 +108,18 @@ type Choice struct {
 // goverter:extend to.*
 // goverter:extend msg.*
 var (
-	MsgToTpSpec     func(SpecMsg) TpSpec
-	MsgFromTpSpec   func(TpSpec) SpecMsg
-	MsgToExpSpec    func(SpecMsg) ExpSpec
-	MsgFromExpSpec  func(ExpSpec) SpecMsg
+	// tp
+	MsgToTpSpec     func(TpSpecMsg) TpSpec
+	MsgFromTpSpec   func(TpSpec) TpSpecMsg
 	MsgFromTpRoot   func(TpRoot) TpRootMsg
 	MsgToTpRoot     func(TpRootRaw) (TpRoot, error)
 	MsgFromTpRoots  func([]TpRoot) []TpRootMsg
 	MsgToTpRoots    func([]TpRootRaw) ([]TpRoot, error)
+	MsgFromTpTeaser func(TpTeaser) TpTeaserMsg
+	MsgToTpTeaser   func(TpTeaserMsg) (TpTeaser, error)
+	// exp
+	MsgToExpSpec    func(ExpSpecMsg) ExpSpec
+	MsgFromExpSpec  func(ExpSpec) ExpSpecMsg
 	MsgFromExpRoot  func(ExpRoot) ExpRootMsg
 	MsgFromExpRoots func([]ExpRoot) []ExpRootMsg
 )
@@ -169,11 +182,7 @@ func msgToStype(msg StypeRaw) (Stype, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Tensor{
-			ID: id,
-			S:  m,
-			T:  s,
-		}, nil
+		return Tensor{ID: id, S: m, T: s}, nil
 	case LolliK:
 		m, err := msgToStype(*msg.M)
 		if err != nil {
@@ -183,11 +192,7 @@ func msgToStype(msg StypeRaw) (Stype, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Lolli{
-			ID: id,
-			S:  m,
-			T:  s,
-		}, nil
+		return Lolli{ID: id, S: m, T: s}, nil
 	case WithK:
 		sts := make(Choices, len(msg.Chs))
 		for _, ch := range msg.Chs {

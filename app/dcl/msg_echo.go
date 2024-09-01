@@ -12,9 +12,9 @@ import (
 
 // Adapter
 type tpHandlerEcho struct {
-	api  TpApi
-	view msg.Renderer
-	log  *slog.Logger
+	api TpApi
+	ssr msg.Renderer
+	log *slog.Logger
 }
 
 func newTpHandlerEcho(a TpApi, r msg.Renderer, l *slog.Logger) *tpHandlerEcho {
@@ -53,28 +53,7 @@ func (h *tpHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("tp", MsgFromTpRoot(ar))
-	if err != nil {
-		return err
-	}
-	return c.HTMLBlob(http.StatusOK, html)
-}
-
-func (h *tpHandlerEcho) SsrPatchOne(c echo.Context) error {
-	var tp TpRootMsg
-	err := c.Bind(&tp)
-	if err != nil {
-		return err
-	}
-	id, err := core.FromString[AR](tp.ID)
-	if err != nil {
-		return err
-	}
-	ar, err := h.api.Retrieve(id)
-	if err != nil {
-		return err
-	}
-	html, err := h.view.Render("tp", MsgFromTpRoot(ar))
+	html, err := h.ssr.Render("tp", MsgFromTpRoot(ar))
 	if err != nil {
 		return err
 	}

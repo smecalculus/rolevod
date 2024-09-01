@@ -1,9 +1,12 @@
 package env
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
@@ -12,40 +15,100 @@ import (
 )
 
 // Adapter
-type repoPgx struct {
+type envRepoPgx struct {
 	conn *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "env.repoPgx")
-	return &repoPgx{p, l.With(name)}
+func newEnvRepoPgx(p *pgxpool.Pool, l *slog.Logger) *envRepoPgx {
+	name := slog.String("name", "env.envRepoPgx")
+	return &envRepoPgx{p, l.With(name)}
 }
 
-func (r *repoPgx) Insert(root AR) error {
-	return nil
-}
-
-func (r *repoPgx) SelectById(id core.ID[AR]) (AR, error) {
-	tpDefs := make([]dcl.TpRoot, 5)
-	for i := range 5 {
-		tpDefs[i] = dcl.TpRoot{
-			ID:   core.New[dcl.AR](),
-			Name: fmt.Sprintf("TpRoot%v", i)}
+func (r *envRepoPgx) Insert(root EnvRoot) error {
+	query := `
+		INSERT INTO envs (
+			id,
+			name
+		) values (
+			@id,
+			@name
+		)`
+	data := dataFromEnvRoot(root)
+	args := pgx.NamedArgs{
+		"id":   data.ID,
+		"name": data.Name,
 	}
-	expDecs := make([]dcl.ExpRoot, 5)
-	for i := range 5 {
-		expDecs[i] = dcl.ExpRoot{
-			ID:   core.New[dcl.AR](),
-			Name: fmt.Sprintf("ExpRoot%v", i)}
+	ctx := context.Background()
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return err
 	}
-	return AR{id, "Foo", tpDefs, expDecs}, nil
+	_, err = tx.Exec(ctx, query, args)
+	if err != nil {
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("env", args))
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	return tx.Commit(ctx)
 }
 
-func (r *repoPgx) SelectAll() ([]AR, error) {
-	roots := make([]AR, 5)
+func (r *envRepoPgx) SelectById(id core.ID[AR]) (EnvRoot, error) {
+	query := `
+		SELECT
+			id,
+			name
+		FROM envs
+		WHERE id = $1`
+	ctx := context.Background()
+	rows, err := r.conn.Query(ctx, query, core.ToString(id))
+	if err != nil {
+		return EnvRoot{}, err
+	}
+	defer rows.Close()
+	env, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[envRootData])
+	if err != nil {
+		return EnvRoot{}, err
+	}
+	return dataToEnvRoot(env)
+}
+
+func (r *envRepoPgx) SelectAll() ([]EnvRoot, error) {
+	roots := make([]EnvRoot, 5)
 	for i := range 5 {
-		roots[i] = AR{core.New[AR](), fmt.Sprintf("Foo%v", i), []dcl.TpRoot{}, []dcl.ExpRoot{}}
+		roots[i] = EnvRoot{core.New[AR](), fmt.Sprintf("Foo%v", i), []dcl.TpTeaser{}, []dcl.ExpRoot{}}
 	}
 	return roots, nil
+}
+
+// Adapter
+type tpRepoPgx struct {
+	conn *pgxpool.Pool
+	log  *slog.Logger
+}
+
+func newTpRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tpRepoPgx {
+	name := slog.String("name", "env.tpRepoPgx")
+	return &tpRepoPgx{p, l.With(name)}
+}
+
+func (r *tpRepoPgx) SelectById(id core.ID[AR]) ([]dcl.TpTeaser, error) {
+	query := `
+		SELECT
+			tp.id,
+			tp.name
+		FROM tps tp
+		LEFT JOIN introductions rel
+			ON tp.id = rel.tp_id
+		WHERE rel.env_id = $1`
+	ctx := context.Background()
+	rows, err := r.conn.Query(ctx, query, core.ToString(id))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tps, err := pgx.CollectRows(rows, pgx.RowToStructByName[dcl.TpTeaserData])
+	if err != nil {
+		return nil, err
+	}
+	return dcl.DataToTpTeasers(tps)
 }

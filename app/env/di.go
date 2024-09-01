@@ -16,13 +16,14 @@ import (
 
 var Module = fx.Module("app/env",
 	fx.Provide(
-		fx.Annotate(newService, fx.As(new(Api))),
+		fx.Annotate(newService, fx.As(new(EnvApi))),
 	),
 	fx.Provide(
 		fx.Private,
 		newHandlerEcho,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		fx.Annotate(newRepoPgx, fx.As(new(repo))),
+		fx.Annotate(newEnvRepoPgx, fx.As(new(envRepo))),
+		fx.Annotate(newTpRepoPgx, fx.As(new(tpRepo))),
 	),
 	fx.Invoke(
 		cfgEcho,

@@ -37,6 +37,7 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		sa := pgx.NamedArgs{
 			"kind": s.K,
 			"id":   s.ID,
+			"name": s.Name,
 		}
 		sb.Queue(sq, sa)
 	}
@@ -58,15 +59,15 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	// transitions
-	tq := "insert into transitions (from_id, to_id, msg_id, label) values (@from, @to, @msg, @label)"
+	tq := "insert into transitions (from_id, to_id, msg_id, msg_key) values (@from, @to, @msg, @key)"
 	tb := pgx.Batch{}
 	for _, trs := range data.Trs {
 		for _, tr := range trs {
 			ta := pgx.NamedArgs{
-				"from":  tr.FromID,
-				"to":    tr.ToID,
-				"msg":   tr.MsgID,
-				"label": tr.Label,
+				"from": tr.FromID,
+				"to":   tr.ToID,
+				"msg":  tr.MsgID,
+				"key":  tr.MsgKey,
 			}
 			tb.Queue(tq, ta)
 		}
@@ -79,7 +80,7 @@ func (r *tpRepoPgx) Insert(tp TpRoot) (err error) {
 		for _, tr := range trs {
 			_, err = tbr.Exec()
 			if err != nil {
-				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("transition", tr))
+				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("tr", tr))
 			}
 		}
 	}
@@ -111,16 +112,16 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 		Chs: Choices{
 			"enq": Tensor{
 				ID: core.New[AR](),
-				S:  TpRef{"Foo", fooId},
-				T:  TpRef{"Queue", id},
+				S:  TpRef{fooId, "Foo"},
+				T:  TpRef{id, "Queue"},
 			},
 			"deq": Plus{
 				ID: core.New[AR](),
 				Chs: Choices{
 					"some": Lolli{
 						ID: core.New[AR](),
-						S:  TpRef{"Foo", fooId},
-						T:  TpRef{"Queue", id},
+						S:  TpRef{fooId, "Foo"},
+						T:  TpRef{id, "Queue"},
 					},
 					"none": One{ID: core.New[AR]()},
 				},
@@ -131,11 +132,22 @@ func (r *tpRepoPgx) SelectById(id core.ID[AR]) (TpRoot, error) {
 }
 
 func (r *tpRepoPgx) SelectAll() ([]TpRoot, error) {
-	roots := make([]TpRoot, 5)
-	for i := range 5 {
-		roots[i] = TpRoot{core.New[AR](), fmt.Sprintf("TpRoot%v", i), One{}}
+	ctx := context.Background()
+	rq := `
+		SELECT
+			id,
+			name
+		FROM tps`
+	rows, err := r.conn.Query(ctx, rq)
+	if err != nil {
+		return nil, err
 	}
-	return roots, nil
+	defer rows.Close()
+	tps, err := pgx.CollectRows(rows, pgx.RowToStructByName[tpRootData])
+	if err != nil {
+		return nil, err
+	}
+	return dataToTpRoots(tps)
 }
 
 // Adapter
@@ -163,17 +175,4 @@ func (r *expRepoPgx) SelectAll() ([]ExpRoot, error) {
 		roots[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpRoot%v", i)}
 	}
 	return roots, nil
-}
-
-func (r *tpRepoPgx) WithinTransaction(act func(ctx context.Context) error) error {
-	ctx := context.Background()
-	tx, err := r.conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	err = act(context.WithValue(ctx, "tx", tx))
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
 }

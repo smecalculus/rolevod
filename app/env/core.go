@@ -3,62 +3,80 @@ package env
 import (
 	"log/slog"
 
-	"smecalculus/rolevod/app/dcl"
 	"smecalculus/rolevod/lib/core"
+
+	"smecalculus/rolevod/app/dcl"
 )
 
 // Aggregate Spec
-type AS struct {
+type AS interface {
+	as()
+}
+
+func (EnvSpec) as() {}
+
+type EnvSpec struct {
 	Name string
 }
 
 // Aggregate Root
-type AR struct {
+type AR interface {
+	ar()
+}
+
+func (EnvRoot) ar() {}
+
+type EnvRoot struct {
 	ID   core.ID[AR]
 	Name string
-	Tps  []dcl.TpRoot
+	Tps  []dcl.TpTeaser
 	Exps []dcl.ExpRoot
 }
 
 // Port
-type Api interface {
-	Create(AS) (AR, error)
-	Retrieve(core.ID[AR]) (AR, error)
-	RetreiveAll() ([]AR, error)
+type EnvApi interface {
+	Create(EnvSpec) (EnvRoot, error)
+	Retrieve(core.ID[AR]) (EnvRoot, error)
+	RetreiveAll() ([]EnvRoot, error)
 }
 
 type service struct {
-	repo repo
-	log  *slog.Logger
+	envRepo envRepo
+	tpRepo  tpRepo
+	log     *slog.Logger
 }
 
-func newService(r repo, l *slog.Logger) *service {
+func newService(er envRepo, tr tpRepo, l *slog.Logger) *service {
 	name := slog.String("name", "env.service")
-	return &service{r, l.With(name)}
+	return &service{er, tr, l.With(name)}
 }
 
-func (s *service) Create(spec AS) (AR, error) {
-	root := AR{
+func (s *service) Create(spec EnvSpec) (EnvRoot, error) {
+	root := EnvRoot{
 		ID:   core.New[AR](),
 		Name: spec.Name,
 	}
-	err := s.repo.Insert(root)
+	err := s.envRepo.Insert(root)
 	if err != nil {
 		return root, err
 	}
 	return root, nil
 }
 
-func (s *service) Retrieve(id core.ID[AR]) (AR, error) {
-	root, err := s.repo.SelectById(id)
+func (s *service) Retrieve(id core.ID[AR]) (EnvRoot, error) {
+	root, err := s.envRepo.SelectById(id)
+	if err != nil {
+		return root, err
+	}
+	root.Tps, err = s.tpRepo.SelectById(id)
 	if err != nil {
 		return root, err
 	}
 	return root, nil
 }
 
-func (s *service) RetreiveAll() ([]AR, error) {
-	roots, err := s.repo.SelectAll()
+func (s *service) RetreiveAll() ([]EnvRoot, error) {
+	roots, err := s.envRepo.SelectAll()
 	if err != nil {
 		return roots, err
 	}
@@ -66,10 +84,15 @@ func (s *service) RetreiveAll() ([]AR, error) {
 }
 
 // Port
-type repo interface {
-	Insert(AR) error
-	SelectById(core.ID[AR]) (AR, error)
-	SelectAll() ([]AR, error)
+type envRepo interface {
+	Insert(EnvRoot) error
+	SelectById(core.ID[AR]) (EnvRoot, error)
+	SelectAll() ([]EnvRoot, error)
+}
+
+// Port
+type tpRepo interface {
+	SelectById(core.ID[AR]) ([]dcl.TpTeaser, error)
 }
 
 func toCore(id string) (core.ID[AR], error) {

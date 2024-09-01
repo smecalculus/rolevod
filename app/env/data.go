@@ -1,8 +1,8 @@
 package env
 
-type RootData struct {
-	ID   string
-	Name string
+type envRootData struct {
+	ID   string `db:"id"`
+	Name string `db:"name"`
 }
 
 // goverter:variables
@@ -10,6 +10,6 @@ type RootData struct {
 // goverter:extend to.*
 var (
 	// goverter:ignore Tps Exps
-	DataToRoot   func(RootData) (AR, error)
-	DataFromRoot func(AR) RootData
+	dataToEnvRoot   func(envRootData) (EnvRoot, error)
+	dataFromEnvRoot func(EnvRoot) envRootData
 )

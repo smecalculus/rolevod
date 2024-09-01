@@ -1,4 +1,4 @@
-package store
+package data
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-var Module = fx.Module("lib/store",
+var Module = fx.Module("lib/data",
 	fx.Provide(
 		newPgx,
 	),

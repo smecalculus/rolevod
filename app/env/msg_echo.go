@@ -1,9 +1,7 @@
 package env
 
 import (
-	"fmt"
 	"log/slog"
-	"mime"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -14,18 +12,18 @@ import (
 
 // Adapter
 type handlerEcho struct {
-	api  Api
-	view msg.Renderer
-	log  *slog.Logger
+	api EnvApi
+	ssr msg.Renderer
+	log *slog.Logger
 }
 
-func newHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a EnvApi, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "env.handlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
 
 func (h *handlerEcho) ApiPostOne(c echo.Context) error {
-	var spec AS
+	var spec EnvSpec
 	err := c.Bind(&spec)
 	if err != nil {
 		return err
@@ -34,23 +32,7 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	mediaType, _, err := mime.ParseMediaType(c.Request().Header.Get(echo.HeaderAccept))
-	if err != nil {
-		return err
-	}
-	switch mediaType {
-	case echo.MIMEApplicationJSON, echo.MIMETextPlain, msg.MIMEAnyAny:
-		return c.JSON(http.StatusOK, MsgFromRoot(root))
-	case echo.MIMETextHTML, echo.MIMETextHTMLCharsetUTF8:
-		html, err := h.view.Render("root", root)
-		if err != nil {
-			return err
-		}
-		return c.HTMLBlob(http.StatusOK, html)
-	default:
-		return echo.NewHTTPError(http.StatusUnsupportedMediaType,
-			fmt.Sprintf("unsupported media type: %v", mediaType))
-	}
+	return c.JSON(http.StatusOK, MsgFromEnvRoot(root))
 }
 
 func (h *handlerEcho) ApiGetOne(c echo.Context) error {
@@ -67,7 +49,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoot(root))
+	return c.JSON(http.StatusOK, MsgFromEnvRoot(root))
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
@@ -84,7 +66,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.view.Render("envRoot", MsgFromRoot(root))
+	html, err := h.ssr.Render("envRoot", MsgFromEnvRoot(root))
 	if err != nil {
 		return err
 	}

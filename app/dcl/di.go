@@ -47,7 +47,6 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 func cfgTpEcho(e *echo.Echo, h *tpHandlerEcho) error {
 	e.PUT("/api/v1/tps/:id", h.ApiPutOne)
 	e.GET("/ssr/tps/:id", h.SsrGetOne)
-	e.PATCH("/ssr/tps/:id", h.SsrPatchOne)
 	return nil
 }
 

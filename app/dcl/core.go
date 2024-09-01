@@ -16,11 +16,11 @@ type Expname = string
 
 // Aggregate Spec
 type AS interface {
-	dcl()
+	as()
 }
 
-func (TpSpec) dcl()  {}
-func (ExpSpec) dcl() {}
+func (TpSpec) as()  {}
+func (ExpSpec) as() {}
 
 type TpSpec struct {
 	Name Tpname
@@ -32,17 +32,22 @@ type ExpSpec struct {
 
 // Aggregate Root (aka decl)
 type AR interface {
-	dcl()
+	ar()
 }
 
-func (TpRoot) dcl()  {}
-func (ExpRoot) dcl() {}
+func (TpRoot) ar()  {}
+func (ExpRoot) ar() {}
 
 // aka TpDef
 type TpRoot struct {
 	ID   core.ID[AR]
 	Name Tpname
 	St   Stype
+}
+
+type TpTeaser struct {
+	ID   core.ID[AR]
+	Name Tpname
 }
 
 // aka ExpDecDef
@@ -101,8 +106,8 @@ type One struct {
 
 // aka TpName
 type TpRef struct {
-	Name Tpname
 	ID   core.ID[AR]
+	Name Tpname
 }
 
 type Up struct {
