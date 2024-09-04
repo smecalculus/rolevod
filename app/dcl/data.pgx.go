@@ -181,13 +181,13 @@ func (r *expRepoPgx) Insert(exp ExpRoot) error {
 }
 
 func (r *expRepoPgx) SelectById(id core.ID[AR]) (ExpRoot, error) {
-	return ExpRoot{id, "ExpRoot"}, nil
+	return ExpRoot{ID: id, Name: "ExpRoot"}, nil
 }
 
 func (r *expRepoPgx) SelectAll() ([]ExpRoot, error) {
 	roots := make([]ExpRoot, 5)
 	for i := range 5 {
-		roots[i] = ExpRoot{core.New[AR](), fmt.Sprintf("ExpRoot%v", i)}
+		roots[i] = ExpRoot{ID: core.New[AR](), Name: fmt.Sprintf("ExpRoot%v", i)}
 	}
 	return roots, nil
 }

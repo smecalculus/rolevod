@@ -86,8 +86,9 @@ var (
 	MsgFromTpTeaser func(TpTeaser) TpTeaserMsg
 	MsgToTpTeaser   func(TpTeaserMsg) (TpTeaser, error)
 	// exp
-	MsgToExpSpec    func(ExpSpecMsg) ExpSpec
-	MsgFromExpSpec  func(ExpSpec) ExpSpecMsg
+	MsgToExpSpec   func(ExpSpecMsg) ExpSpec
+	MsgFromExpSpec func(ExpSpec) ExpSpecMsg
+	// goverter:ignore Ctx Zc
 	MsgToExpRoot    func(ExpRootMsg) (ExpRoot, error)
 	MsgFromExpRoot  func(ExpRoot) ExpRootMsg
 	MsgFromExpRoots func([]ExpRoot) []ExpRootMsg
@@ -96,15 +97,15 @@ var (
 func msgFromStype(stype Stype) StypeMsg {
 	switch st := stype.(type) {
 	case One:
-		return StypeMsg{K: OneK, ID: core.ToString(st.ID)}
+		return StypeMsg{K: OneK, ID: st.ID.String()}
 	case TpRef:
-		return StypeMsg{K: RefK, ID: core.ToString(st.ID), Name: st.Name}
+		return StypeMsg{K: RefK, ID: st.ID.String(), Name: st.Name}
 	case Tensor:
 		m := msgFromStype(st.S)
 		s := msgFromStype(st.T)
 		return StypeMsg{
 			K:  TensorK,
-			ID: core.ToString(st.ID),
+			ID: st.ID.String(),
 			M:  &m,
 			S:  &s,
 		}
@@ -113,7 +114,7 @@ func msgFromStype(stype Stype) StypeMsg {
 		s := msgFromStype(st.T)
 		return StypeMsg{
 			K:  LolliK,
-			ID: core.ToString[AR](st.ID),
+			ID: st.ID.String(),
 			M:  &m,
 			S:  &s,
 		}
@@ -122,13 +123,13 @@ func msgFromStype(stype Stype) StypeMsg {
 		for i, l := range maps.Keys(st.Chs) {
 			sts[i] = ChoiceMsg{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return StypeMsg{K: WithK, ID: core.ToString(st.ID), Chs: sts}
+		return StypeMsg{K: WithK, ID: st.ID.String(), Chs: sts}
 	case Plus:
 		sts := make([]ChoiceMsg, len(st.Chs))
 		for i, l := range maps.Keys(st.Chs) {
 			sts[i] = ChoiceMsg{L: string(l), S: msgFromStype(st.Chs[l])}
 		}
-		return StypeMsg{K: PlusK, ID: core.ToString(st.ID), Chs: sts}
+		return StypeMsg{K: PlusK, ID: st.ID.String(), Chs: sts}
 	default:
 		panic(ErrUnexpectedSt)
 	}

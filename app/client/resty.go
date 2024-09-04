@@ -6,7 +6,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 
 	"smecalculus/rolevod/app/dcl"
-	ws "smecalculus/rolevod/app/ws"
+	"smecalculus/rolevod/app/ws"
 )
 
 // Adapter

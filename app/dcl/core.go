@@ -14,47 +14,34 @@ var (
 type Tpname = string
 type Expname = string
 
-// Aggregate Spec
-type AS interface {
-	as()
+type Spec interface {
+	spec()
 }
 
-func (TpSpec) as()  {}
-func (ExpSpec) as() {}
+// Aggregate Root (aka decl)
+type AR interface {
+	root()
+}
 
 type TpSpec struct {
 	Name Tpname
 	St   Stype
 }
 
-type ExpSpec struct {
-	Name Expname
-}
-
-// Aggregate Root (aka decl)
-type AR interface {
-	ar()
-}
-
-func (TpRoot) ar()  {}
-func (ExpRoot) ar() {}
-
-// aka TpDef
-type TpRoot struct {
-	ID   core.ID[AR]
-	Name Tpname
-	St   Stype
-}
+func (TpSpec) spec() {}
 
 type TpTeaser struct {
 	ID   core.ID[AR]
 	Name Tpname
 }
 
-// aka ExpDecDef
-type ExpRoot struct {
+func (TpRoot) root() {}
+
+// aka TpDef
+type TpRoot struct {
 	ID   core.ID[AR]
-	Name Expname
+	Name Tpname
+	St   Stype
 }
 
 type Label string
@@ -112,16 +99,18 @@ type TpRef struct {
 }
 
 type Up struct {
-	A Stype
+	ID core.ID[AR]
+	A  Stype
 }
 
 type Down struct {
-	A Stype
+	ID core.ID[AR]
+	A  Stype
 }
 
 type ChanTp struct {
-	X Chan
-	A Stype
+	X  Chan
+	Tp Stype
 }
 
 // Port
@@ -156,27 +145,113 @@ func (s *tpService) Create(spec TpSpec) (TpRoot, error) {
 }
 
 func (s *tpService) Update(root TpRoot) error {
-	err := s.repo.Insert(root)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.repo.Insert(root)
 }
 
 func (s *tpService) Retrieve(id core.ID[AR]) (TpRoot, error) {
-	root, err := s.repo.SelectById(id)
-	if err != nil {
-		return root, err
-	}
-	return root, nil
+	return s.repo.SelectById(id)
 }
 
 func (s *tpService) RetreiveAll() ([]TpRoot, error) {
-	roots, err := s.repo.SelectAll()
-	if err != nil {
-		return nil, err
-	}
-	return roots, nil
+	return s.repo.SelectAll()
+}
+
+type ExpSpec struct {
+	Name Expname
+}
+
+func (ExpSpec) spec() {}
+
+type ExpTeaser struct {
+	ID   core.ID[AR]
+	Name Expname
+}
+
+type Context []ChanTp
+type Branches map[Label]Expression
+
+// aka ExpDec or ExpDecDef without expression
+type ExpRoot struct {
+	ID   core.ID[AR]
+	Name Expname
+	Ctx  Context
+	Zc   ChanTp
+}
+
+func (ExpRoot) root() {}
+
+type Expression interface {
+	exp()
+}
+
+func (Fwd) exp()    {}
+func (Spawn) exp()  {}
+func (ExpRef) exp() {}
+func (Lab) exp()    {}
+func (Case) exp()   {}
+func (Send) exp()   {}
+func (Recv) exp()   {}
+func (Close) exp()  {}
+func (Wait) exp()   {}
+
+type Fwd struct {
+	ID core.ID[AR]
+	X  Chan
+	Y  Chan
+}
+
+type Spawn struct {
+	ID   core.ID[AR]
+	Name Expname
+	Xs   []Chan
+	X    Chan
+	Q    Expression
+}
+
+// aka ExpName
+type ExpRef struct {
+	ID   core.ID[AR]
+	Name Expname
+	Xs   []Chan
+	X    Chan
+}
+
+type Lab struct {
+	ID  core.ID[AR]
+	Ch  Chan
+	L   Label
+	Exp Expression
+}
+
+type Case struct {
+	ID  core.ID[AR]
+	Ch  Chan
+	Brs Branches
+}
+
+type Send struct {
+	ID  core.ID[AR]
+	Ch1 Chan
+	Ch2 Chan
+	Exp Expression
+}
+
+type Recv struct {
+	ID  core.ID[AR]
+	Ch1 Chan
+	Ch2 Chan
+	Exp Expression
+}
+
+type Close struct {
+	ID core.ID[AR]
+	X  Chan
+}
+
+type Wait struct {
+	ID core.ID[AR]
+	X  Chan
+	P  Expression
 }
 
 // Port
@@ -209,19 +284,11 @@ func (s *expService) Create(spec ExpSpec) (ExpRoot, error) {
 }
 
 func (s *expService) Retrieve(id core.ID[AR]) (ExpRoot, error) {
-	root, err := s.repo.SelectById(id)
-	if err != nil {
-		return root, err
-	}
-	return root, nil
+	return s.repo.SelectById(id)
 }
 
 func (s *expService) RetreiveAll() ([]ExpRoot, error) {
-	roots, err := s.repo.SelectAll()
-	if err != nil {
-		return nil, err
-	}
-	return roots, nil
+	return s.repo.SelectAll()
 }
 
 func elab(stype Stype) Stype {
@@ -246,7 +313,7 @@ type repo[T AR] interface {
 // goverter:output:format assign-variable
 // goverter:extend To.*
 var (
-	TpTeaserFromTpRoot func(TpRoot) TpTeaser
+	ToTpTeaser func(TpRoot) TpTeaser
 )
 
 func ToSame(id core.ID[AR]) core.ID[AR] {
@@ -258,5 +325,5 @@ func ToCore(id string) (core.ID[AR], error) {
 }
 
 func ToEdge(id core.ID[AR]) string {
-	return core.ToString(id)
+	return id.String()
 }

@@ -18,5 +18,6 @@ var (
 	// goverter:ignore Tps Exps
 	dataToEnvRoot   func(envRootData) (EnvRoot, error)
 	dataFromEnvRoot func(EnvRoot) envRootData
+	dataToEnvRoots  func([]envRootData) ([]EnvRoot, error)
 	dataFromTpIntro func(TpIntro) tpIntroData
 )

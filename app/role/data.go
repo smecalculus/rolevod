@@ -1,4 +1,4 @@
-package dcl
+package role
 
 import (
 	"errors"
@@ -6,16 +6,22 @@ import (
 	"smecalculus/rolevod/lib/core"
 )
 
-type tpRootData struct {
-	ID     string                  `db:"id"`
-	Name   string                  `db:"name"`
-	States map[string]state        `db:"-"`
-	Trs    map[string][]transition `db:"-"`
+type roleRootData struct {
+	ID       string                  `db:"id"`
+	Name     string                  `db:"name"`
+	Children []roleTeaserData        `db:"-"`
+	States   map[string]state        `db:"-"`
+	Trs      map[string][]transition `db:"-"`
 }
 
-type TpTeaserData struct {
+type roleTeaserData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
+}
+
+type kinshipRootData struct {
+	Parent   roleTeaserData
+	Children []roleTeaserData
 }
 
 type kind int
@@ -44,29 +50,54 @@ type transition struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend To.*
+// goverter:extend to.*
 // goverter:extend data.*
 var (
-	DataToTpTeaser    func(TpTeaserData) (TpTeaser, error)
-	DataFromTpTeaser  func(TpTeaser) TpTeaserData
-	DataToTpTeasers   func([]TpTeaserData) ([]TpTeaser, error)
-	DataFromTpTeasers func([]TpTeaser) []TpTeaserData
-	DataToTpRoots     func([]tpRootData) ([]TpRoot, error)
+	DataToRoleTeaser    func(roleTeaserData) (RoleTeaser, error)
+	DataFromRoleTeaser  func(RoleTeaser) roleTeaserData
+	DataToRoleTeasers   func([]roleTeaserData) ([]RoleTeaser, error)
+	DataFromRoleTeasers func([]RoleTeaser) []roleTeaserData
+	DataToRoleRoots     func([]roleRootData) ([]RoleRoot, error)
+	DataFromRoleRoots   func([]RoleRoot) []roleRootData
+	// kinship
+	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
+	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
 )
 
-func dataFromTpRoot(root TpRoot) tpRootData {
-	data := &tpRootData{
-		ID:     root.ID.String(),
-		Name:   root.Name,
-		States: map[string]state{},
-		Trs:    map[string][]transition{},
+func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
+	id, err := core.FromString[Role](dto.ID)
+	if err != nil {
+		return RoleRoot{}, nil
+	}
+	children, err := DataToRoleTeasers(dto.Children)
+	if err != nil {
+		return RoleRoot{}, nil
+	}
+	return RoleRoot{
+		ID:       id,
+		Name:     dto.Name,
+		Children: children,
+		St:       dataToStype(dto, dto.States[dto.ID]),
+	}, nil
+}
+
+func dataFromRoleRoot(root RoleRoot) roleRootData {
+	data := &roleRootData{
+		ID:       root.ID.String(),
+		Name:     root.Name,
+		Children: DataFromRoleTeasers(root.Children),
+		States:   map[string]state{},
+		Trs:      map[string][]transition{},
+	}
+	if root.St == nil {
+		return *data
 	}
 	state := dataFromStype(data, root.St)
 	data.States[state.ID] = state
 	return *data
 }
 
-func dataFromStype(data *tpRootData, stype Stype) state {
+func dataFromStype(data *roleRootData, stype Stype) state {
 	switch st := stype.(type) {
 	case One:
 		return state{K: oneK, ID: st.ID.String()}
@@ -111,20 +142,8 @@ func dataFromStype(data *tpRootData, stype Stype) state {
 	}
 }
 
-func dataToTpRoot(data tpRootData) (TpRoot, error) {
-	id, err := core.FromString[AR](data.ID)
-	if err != nil {
-		return TpRoot{}, nil
-	}
-	return TpRoot{
-		ID:   id,
-		Name: data.Name,
-		St:   dataToStype(data, data.States[data.ID]),
-	}, nil
-}
-
-func dataToStype(data tpRootData, from state) Stype {
-	id, err := core.FromString[AR](from.ID)
+func dataToStype(data roleRootData, from state) Stype {
+	id, err := core.FromString[Role](from.ID)
 	if err != nil {
 		panic(errInvalidID)
 	}
@@ -167,15 +186,3 @@ func dataToStype(data tpRootData, from state) Stype {
 var (
 	errInvalidID = errors.New("invalid state id")
 )
-
-type expRootData struct {
-	ID     string                  `db:"id"`
-	Name   string                  `db:"name"`
-	States map[string]state        `db:"-"`
-	Trs    map[string][]transition `db:"-"`
-}
-
-type ExpTeaserData struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
-}

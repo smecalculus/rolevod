@@ -10,8 +10,9 @@ import (
 	"smecalculus/rolevod/lib/msg"
 
 	"smecalculus/rolevod/app/dcl"
+	"smecalculus/rolevod/app/role"
 	"smecalculus/rolevod/app/web"
-	ws "smecalculus/rolevod/app/ws"
+	"smecalculus/rolevod/app/ws"
 )
 
 func main() {
@@ -24,5 +25,6 @@ func main() {
 		web.Module,
 		ws.Module,
 		dcl.Module,
+		role.Module,
 	).Run()
 }

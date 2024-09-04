@@ -8,6 +8,16 @@ CREATE TABLE tps (
 	name varchar(20)
 );
 
+CREATE TABLE roles (
+	id varchar(20) UNIQUE,
+	name varchar(20)
+);
+
+CREATE TABLE kinships (
+	parent_id varchar(20),
+	child_id varchar(20)
+);
+
 CREATE TABLE introductions (
 	env_id varchar(20),
 	tp_id varchar(20)

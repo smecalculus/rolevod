@@ -8,14 +8,17 @@ import (
 	"smecalculus/rolevod/app/dcl"
 )
 
-// Aggregate Spec
-type AS interface {
-	as()
+type Spec interface {
+	spec()
 }
 
-func (EnvSpec) as() {}
+func (EnvSpec) spec() {}
 
 type EnvSpec struct {
+	Name string
+}
+
+type EnvTeaser struct {
 	Name string
 }
 
@@ -107,5 +110,5 @@ func toCore(id string) (core.ID[AR], error) {
 }
 
 func toEdge(id core.ID[AR]) string {
-	return core.ToString(id)
+	return id.String()
 }

@@ -16,7 +16,7 @@ var Module = fx.Module("app/web",
 	fx.Provide(
 		fx.Private,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		hewHandlerEcho,
+		newHandlerEcho,
 	),
 	fx.Invoke(
 		cfgEcho,

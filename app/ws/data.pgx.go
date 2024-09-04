@@ -3,7 +3,6 @@ package ws
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -60,7 +59,7 @@ func (r *envRepoPgx) SelectById(id core.ID[AR]) (EnvRoot, error) {
 		FROM envs
 		WHERE id = $1`
 	ctx := context.Background()
-	rows, err := r.conn.Query(ctx, query, core.ToString(id))
+	rows, err := r.conn.Query(ctx, query, id.String())
 	if err != nil {
 		return EnvRoot{}, err
 	}
@@ -73,11 +72,22 @@ func (r *envRepoPgx) SelectById(id core.ID[AR]) (EnvRoot, error) {
 }
 
 func (r *envRepoPgx) SelectAll() ([]EnvRoot, error) {
-	roots := make([]EnvRoot, 5)
-	for i := range 5 {
-		roots[i] = EnvRoot{core.New[AR](), fmt.Sprintf("Foo%v", i), []dcl.TpTeaser{}, []dcl.ExpRoot{}}
+	query := `
+		SELECT
+			id,
+			name
+		FROM envs`
+	ctx := context.Background()
+	rows, err := r.conn.Query(ctx, query)
+	if err != nil {
+		return nil, err
 	}
-	return roots, nil
+	defer rows.Close()
+	envs, err := pgx.CollectRows(rows, pgx.RowToStructByName[envRootData])
+	if err != nil {
+		return nil, err
+	}
+	return dataToEnvRoots(envs)
 }
 
 // Adapter

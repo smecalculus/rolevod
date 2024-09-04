@@ -1,0 +1,72 @@
+{{define "tp_dl"}}
+    <script>
+        Alpine.data('tp', () => ({
+            tp: {{.}},
+        }))
+    </script>
+    <div id="role" x-data="tp">
+        <div class="row">
+            <div class="col-auto">
+                <input x-model="tp.name" type="text" class="form-control">
+            </div>
+        </div>
+        {{template "st_dl" (dict "St" .St "Root" .ID "Path" "tp.st")}}
+    </div>
+{{end}}
+
+{{define "st_dl"}}
+    {{$kinds := list "one" "ref" "tensor" "lolli" "with" "plus"}}
+    {{if or (eq .St.K "with") (eq .St.K "plus")}}
+        <dl class="row offset-md-0">
+        {{range $i, $ch := .St.Chs}}
+            <dt class="row offset-md-0">
+                <div class="col-auto">
+                    {{$lp := printf "%v.choices[%v].label" $.Path $i}}
+                    <input x-model="{{$lp}}" type="text" class="form-control">
+                </div>
+            </dt>
+            <dd class="row offset-md-0">
+                {{$sp := printf "%v.choices[%v].session" $.Path $i}}
+                {{template "st_dl" (dict "St" $ch.S "Root" $.Root "Path" $sp)}}
+            </dd>
+        {{end}}
+        </dl>
+    {{else if or (eq .St.K "tensor") (eq .St.K "lolli")}}
+        <dl class="ms-4">
+            <div class="input-group text-center align-items-center gap-2">
+                <div class="col-auto">
+                    {{template "st_dl" (dict "St" .St.M "Root" .Root "Path" (printf "%v.message" $.Path))}}
+                </div>
+                <div class="col-1">
+                    <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
+                    {{range $k := $kinds}}
+                        <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+                    {{end}}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    {{template "st_dl" (dict "St" .St.S "Root" .Root "Path" (printf "%v.session" $.Path))}}
+                </div>
+            </div>
+            {{if ne .St.S.K "ref"}}
+            <div class="col-auto">
+                {{template "st_dl" (dict "St" .St.S "Root" .Root)}}
+            </div>
+            {{end}}
+        </dl>
+    {{else if eq .St.K "ref"}}
+        {{if eq .St.ID .Root}}
+            <span x-text="tp.name"></span>
+        {{else}}
+            <a x-text="{{printf "%v.name" .Path}}" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
+        {{end}}
+    {{else}}
+        <div class="col-auto ms-4">
+            <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
+            {{range $k := $kinds}}
+                <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+            {{end}}
+            </select>
+        </div>
+    {{end}}
+{{end}}

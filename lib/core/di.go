@@ -15,6 +15,7 @@ var Module = fx.Module("lib/core",
 )
 
 func newLogger() *slog.Logger {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	return slog.Default()
 }
 
