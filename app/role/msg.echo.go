@@ -101,9 +101,9 @@ type kinshipHandlerEcho struct {
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(ra RoleApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a RoleApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
-	return &kinshipHandlerEcho{ra, r, l.With(name)}
+	return &kinshipHandlerEcho{a, r, l.With(name)}
 }
 
 func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
@@ -112,12 +112,11 @@ func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	ks, err := MsgToKinshipSpec(mto)
+	spec, err := MsgToKinshipSpec(mto)
 	if err != nil {
 		return err
 	}
-	h.log.Debug("trying to extablish", slog.Any("spec", ks))
-	err = h.api.Establish(ks)
+	err = h.api.Establish(spec)
 	if err != nil {
 		return err
 	}

@@ -14,11 +14,7 @@ var (
 type Tpname = string
 type Expname = string
 
-type Spec interface {
-	spec()
-}
-
-// Aggregate Root (aka decl)
+// Aggregate Root
 type Role interface {
 	role()
 }
@@ -27,8 +23,6 @@ type RoleSpec struct {
 	Name Tpname
 	St   Stype
 }
-
-func (RoleSpec) spec() {}
 
 type RoleTeaser struct {
 	ID   core.ID[Role]
@@ -134,19 +128,19 @@ func newRoleService(rr roleRepo, kr kinshipRepo, l *slog.Logger) *roleService {
 	return &roleService{rr, kr, l.With(name)}
 }
 
-func (s *roleService) Create(rs RoleSpec) (RoleRoot, error) {
-	rr := RoleRoot{
+func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
+	root := RoleRoot{
 		ID:   core.New[Role](),
-		Name: rs.Name,
-		St:   elab(rs.St),
+		Name: spec.Name,
+		St:   elab(spec.St),
 	}
-	err := s.roleRepo.Insert(rr)
+	err := s.roleRepo.Insert(root)
 	if err != nil {
-		s.log.Error("creation failed", slog.Any("reason", err), slog.Any("rs", rs))
-		return rr, err
+		s.log.Error("creation failed", slog.Any("reason", err), slog.Any("spec", spec))
+		return root, err
 	}
-	s.log.Debug("creation succeed", slog.Any("rr", rr))
-	return rr, nil
+	s.log.Debug("creation succeed", slog.Any("root", root))
+	return root, nil
 }
 
 func (s *roleService) Update(rr RoleRoot) error {
@@ -154,15 +148,15 @@ func (s *roleService) Update(rr RoleRoot) error {
 }
 
 func (s *roleService) Retrieve(id core.ID[Role]) (RoleRoot, error) {
-	rr, err := s.roleRepo.SelectById(id)
+	root, err := s.roleRepo.SelectById(id)
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	rr.Children, err = s.roleRepo.SelectChildren(id)
+	root.Children, err = s.roleRepo.SelectChildren(id)
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	return rr, nil
+	return root, nil
 }
 
 func (s *roleService) RetreiveAll() ([]RoleTeaser, error) {
@@ -170,7 +164,6 @@ func (s *roleService) RetreiveAll() ([]RoleTeaser, error) {
 }
 
 func (s *roleService) Establish(ks KinshipSpec) error {
-	// children := make([]RoleTeaser, len(ks.Children))
 	var children []RoleTeaser
 	for _, id := range ks.Children {
 		children = append(children, RoleTeaser{ID: id})
@@ -183,7 +176,7 @@ func (s *roleService) Establish(ks KinshipSpec) error {
 	if err != nil {
 		return err
 	}
-	s.log.Debug("establish success", slog.Any("kinship", kr))
+	s.log.Debug("establishment succeed", slog.Any("kinship", kr))
 	return nil
 }
 

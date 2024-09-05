@@ -8,27 +8,27 @@ import (
 
 	"smecalculus/rolevod/lib/msg"
 
-	"smecalculus/rolevod/app/ws"
+	"smecalculus/rolevod/app/role"
 )
 
 // Adapter
 type handlerEcho struct {
-	api  ws.EnvApi
+	api role.RoleApi
 	ssr msg.Renderer
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newHandlerEcho(a ws.EnvApi, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a role.RoleApi, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "web.handlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
 
 func (h *handlerEcho) Home(c echo.Context) error {
-	roots, err := h.api.RetreiveAll()
+	rts, err := h.api.RetreiveAll()
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("home.html", ws.MsgFromEnvRoots(roots))
+	html, err := h.ssr.Render("home.html", role.MsgFromRoleTeasers(rts))
 	if err != nil {
 		return err
 	}

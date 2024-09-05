@@ -42,6 +42,7 @@ func newEcho(p *props, l *slog.Logger, lc fx.Lifecycle) *echo.Echo {
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			if v.Error != nil {
 				log.Error("request failed",
+					slog.String("method", v.Method),
 					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),
 					slog.String("reason", v.Error.Error()),

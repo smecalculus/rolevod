@@ -22,13 +22,13 @@ func newRoleRepoPgx(p *pgxpool.Pool, l *slog.Logger) *roleRepoPgx {
 	return &roleRepoPgx{p, l.With(name)}
 }
 
-func (r *roleRepoPgx) Insert(rr RoleRoot) (err error) {
+func (r *roleRepoPgx) Insert(root RoleRoot) (err error) {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoleRoot(rr)
+	dto := dataFromRoleRoot(root)
 	// states
 	sq := `
 		INSERT INTO states (
@@ -197,7 +197,7 @@ func newKinshipRepoPgx(p *pgxpool.Pool, l *slog.Logger) *kinshipRepoPgx {
 	return &kinshipRepoPgx{p, l.With(name)}
 }
 
-func (r *kinshipRepoPgx) Insert(kr KinshipRoot) error {
+func (r *kinshipRepoPgx) Insert(root KinshipRoot) error {
 	query := `
 		INSERT INTO kinships (
 			parent_id,
@@ -212,7 +212,7 @@ func (r *kinshipRepoPgx) Insert(kr KinshipRoot) error {
 		return err
 	}
 	batch := pgx.Batch{}
-	dto := DataFromKinshipRoot(kr)
+	dto := DataFromKinshipRoot(root)
 	for _, child := range dto.Children {
 		args := pgx.NamedArgs{
 			"parent_id": dto.Parent.ID,

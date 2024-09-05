@@ -9,12 +9,12 @@
     <body>
         {{ template "navbar" }}
         <div class="container">
-            <table class="table" id="envs">
+            <table class="table" id="roles">
                 <tbody>
                 {{range .}}
                     <tr>
                         <td>
-                            <a href="/ssr/envs/{{ .ID }}" hx-target="#envs" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                            <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
                         </td>
                         <td>Decls: <a href="#">0</a></td>
                     </tr>

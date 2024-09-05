@@ -9,10 +9,11 @@ import (
 	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/msg"
 
-	"smecalculus/rolevod/app/dcl"
+	"smecalculus/rolevod/app/force"
 	"smecalculus/rolevod/app/role"
+	"smecalculus/rolevod/app/seat"
 	"smecalculus/rolevod/app/web"
-	"smecalculus/rolevod/app/ws"
+	"smecalculus/rolevod/app/work"
 )
 
 func main() {
@@ -22,9 +23,10 @@ func main() {
 		data.Module,
 		msg.Module,
 		// app
-		web.Module,
-		ws.Module,
-		dcl.Module,
+		force.Module,
 		role.Module,
+		seat.Module,
+		web.Module,
+		work.Module,
 	).Run()
 }

@@ -1,4 +1,4 @@
-package e2e
+package role_test
 
 import (
 	"os"
@@ -21,34 +21,34 @@ func TestMain(m *testing.M) {
 
 func TestEstablish(t *testing.T) {
 	// given
-	prs := role.RoleSpec{Name: "parent-role"}
-	prr, err := roleApi.Create(prs)
+	ps := role.RoleSpec{Name: "parent-role"}
+	pr, err := roleApi.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	crs := role.RoleSpec{Name: "child-role", St: role.One{}}
-	crr, err := roleApi.Create(crs)
+	cs := role.RoleSpec{Name: "child-role", St: role.One{}}
+	cr, err := roleApi.Create(cs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// when
 	ks := role.KinshipSpec{
-		Parent:   prr.ID,
-		Children: []core.ID[role.Role]{crr.ID},
+		Parent:   pr.ID,
+		Children: []core.ID[role.Role]{cr.ID},
 	}
 	err = roleApi.Establish(ks)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := roleApi.Retrieve(prr.ID)
+	actual, err := roleApi.Retrieve(pr.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := role.ToRoleTeaser(crr)
+	expectedChild := role.ToRoleTeaser(cr)
 	if !slices.Contains(actual.Children, expectedChild) {
-		t.Errorf("unexpected children in %q; want: %+v, got: %+v", prr.Name, expectedChild, actual.Children)
+		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
 	}
 }

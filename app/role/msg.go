@@ -79,14 +79,16 @@ type TpRefMsg struct {
 // goverter:extend msg.*
 var (
 	// role
-	MsgToRoleSpec     func(RoleSpecMsg) (RoleSpec, error)
-	MsgFromRoleSpec   func(RoleSpec) RoleSpecMsg
-	MsgFromRoleRoot   func(RoleRoot) RoleRootMsg
-	MsgToRoleRoot     func(RoleRootMsg) (RoleRoot, error)
-	MsgFromRoleRoots  func([]RoleRoot) []RoleRootMsg
-	MsgToRoleRoots    func([]RoleRootMsg) ([]RoleRoot, error)
-	MsgFromRoleTeaser func(RoleTeaser) RoleTeaserMsg
-	MsgToRoleTeaser   func(RoleTeaserMsg) (RoleTeaser, error)
+	MsgToRoleSpec      func(RoleSpecMsg) (RoleSpec, error)
+	MsgFromRoleSpec    func(RoleSpec) RoleSpecMsg
+	MsgFromRoleRoot    func(RoleRoot) RoleRootMsg
+	MsgToRoleRoot      func(RoleRootMsg) (RoleRoot, error)
+	MsgFromRoleRoots   func([]RoleRoot) []RoleRootMsg
+	MsgToRoleRoots     func([]RoleRootMsg) ([]RoleRoot, error)
+	MsgFromRoleTeaser  func(RoleTeaser) RoleTeaserMsg
+	MsgToRoleTeaser    func(RoleTeaserMsg) (RoleTeaser, error)
+	MsgFromRoleTeasers func([]RoleTeaser) []RoleTeaserMsg
+	MsgToRoleTeasers   func([]RoleTeaserMsg) ([]RoleTeaser, error)
 	// kinship
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
@@ -103,8 +105,6 @@ func msgFromStype(stype Stype) *StypeMsg {
 	case TpRef:
 		return &StypeMsg{K: RefK, ID: st.ID.String(), Name: st.Name}
 	case Tensor:
-		// m := msgFromStype(st.S)
-		// s := msgFromStype(st.T)
 		return &StypeMsg{
 			K:  TensorK,
 			ID: st.ID.String(),
@@ -112,8 +112,6 @@ func msgFromStype(stype Stype) *StypeMsg {
 			S:  msgFromStype(st.T),
 		}
 	case Lolli:
-		// m := msgFromStype(st.S)
-		// s := msgFromStype(st.T)
 		return &StypeMsg{
 			K:  LolliK,
 			ID: st.ID.String(),
