@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/app/bare/state"
 )
 
 // Adapter
@@ -22,85 +24,13 @@ func newRoleRepoPgx(p *pgxpool.Pool, l *slog.Logger) *roleRepoPgx {
 	return &roleRepoPgx{p, l.With(name)}
 }
 
-func (r *roleRepoPgx) Insert(root RoleRoot) (err error) {
+func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	dto := dataFromRoleRoot(root)
-	// states
-	sq := `
-		INSERT INTO states (
-			kind, id, name
-		) VALUES (
-			@kind, @id, @name
-		)`
-	sb := pgx.Batch{}
-	for _, s := range dto.States {
-		sa := pgx.NamedArgs{
-			"kind": s.K,
-			"id":   s.ID,
-			"name": s.Name,
-		}
-		sb.Queue(sq, sa)
-	}
-	sbr := tx.SendBatch(ctx, &sb)
-	defer func() {
-		err = errors.Join(err, sbr.Close())
-	}()
-	for _, s := range dto.States {
-		_, err = sbr.Exec()
-		if err != nil {
-			r.log.Error("insert failed", slog.Any("reason", err), slog.Any("state", s))
-		}
-	}
-	if err != nil {
-		return errors.Join(err, sbr.Close(), tx.Rollback(ctx))
-	}
-	err = sbr.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	// transitions
-	tq := `
-		INSERT INTO transitions (
-			from_id, to_id, msg_id, msg_key
-		) VALUES (
-			@from_id, @to_id, @msg_id, @msg_key
-		)`
-	tb := pgx.Batch{}
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			ta := pgx.NamedArgs{
-				"from_id": tr.FromID,
-				"to_id":   tr.ToID,
-				"msg_id":  tr.MsgID,
-				"msg_key": tr.MsgKey,
-			}
-			tb.Queue(tq, ta)
-		}
-	}
-	tbr := tx.SendBatch(ctx, &tb)
-	defer func() {
-		err = errors.Join(err, tbr.Close())
-	}()
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			_, err = tbr.Exec()
-			if err != nil {
-				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("tr", tr))
-			}
-		}
-	}
-	if err != nil {
-		return errors.Join(err, tbr.Close(), tx.Rollback(ctx))
-	}
-	err = tbr.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	// role
 	rq := `
 		INSERT INTO roles (
 			id, name
@@ -119,30 +49,50 @@ func (r *roleRepoPgx) Insert(root RoleRoot) (err error) {
 	return tx.Commit(ctx)
 }
 
+func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
+	query := `
+		SELECT
+			id,
+			name
+		FROM roles`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
+	if err != nil {
+		return nil, err
+	}
+	return DataToRoleRefs(dtos)
+}
+
 func (r *roleRepoPgx) SelectById(rid id.ADT[ID]) (RoleRoot, error) {
-	fooId := id.New[ID]()
-	queue := With{
-		ID: id.New[ID](),
-		Choices: map[Label]Stype{
-			"enq": Tensor{
-				ID: id.New[ID](),
-				S:  TpRef{fooId, "Foo"},
-				T:  TpRef{rid, "Queue"},
+	fooID := id.New[state.ID]()
+	queueID, _ := id.String[state.ID](rid.String())
+	queue := &state.With{
+		ID: id.New[state.ID](),
+		Choices: map[state.Label]state.Root{
+			"enq": &state.Tensor{
+				ID: id.New[state.ID](),
+				S:  &state.TpRef{ID: fooID, Name: "Foo"},
+				T:  &state.TpRef{ID: queueID, Name: "Queue"},
 			},
-			"deq": Plus{
-				ID: id.New[ID](),
-				Choices: map[Label]Stype{
-					"some": Lolli{
-						ID: id.New[ID](),
-						S:  TpRef{fooId, "Foo"},
-						T:  TpRef{rid, "Queue"},
+			"deq": &state.Plus{
+				ID: id.New[state.ID](),
+				Choices: map[state.Label]state.Root{
+					"some": &state.Lolli{
+						ID: id.New[state.ID](),
+						S:  &state.TpRef{ID: fooID, Name: "Foo"},
+						T:  &state.TpRef{ID: queueID, Name: "Queue"},
 					},
-					"none": One{ID: id.New[ID]()},
+					"none": &state.One{ID: id.New[state.ID]()},
 				},
 			},
 		},
 	}
-	return RoleRoot{ID: rid, Name: "Queue", St: queue}, nil
+	return RoleRoot{ID: rid, Name: "Queue", State: queue}, nil
 }
 
 func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
@@ -156,25 +106,6 @@ func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
 		WHERE k.parent_id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, id.String())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
-	if err != nil {
-		return nil, err
-	}
-	return DataToRoleRefs(dtos)
-}
-
-func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
-	query := `
-		SELECT
-			id,
-			name
-		FROM roles`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}

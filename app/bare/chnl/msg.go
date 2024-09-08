@@ -5,9 +5,8 @@ type SpecMsg struct {
 }
 
 type RootMsg struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Children []RefMsg `json:"children"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type RefMsg struct {

@@ -6,100 +6,32 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/internal/chnl"
+	"smecalculus/rolevod/app/bare/state"
 )
 
 var (
 	ErrUnexpectedSt = errors.New("unexpected session type")
 )
 
-type Tpname = string
-type Expname = string
-
-// Aggregate Root
 type ID interface{}
 
 type RoleSpec struct {
-	Name Tpname
-	St   Stype
+	Name  string
+	State state.Root
 }
 
 type RoleRef struct {
 	ID   id.ADT[ID]
-	Name Tpname
+	Name string
 }
 
 // Aggregate Root
 // aka TpDef
 type RoleRoot struct {
 	ID       id.ADT[ID]
-	Name     Tpname
+	Name     string
 	Children []RoleRef
-	St       Stype
-}
-
-type Label string
-
-type Stype interface {
-	stype()
-}
-
-func (One) stype()    {}
-func (TpRef) stype()  {}
-func (Tensor) stype() {}
-func (Lolli) stype()  {}
-func (With) stype()   {}
-func (Plus) stype()   {}
-func (Up) stype()     {}
-func (Down) stype()   {}
-
-// aka External Choice
-type With struct {
-	ID      id.ADT[ID]
-	Choices map[Label]Stype
-}
-
-// aka Internal Choice
-type Plus struct {
-	ID      id.ADT[ID]
-	Choices map[Label]Stype
-}
-
-type Tensor struct {
-	ID id.ADT[ID]
-	S  Stype
-	T  Stype
-}
-
-type Lolli struct {
-	ID id.ADT[ID]
-	S  Stype
-	T  Stype
-}
-
-type One struct {
-	ID id.ADT[ID]
-}
-
-// aka TpName
-type TpRef struct {
-	ID   id.ADT[ID]
-	Name Tpname
-}
-
-type Up struct {
-	ID id.ADT[ID]
-	A  Stype
-}
-
-type Down struct {
-	ID id.ADT[ID]
-	A  Stype
-}
-
-type ChanTp struct {
-	X  chnl.Ref
-	Tp Stype
+	State    state.Root
 }
 
 // Port
@@ -113,20 +45,27 @@ type RoleApi interface {
 
 type roleService struct {
 	roleRepo    roleRepo
+	stateRepo   state.Repo
 	kinshipRepo kinshipRepo
 	log         *slog.Logger
 }
 
-func newRoleService(rr roleRepo, kr kinshipRepo, l *slog.Logger) *roleService {
+func newRoleService(rr roleRepo, sr state.Repo, kr kinshipRepo, l *slog.Logger) *roleService {
 	name := slog.String("name", "roleService")
-	return &roleService{rr, kr, l.With(name)}
+	return &roleService{rr, sr, kr, l.With(name)}
 }
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	root := RoleRoot{
 		ID:   id.New[ID](),
 		Name: spec.Name,
-		St:   elab(spec.St),
+	}
+	if spec.State != nil {
+		err := s.stateRepo.Insert(elab(spec.State))
+		if err != nil {
+			s.log.Error("creation failed", slog.Any("reason", err), slog.Any("state", spec.State))
+			return root, err
+		}
 	}
 	err := s.roleRepo.Insert(root)
 	if err != nil {
@@ -137,16 +76,29 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	return root, nil
 }
 
-func (s *roleService) Update(rr RoleRoot) error {
-	return s.roleRepo.Insert(rr)
+func (s *roleService) Update(root RoleRoot) error {
+	return s.roleRepo.Insert(root)
 }
 
-func (s *roleService) Retrieve(id id.ADT[ID]) (RoleRoot, error) {
-	root, err := s.roleRepo.SelectById(id)
+func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
+	root, err := s.roleRepo.SelectById(rid)
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	root.Children, err = s.roleRepo.SelectChildren(id)
+	root.Children, err = s.roleRepo.SelectChildren(rid)
+	if err != nil {
+		return RoleRoot{}, err
+	}
+	// TODO: связка ролей и состояний
+	// 1. переиспользуем идентификатор (/)
+	// 2. складываем в отдельное поле
+	// 3. строим отдельное отношение
+	// - дополнительное обращение к БД
+	stateID, err := id.String[state.ID](rid.String())
+	if err != nil {
+		return RoleRoot{}, err
+	}
+	root.State, err = s.stateRepo.SelectById(stateID)
 	if err != nil {
 		return RoleRoot{}, err
 	}
@@ -157,13 +109,13 @@ func (s *roleService) RetreiveAll() ([]RoleRef, error) {
 	return s.roleRepo.SelectAll()
 }
 
-func (s *roleService) Establish(ks KinshipSpec) error {
+func (s *roleService) Establish(spec KinshipSpec) error {
 	var children []RoleRef
-	for _, id := range ks.Children {
+	for _, id := range spec.Children {
 		children = append(children, RoleRef{ID: id})
 	}
 	kr := KinshipRoot{
-		Parent:   RoleRef{ID: ks.Parent},
+		Parent:   RoleRef{ID: spec.Parent},
 		Children: children,
 	}
 	err := s.kinshipRepo.Insert(kr)
@@ -174,14 +126,14 @@ func (s *roleService) Establish(ks KinshipSpec) error {
 	return nil
 }
 
-func elab(stype Stype) Stype {
-	switch st := stype.(type) {
+func elab(root state.Root) state.Root {
+	switch st := root.(type) {
 	case nil:
 		return nil
-	case One:
-		return One{ID: id.New[ID]()}
-	case TpRef:
-		return TpRef{ID: id.New[ID](), Name: st.Name}
+	case *state.One:
+		return &state.One{ID: id.New[state.ID]()}
+	case *state.TpRef:
+		return &state.TpRef{ID: id.New[state.ID](), Name: st.Name}
 	default:
 		panic(ErrUnexpectedSt)
 	}

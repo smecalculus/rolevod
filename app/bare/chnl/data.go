@@ -1,9 +1,8 @@
 package chnl
 
 type RootData struct {
-	ID       string    `db:"id"`
-	Name     string    `db:"name"`
-	Children []RefData `db:"-"`
+	ID   string `db:"id"`
+	Name string `db:"name"`
 }
 
 type RefData struct {

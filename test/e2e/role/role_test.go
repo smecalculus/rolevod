@@ -8,6 +8,8 @@ import (
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/role"
+
+	"smecalculus/rolevod/app/bare/state"
 )
 
 var (
@@ -27,7 +29,7 @@ func TestEstablish(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	cs := role.RoleSpec{Name: "child-role", St: role.One{}}
+	cs := role.RoleSpec{Name: "child-role", State: &state.One{}}
 	cr, err := roleApi.Create(cs)
 	if err != nil {
 		t.Fatal(err)

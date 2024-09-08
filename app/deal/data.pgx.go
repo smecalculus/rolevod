@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/app/seat"
 )
 
 // Adapter
@@ -48,6 +50,14 @@ func (r *dealRepoPgx) Insert(root DealRoot) error {
 	return tx.Commit(ctx)
 }
 
+func (r *dealRepoPgx) SelectAll() ([]DealRef, error) {
+	roots := make([]DealRef, 5)
+	for i := range 5 {
+		roots[i] = DealRef{ID: id.New[ID](), Name: fmt.Sprintf("DealRoot%v", i)}
+	}
+	return roots, nil
+}
+
 func (r *dealRepoPgx) SelectById(id id.ADT[ID]) (DealRoot, error) {
 	return DealRoot{ID: id, Name: "DealRoot"}, nil
 }
@@ -74,12 +84,8 @@ func (r *dealRepoPgx) SelectChildren(id id.ADT[ID]) ([]DealRef, error) {
 	return DataToDealRefs(dtos)
 }
 
-func (r *dealRepoPgx) SelectAll() ([]DealRef, error) {
-	roots := make([]DealRef, 5)
-	for i := range 5 {
-		roots[i] = DealRef{ID: id.New[ID](), Name: fmt.Sprintf("DealRoot%v", i)}
-	}
-	return roots, nil
+func (r *dealRepoPgx) SelectSeats(id id.ADT[ID]) ([]seat.SeatRef, error) {
+	return []seat.SeatRef{}, nil
 }
 
 // Adapter
@@ -194,15 +200,4 @@ func (r *partRepoPgx) Insert(root PartRoot) error {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
-}
-
-// Adapter
-type tranRepoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
-}
-
-func newTranRepoPgx(p *pgxpool.Pool, l *slog.Logger) *tranRepoPgx {
-	name := slog.String("name", "tranRepoPgx")
-	return &tranRepoPgx{p, l.With(name)}
 }

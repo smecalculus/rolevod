@@ -1,21 +1,6 @@
-CREATE TABLE envs (
-	id varchar(20) UNIQUE,
-	name varchar(20)
-);
-
-CREATE TABLE tps (
-	id varchar(20) UNIQUE,
-	name varchar(20)
-);
-
 CREATE TABLE roles (
 	id varchar(20) UNIQUE,
 	name varchar(20)
-);
-
-CREATE TABLE kinships (
-	parent_id varchar(20),
-	child_id varchar(20)
 );
 
 CREATE TABLE seats (
@@ -55,4 +40,9 @@ CREATE TABLE channels (
 	id varchar(20),
 	name varchar(20),
 	state_id varchar(20)
+);
+
+CREATE TABLE kinships (
+	parent_id varchar(20),
+	child_id varchar(20)
 );

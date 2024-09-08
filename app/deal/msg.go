@@ -36,9 +36,11 @@ type MessageMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
-	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
-	MsgFromDealSpec  func(DealSpec) DealSpecMsg
+	MsgToDealSpec   func(DealSpecMsg) (DealSpec, error)
+	MsgFromDealSpec func(DealSpec) DealSpecMsg
+	// goverter:ignore Prcs Msgs Srvs
 	MsgToDealRoot    func(DealRootMsg) (DealRoot, error)
 	MsgFromDealRoot  func(DealRoot) DealRootMsg
 	MsgFromDealRoots func([]DealRoot) []DealRootMsg
@@ -77,6 +79,8 @@ type PartRootMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/app/seat:To.*
+// goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)

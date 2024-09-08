@@ -12,9 +12,12 @@ import (
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/lib/msg"
+
+	"smecalculus/rolevod/app/bare/state"
 )
 
 var Module = fx.Module("app/deal",
+	state.Module,
 	fx.Provide(
 		fx.Annotate(newDealService, fx.As(new(DealApi))),
 	),
@@ -27,14 +30,11 @@ var Module = fx.Module("app/deal",
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		newPartHandlerEcho,
 		fx.Annotate(newPartRepoPgx, fx.As(new(partRepo))),
-		newTranHandlerEcho,
-		fx.Annotate(newTranRepoPgx, fx.As(new(tranRepo))),
 	),
 	fx.Invoke(
 		cfgDealEcho,
 		cfgKinshipEcho,
 		cfgPartEcho,
-		cfgTranEcho,
 	),
 )
 
@@ -52,7 +52,6 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 func cfgDealEcho(e *echo.Echo, h *dealHandlerEcho) error {
 	e.POST("/api/v1/deals", h.ApiPostOne)
 	e.GET("/api/v1/deals/:id", h.ApiGetOne)
-	e.POST("/api/v1/deals/:id/trans", h.ApiPostOne)
 	e.GET("/ssr/deals/:id", h.SsrGetOne)
 	return nil
 }
@@ -64,10 +63,5 @@ func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
 
 func cfgPartEcho(e *echo.Echo, h *partHandlerEcho) error {
 	e.POST("/api/v1/deals/:id/parts", h.ApiPostOne)
-	return nil
-}
-
-func cfgTranEcho(e *echo.Echo, h *tranHandlerEcho) error {
-	e.POST("/api/v1/deals/:id/trans", h.ApiPostOne)
 	return nil
 }

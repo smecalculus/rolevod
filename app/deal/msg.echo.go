@@ -134,32 +134,3 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 	}
 	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
 }
-
-// Adapter
-type tranHandlerEcho struct {
-	api DealApi
-	ssr msg.Renderer
-	log *slog.Logger
-}
-
-func newTranHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *tranHandlerEcho {
-	name := slog.String("name", "tranHandlerEcho")
-	return &tranHandlerEcho{a, r, l.With(name)}
-}
-
-func (h *tranHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto DealSpecMsg
-	err := c.Bind(&mto)
-	if err != nil {
-		return err
-	}
-	spec, err := MsgToDealSpec(mto)
-	if err != nil {
-		return err
-	}
-	root, err := h.api.Create(spec)
-	if err != nil {
-		return err
-	}
-	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
-}

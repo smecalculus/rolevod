@@ -1,5 +1,9 @@
 package deal
 
+import (
+	"smecalculus/rolevod/app/seat"
+)
+
 type dealRefData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
@@ -9,20 +13,20 @@ type dealRootData struct {
 	ID       string        `db:"id"`
 	Name     string        `db:"name"`
 	Children []dealRefData `db:"-"`
-	Procs    []procData    `db:"-"`
-	Msgs     []msgData     `db:"-"`
-	Srvs     []srvData     `db:"-"`
+	Prcs     []processData `db:"-"`
+	Msgs     []messageData `db:"-"`
+	Srvs     []serviceData `db:"-"`
 }
 
-type procData struct {
+type processData struct {
 	ID string `db:"id"`
 }
 
-type msgData struct {
+type messageData struct {
 	ID string `db:"id"`
 }
 
-type srvData struct {
+type serviceData struct {
 	ID string `db:"id"`
 }
 
@@ -34,7 +38,9 @@ var (
 	DataFromDealRef  func(DealRef) dealRefData
 	DataToDealRefs   func([]dealRefData) ([]DealRef, error)
 	DataFromDealRefs func([]DealRef) []dealRefData
-	DataToDealRoot   func(dealRootData) (DealRoot, error)
+	// goverter:ignore Seats Prcs Msgs Srvs
+	DataToDealRoot func(dealRootData) (DealRoot, error)
+	// goverter:ignore Prcs Msgs Srvs
 	DataFromDealRoot func(DealRoot) dealRootData
 )
 
@@ -51,20 +57,15 @@ var (
 	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
 )
 
-// TODO: здесь не место
-type seatRefData struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
-}
-
 type partRootData struct {
 	Deal  dealRefData
-	Seats []seatRefData
+	Seats []seat.SeatRefData
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/app/seat:Data.*
 var (
 	DataToPartRoot   func(partRootData) (PartRoot, error)
 	DataFromPartRoot func(PartRoot) partRootData

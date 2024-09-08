@@ -6,9 +6,8 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/role"
-
-	"smecalculus/rolevod/app/internal/chnl"
+	"smecalculus/rolevod/app/bare/chnl"
+	"smecalculus/rolevod/app/bare/state"
 )
 
 var (
@@ -31,7 +30,7 @@ type SeatRef struct {
 // Relation
 type ChanTp struct {
 	Comm  chnl.Ref
-	Proto role.Stype
+	State state.Root
 }
 
 // Aggregate Root
@@ -135,6 +134,8 @@ type kinshipRepo interface {
 // goverter:extend to.*
 var (
 	ToSeatRef func(SeatRoot) SeatRef
+	ToCore    func([]string) ([]id.ADT[ID], error)
+	ToEdge    func([]id.ADT[ID]) []string
 )
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {

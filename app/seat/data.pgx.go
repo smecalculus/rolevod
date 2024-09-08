@@ -67,7 +67,7 @@ func (r *seatRepoPgx) SelectChildren(id id.ADT[ID]) ([]SeatRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[seatRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[SeatRefData])
 	if err != nil {
 		return nil, err
 	}

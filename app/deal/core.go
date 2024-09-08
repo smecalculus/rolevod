@@ -7,7 +7,7 @@ import (
 
 	"smecalculus/rolevod/app/seat"
 
-	"smecalculus/rolevod/app/internal/chnl"
+	"smecalculus/rolevod/app/bare/chnl"
 )
 
 type ID interface{}
@@ -282,12 +282,6 @@ type Wait struct {
 	Comm chnl.Ref
 	Cont Step
 }
-
-type tranRepo interface {
-	Insert(TranRoot) error
-}
-
-// Boilerplate
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {
 	return id
