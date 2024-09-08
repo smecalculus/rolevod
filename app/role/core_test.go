@@ -6,7 +6,7 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/state"
 )
 
 func TestKinshipEstalish(t *testing.T) {
@@ -44,6 +44,9 @@ func (r *stateRepoFixture) SelectAll() ([]state.Ref, error) {
 	return []state.Ref{}, nil
 }
 func (r *stateRepoFixture) SelectById(sid id.ADT[state.ID]) (state.Root, error) {
+	return nil, nil
+}
+func (r *stateRepoFixture) SelectNext(sid id.ADT[state.ID]) (state.Ref, error) {
 	return nil, nil
 }
 

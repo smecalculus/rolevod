@@ -1,13 +1,17 @@
 package deal
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/seat"
 
-	"smecalculus/rolevod/app/bare/chnl"
+	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/internal/state"
+	"smecalculus/rolevod/internal/step"
 )
 
 type ID interface{}
@@ -34,18 +38,10 @@ type DealRoot struct {
 	Srvs     map[chnl.Ref]Service
 }
 
-type Sem interface {
-	sem()
-}
-
-func (Process) sem() {}
-func (Message) sem() {}
-func (Service) sem() {}
-
 // aka exec.Proc
 type Process struct {
 	ID  id.ADT[ID]
-	Exp Step
+	Exp step.Root
 }
 
 // aka exec.Msg
@@ -83,18 +79,28 @@ type DealApi interface {
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
 	Involve(PartSpec) error
-	Make(TranSpec) error
+	Take(Transition) error
 }
 
 type dealService struct {
-	dealRepo    dealRepo
-	kinshipRepo kinshipRepo
-	log         *slog.Logger
+	deals    dealRepo
+	chnls    chnl.Repo
+	steps    step.Repo
+	states   state.Repo
+	kinships kinshipRepo
+	log      *slog.Logger
 }
 
-func newDealService(dr dealRepo, kr kinshipRepo, l *slog.Logger) *dealService {
+func newDealService(
+	deals dealRepo,
+	chnls chnl.Repo,
+	steps step.Repo,
+	states state.Repo,
+	kinships kinshipRepo,
+	l *slog.Logger,
+) *dealService {
 	name := slog.String("name", "dealService")
-	return &dealService{dr, kr, l.With(name)}
+	return &dealService{deals, chnls, steps, states, kinships, l.With(name)}
 }
 
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
@@ -102,7 +108,7 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 		ID:   id.New[ID](),
 		Name: spec.Name,
 	}
-	err := s.dealRepo.Insert(root)
+	err := s.deals.Insert(root)
 	if err != nil {
 		return root, err
 	}
@@ -110,11 +116,11 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 }
 
 func (s *dealService) Retrieve(id id.ADT[ID]) (DealRoot, error) {
-	root, err := s.dealRepo.SelectById(id)
+	root, err := s.deals.SelectById(id)
 	if err != nil {
 		return DealRoot{}, err
 	}
-	root.Children, err = s.dealRepo.SelectChildren(id)
+	root.Children, err = s.deals.SelectChildren(id)
 	if err != nil {
 		return DealRoot{}, err
 	}
@@ -122,7 +128,7 @@ func (s *dealService) Retrieve(id id.ADT[ID]) (DealRoot, error) {
 }
 
 func (s *dealService) RetreiveAll() ([]DealRef, error) {
-	return s.dealRepo.SelectAll()
+	return s.deals.SelectAll()
 }
 
 func (s *dealService) Establish(spec KinshipSpec) error {
@@ -134,7 +140,7 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 		Parent:   DealRef{ID: spec.ParentID},
 		Children: children,
 	}
-	err := s.kinshipRepo.Insert(root)
+	err := s.kinships.Insert(root)
 	if err != nil {
 		return err
 	}
@@ -142,12 +148,114 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (c *dealService) Involve(spec PartSpec) error {
+func (s *dealService) Involve(spec PartSpec) error {
 	return nil
 }
 
-func (c *dealService) Make(spec TranSpec) error {
-	return nil
+func (s *dealService) Take(rel Transition) error {
+	switch want := rel.Step.(type) {
+	case step.Close:
+		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		if err != nil {
+			return err
+		}
+		switch curState := curChnl.State.(type) {
+		case state.One:
+			got, err := s.steps.SelectByChnl(curChnl.ID)
+			if err != nil {
+				return err
+			}
+			_, ok := got.(step.Wait)
+			if !ok {
+				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+			}
+			return nil
+		default:
+			nextState, err := s.states.SelectNext(curState.Get())
+			if err != nil {
+				return err
+			}
+			_, ok := nextState.(state.One)
+			if !ok {
+				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
+			}
+			nextChnl := chnl.Root{
+				ID:    id.New[chnl.ID](),
+				Name:  curChnl.Name,
+				State: nextState,
+			}
+			want.Via = chnl.ToRef(nextChnl)
+			return s.steps.Insert(want)
+		}
+	case step.Wait:
+		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		if err != nil {
+			return err
+		}
+		switch curState := curChnl.State.(type) {
+		case state.One:
+			got, err := s.steps.SelectByChnl(curChnl.ID)
+			if err != nil {
+				return err
+			}
+			_, ok := got.(step.Close)
+			if !ok {
+				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+			}
+			return nil
+		default:
+			nextState, err := s.states.SelectNext(curState.Get())
+			if err != nil {
+				return err
+			}
+			_, ok := nextState.(state.One)
+			if !ok {
+				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
+			}
+			nextChnl := chnl.Root{
+				ID:    id.New[chnl.ID](),
+				Name:  curChnl.Name,
+				State: nextState,
+			}
+			want.Via = chnl.ToRef(nextChnl)
+			return s.steps.Insert(want)
+		}
+	case step.Send:
+		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		if err != nil {
+			return err
+		}
+		switch curState := curChnl.State.(type) {
+		case state.Tensor:
+			got, err := s.steps.SelectByChnl(curChnl.ID)
+			if err != nil {
+				return err
+			}
+			_, ok := got.(step.Recv)
+			if !ok {
+				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+			}
+			return nil
+		default:
+			nextState, err := s.states.SelectNext(curState.Get())
+			if err != nil {
+				return err
+			}
+			_, ok := nextState.(state.Tensor)
+			if !ok {
+				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
+			}
+			nextChnl := chnl.Root{
+				ID:    id.New[chnl.ID](),
+				Name:  curChnl.Name,
+				State: nextState,
+			}
+			want.Via = chnl.ToRef(nextChnl)
+			return s.steps.Insert(want)
+		}
+	default:
+		panic(ErrUnexpectedStep)
+	}
 }
 
 type dealRepo interface {
@@ -189,99 +297,16 @@ type partRepo interface {
 }
 
 // Transition Relation
-// знание о текущем шаге снаружи
-type TranSpec struct {
-	From Step
-	To   Step
-}
-
-// знание о текущем шаге внутри
-type TranSpec2 struct {
-	Seat seat.SeatRef
-	Cont Step
-}
-
-type TranRoot struct {
-	From Step
-	To   Step
+type Transition struct {
+	Deal DealRef
+	Step step.Root
 }
 
 type Label string
 
-// aka Expression
-type Step interface {
-	step()
-}
-
-func (Fwd) step()    {}
-func (Spawn) step()  {}
-func (ExpRef) step() {}
-func (Lab) step()    {}
-func (Case) step()   {}
-func (Send) step()   {}
-func (Recv) step()   {}
-func (Close) step()  {}
-func (Wait) step()   {}
-
-type Fwd struct {
-	ID   id.ADT[ID]
-	From chnl.Ref
-	To   chnl.Ref
-}
-
-type Spawn struct {
-	ID     id.ADT[ID]
-	Name   string
-	Comm   chnl.Ref
-	Values []chnl.Ref
-	Cont   Step
-}
-
-// aka ExpName
-type ExpRef struct {
-	ID     id.ADT[ID]
-	Name   string
-	Comm   chnl.Ref
-	Values []chnl.Ref
-}
-
-type Lab struct {
-	ID   id.ADT[ID]
-	Comm chnl.Ref
-	Data Label
-	// Cont Step
-}
-
-type Case struct {
-	ID    id.ADT[ID]
-	Comm  chnl.Ref
-	Conts map[Label]Step
-}
-
-type Send struct {
-	ID    id.ADT[ID]
-	Comm  chnl.Ref
-	Value chnl.Ref
-	// Cont Step
-}
-
-type Recv struct {
-	ID    id.ADT[ID]
-	Comm  chnl.Ref
-	Value chnl.Ref
-	Cont  Step
-}
-
-type Close struct {
-	ID   id.ADT[ID]
-	Comm chnl.Ref
-}
-
-type Wait struct {
-	ID   id.ADT[ID]
-	Comm chnl.Ref
-	Cont Step
-}
+var (
+	ErrUnexpectedStep = errors.New("unexpected step type")
+)
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {
 	return id

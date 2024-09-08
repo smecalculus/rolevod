@@ -105,6 +105,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
+			kind,
 			id
 		FROM states`
 	ctx := context.Background()
@@ -113,7 +114,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RefData])
 	if err != nil {
 		return nil, err
 	}

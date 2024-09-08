@@ -1,7 +1,7 @@
 package role
 
 import (
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/state"
 )
 
 type RoleSpecMsg struct {
@@ -28,7 +28,7 @@ type RoleRefMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
-// goverter:extend smecalculus/rolevod/app/bare/state:Msg.*
+// goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgToRoleSpec    func(RoleSpecMsg) (RoleSpec, error)
 	MsgFromRoleSpec  func(RoleSpec) RoleSpecMsg

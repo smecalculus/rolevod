@@ -6,23 +6,17 @@ import (
 	"smecalculus/rolevod/lib/id"
 )
 
-var (
-	ErrUnexpectedSt = errors.New("unexpected session type")
-)
-
 type ID interface{}
 
-type Ref struct {
-	ID id.ADT[ID]
-	// TODO: доменное представление kind
+type Ref interface {
+	Get() id.ADT[ID]
 }
 
 type Label string
 
 // aka Stype
 type Root interface {
-	get() id.ADT[ID]
-	set(id.ADT[ID])
+	Ref
 }
 
 // aka External Choice
@@ -31,8 +25,7 @@ type With struct {
 	Choices map[Label]Root
 }
 
-func (s *With) get() id.ADT[ID]   { return s.ID }
-func (s *With) set(id id.ADT[ID]) { s.ID = id }
+func (r With) Get() id.ADT[ID] { return r.ID }
 
 // aka Internal Choice
 type Plus struct {
@@ -40,8 +33,7 @@ type Plus struct {
 	Choices map[Label]Root
 }
 
-func (s *Plus) get() id.ADT[ID]   { return s.ID }
-func (s *Plus) set(id id.ADT[ID]) { s.ID = id }
+func (r Plus) Get() id.ADT[ID] { return r.ID }
 
 type Tensor struct {
 	ID id.ADT[ID]
@@ -49,8 +41,7 @@ type Tensor struct {
 	T  Root
 }
 
-func (s *Tensor) get() id.ADT[ID]   { return s.ID }
-func (s *Tensor) set(id id.ADT[ID]) { s.ID = id }
+func (r Tensor) Get() id.ADT[ID] { return r.ID }
 
 type Lolli struct {
 	ID id.ADT[ID]
@@ -58,47 +49,47 @@ type Lolli struct {
 	T  Root
 }
 
-func (s *Lolli) get() id.ADT[ID]   { return s.ID }
-func (s *Lolli) set(id id.ADT[ID]) { s.ID = id }
+func (r Lolli) Get() id.ADT[ID] { return r.ID }
 
 type One struct {
 	ID id.ADT[ID]
 }
 
-func (s *One) get() id.ADT[ID]   { return s.ID }
-func (s *One) set(id id.ADT[ID]) { s.ID = id }
+func (r One) Get() id.ADT[ID] { return r.ID }
 
-// TODO: выпилить Name
 // aka TpName
 type TpRef struct {
-	ID   id.ADT[ID]
+	ID id.ADT[ID]
+	// TODO: выпилить
 	Name string
 }
 
-func (s *TpRef) get() id.ADT[ID]   { return s.ID }
-func (s *TpRef) set(id id.ADT[ID]) { s.ID = id }
+func (r TpRef) Get() id.ADT[ID] { return r.ID }
 
 type Up struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (s *Up) get() id.ADT[ID]   { return s.ID }
-func (s *Up) set(id id.ADT[ID]) { s.ID = id }
+func (r Up) Get() id.ADT[ID] { return r.ID }
 
 type Down struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (s *Down) get() id.ADT[ID]   { return s.ID }
-func (s *Down) set(id id.ADT[ID]) { s.ID = id }
+func (r Down) Get() id.ADT[ID] { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectById(id.ADT[ID]) (Root, error)
+	SelectNext(id.ADT[ID]) (Ref, error)
 }
+
+var (
+	ErrUnexpectedState = errors.New("unexpected state type")
+)
 
 // goverter:variables
 // goverter:output:format assign-variable

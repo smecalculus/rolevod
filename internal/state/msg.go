@@ -80,7 +80,7 @@ func MsgFromRoot(root Root) *RootMsg {
 		}
 		return &RootMsg{K: PlusK, ID: state.ID.String(), Choices: sts}
 	default:
-		panic(ErrUnexpectedSt)
+		panic(ErrUnexpectedState)
 	}
 }
 
@@ -138,6 +138,6 @@ func MsgToRoot(mto *RootMsg) (Root, error) {
 		}
 		return &Plus{ID: id, Choices: sts}, nil
 	default:
-		panic(ErrUnexpectedSt)
+		panic(ErrUnexpectedState)
 	}
 }

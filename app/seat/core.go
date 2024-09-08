@@ -1,43 +1,36 @@
 package seat
 
 import (
-	"errors"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/bare/chnl"
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/internal/state"
 )
-
-var (
-	ErrUnexpectedExp = errors.New("unexpected expression type")
-)
-
-type Expname = string
 
 type ID interface{}
 
 type SeatSpec struct {
-	Name Expname
+	Name string
 }
 
 type SeatRef struct {
 	ID   id.ADT[ID]
-	Name Expname
+	Name string
 }
 
 // Relation
 type ChanTp struct {
 	Comm  chnl.Ref
-	State state.Root
+	State state.Ref
 }
 
 // Aggregate Root
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       id.ADT[ID]
-	Name     Expname
+	Name     string
 	Children []SeatRef
 	Ctx      []ChanTp
 	Zc       ChanTp
@@ -110,9 +103,9 @@ func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 // Port
 type seatRepo interface {
 	Insert(SeatRoot) error
+	SelectAll() ([]SeatRef, error)
 	SelectById(id.ADT[ID]) (SeatRoot, error)
 	SelectChildren(id.ADT[ID]) ([]SeatRef, error)
-	SelectAll() ([]SeatRef, error)
 }
 
 type KinshipSpec struct {

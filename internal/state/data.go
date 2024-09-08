@@ -23,6 +23,11 @@ const (
 	plusK
 )
 
+type RefData struct {
+	K  kind   `db:"kind" json:"kind"`
+	ID string `db:"id" json:"id"`
+}
+
 type state struct {
 	K    kind   `db:"kind"`
 	ID   string `db:"id"`
@@ -41,11 +46,11 @@ type transition struct {
 // goverter:extend to.*
 // goverter:extend data.*
 var (
-	DataToRef func(state) (Ref, error)
+	DataToRef func(RefData) (Ref, error)
 	// goverter:ignore K Name
-	DataFromRef   func(Ref) state
-	DataToRefs    func([]state) ([]Ref, error)
-	DataFromRefs  func([]Ref) []state
+	DataFromRef   func(Ref) RefData
+	DataToRefs    func([]RefData) ([]Ref, error)
+	DataFromRefs  func([]Ref) []RefData
 	DataToRoots   func([]rootData) ([]Root, error)
 	DataFromRoots func([]Root) []*rootData
 )
@@ -59,7 +64,7 @@ func dataFromRoot(root Root) *rootData {
 		return nil
 	}
 	dto := &rootData{
-		ID:     root.get().String(),
+		ID:     root.Get().String(),
 		States: map[string]state{},
 		Trs:    map[string][]transition{},
 	}
@@ -109,7 +114,7 @@ func dataFromState(dto *rootData, root Root) state {
 		}
 		return from
 	default:
-		panic(ErrUnexpectedSt)
+		panic(ErrUnexpectedState)
 	}
 }
 
@@ -150,8 +155,16 @@ func dataToState(root rootData, state state) Root {
 		}
 		return st
 	default:
-		panic(ErrUnexpectedSt)
+		panic(ErrUnexpectedState)
 	}
+}
+
+func dataFromRef(ref Ref) RefData {
+	return RefData{}
+}
+
+func dataToRef(dto RefData) Ref {
+	return nil
 }
 
 var (

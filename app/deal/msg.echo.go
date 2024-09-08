@@ -134,3 +134,32 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 	}
 	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
 }
+
+// Adapter
+type stepHandlerEcho struct {
+	api DealApi
+	ssr msg.Renderer
+	log *slog.Logger
+}
+
+func newStepHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *stepHandlerEcho {
+	name := slog.String("name", "stepHandlerEcho")
+	return &stepHandlerEcho{a, r, l.With(name)}
+}
+
+func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
+	var mto DealSpecMsg
+	err := c.Bind(&mto)
+	if err != nil {
+		return err
+	}
+	spec, err := MsgToDealSpec(mto)
+	if err != nil {
+		return err
+	}
+	root, err := h.api.Create(spec)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
+}

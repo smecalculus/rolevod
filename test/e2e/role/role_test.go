@@ -9,7 +9,7 @@ import (
 
 	"smecalculus/rolevod/app/role"
 
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/state"
 )
 
 var (

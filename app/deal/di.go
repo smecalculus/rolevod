@@ -13,7 +13,7 @@ import (
 
 	"smecalculus/rolevod/lib/msg"
 
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/state"
 )
 
 var Module = fx.Module("app/deal",
@@ -30,11 +30,14 @@ var Module = fx.Module("app/deal",
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		newPartHandlerEcho,
 		fx.Annotate(newPartRepoPgx, fx.As(new(partRepo))),
+		newStepHandlerEcho,
+		fx.Annotate(newPartRepoPgx, fx.As(new(partRepo))),
 	),
 	fx.Invoke(
 		cfgDealEcho,
 		cfgKinshipEcho,
 		cfgPartEcho,
+		cfgStepEcho,
 	),
 )
 
@@ -63,5 +66,10 @@ func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
 
 func cfgPartEcho(e *echo.Echo, h *partHandlerEcho) error {
 	e.POST("/api/v1/deals/:id/parts", h.ApiPostOne)
+	return nil
+}
+
+func cfgStepEcho(e *echo.Echo, h *stepHandlerEcho) error {
+	e.POST("/api/v1/deals/:id/steps", h.ApiPostOne)
 	return nil
 }

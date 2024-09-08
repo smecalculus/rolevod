@@ -6,7 +6,7 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/bare/state"
+	"smecalculus/rolevod/internal/state"
 )
 
 var (

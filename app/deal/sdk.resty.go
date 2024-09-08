@@ -63,6 +63,6 @@ func (c *dealClient) Involve(spec PartSpec) error {
 	return nil
 }
 
-func (c *dealClient) Make(spec TranSpec) error {
+func (c *dealClient) Take(rel Transition) error {
 	return nil
 }
