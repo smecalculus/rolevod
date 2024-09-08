@@ -4,13 +4,13 @@ import (
 	"log/slog"
 	"testing"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 func TestKinshipEstalish(t *testing.T) {
 	s := newRoleService(&roleRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
-	children := []core.ID[Role]{core.New[Role]()}
-	s.Establish(KinshipSpec{Parent: core.New[Role](), Children: children})
+	children := []id.ADT[ID]{id.New[ID]()}
+	s.Establish(KinshipSpec{Parent: id.New[ID](), Children: children})
 }
 
 type roleRepoFixture struct {
@@ -19,14 +19,14 @@ type roleRepoFixture struct {
 func (r *roleRepoFixture) Insert(rr RoleRoot) error {
 	return nil
 }
-func (r *roleRepoFixture) SelectById(id core.ID[Role]) (RoleRoot, error) {
+func (r *roleRepoFixture) SelectById(id id.ADT[ID]) (RoleRoot, error) {
 	return RoleRoot{}, nil
 }
-func (r *roleRepoFixture) SelectChildren(id core.ID[Role]) ([]RoleTeaser, error) {
-	return []RoleTeaser{}, nil
+func (r *roleRepoFixture) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
+	return []RoleRef{}, nil
 }
-func (r *roleRepoFixture) SelectAll() ([]RoleTeaser, error) {
-	return []RoleTeaser{}, nil
+func (r *roleRepoFixture) SelectAll() ([]RoleRef, error) {
+	return []RoleRef{}, nil
 }
 
 type kinshipRepoFixture struct {

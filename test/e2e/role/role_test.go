@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/role"
 )
@@ -35,7 +35,7 @@ func TestEstablish(t *testing.T) {
 	// when
 	ks := role.KinshipSpec{
 		Parent:   pr.ID,
-		Children: []core.ID[role.Role]{cr.ID},
+		Children: []id.ADT[role.ID]{cr.ID},
 	}
 	err = roleApi.Establish(ks)
 	if err != nil {
@@ -47,7 +47,7 @@ func TestEstablish(t *testing.T) {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := role.ToRoleTeaser(cr)
+	expectedChild := role.ToRoleRef(cr)
 	if !slices.Contains(actual.Children, expectedChild) {
 		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
 	}

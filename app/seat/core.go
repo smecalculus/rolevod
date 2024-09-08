@@ -4,8 +4,11 @@ import (
 	"errors"
 	"log/slog"
 
+	"smecalculus/rolevod/lib/id"
+
 	"smecalculus/rolevod/app/role"
-	"smecalculus/rolevod/lib/core"
+
+	"smecalculus/rolevod/app/internal/chnl"
 )
 
 var (
@@ -14,123 +17,39 @@ var (
 
 type Expname = string
 
-// Aggregate Root
-type Seat interface {
-	seat()
-}
+type ID interface{}
 
 type SeatSpec struct {
 	Name Expname
 }
 
-type SeatTeaser struct {
-	ID   core.ID[Seat]
+type SeatRef struct {
+	ID   id.ADT[ID]
 	Name Expname
 }
 
-type Label string
-type Chan struct {
-	V string
-}
+// Relation
 type ChanTp struct {
-	X  Chan
-	Tp role.Stype
+	Comm  chnl.Ref
+	Proto role.Stype
 }
 
-type Context []ChanTp
-type Branches map[Label]Expression
-
+// Aggregate Root
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
-	ID       core.ID[Seat]
+	ID       id.ADT[ID]
 	Name     Expname
-	Ctx      Context
+	Children []SeatRef
+	Ctx      []ChanTp
 	Zc       ChanTp
-	Children []SeatTeaser
-}
-
-func (SeatRoot) seat() {}
-
-type Expression interface {
-	exp()
-}
-
-func (Fwd) exp()    {}
-func (Spawn) exp()  {}
-func (ExpRef) exp() {}
-func (Lab) exp()    {}
-func (Case) exp()   {}
-func (Send) exp()   {}
-func (Recv) exp()   {}
-func (Close) exp()  {}
-func (Wait) exp()   {}
-
-type Fwd struct {
-	ID core.ID[Seat]
-	X  Chan
-	Y  Chan
-}
-
-type Spawn struct {
-	ID   core.ID[Seat]
-	Name Expname
-	Xs   []Chan
-	X    Chan
-	Q    Expression
-}
-
-// aka ExpName
-type ExpRef struct {
-	ID   core.ID[Seat]
-	Name Expname
-	Xs   []Chan
-	X    Chan
-}
-
-type Lab struct {
-	ID  core.ID[Seat]
-	Ch  Chan
-	L   Label
-	Exp Expression
-}
-
-type Case struct {
-	ID  core.ID[Seat]
-	Ch  Chan
-	Brs Branches
-}
-
-type Send struct {
-	ID  core.ID[Seat]
-	Ch1 Chan
-	Ch2 Chan
-	Exp Expression
-}
-
-type Recv struct {
-	ID  core.ID[Seat]
-	Ch1 Chan
-	Ch2 Chan
-	Exp Expression
-}
-
-type Close struct {
-	ID core.ID[Seat]
-	X  Chan
-}
-
-type Wait struct {
-	ID core.ID[Seat]
-	X  Chan
-	P  Expression
 }
 
 // Port
 type SeatApi interface {
 	Create(SeatSpec) (SeatRoot, error)
-	Retrieve(core.ID[Seat]) (SeatRoot, error)
+	Retrieve(id.ADT[ID]) (SeatRoot, error)
 	Establish(KinshipSpec) error
-	RetreiveAll() ([]SeatTeaser, error)
+	RetreiveAll() ([]SeatRef, error)
 }
 
 type seatService struct {
@@ -146,7 +65,7 @@ func newSeatService(sr seatRepo, kr kinshipRepo, l *slog.Logger) *seatService {
 
 func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	root := SeatRoot{
-		ID:   core.New[Seat](),
+		ID:   id.New[ID](),
 		Name: spec.Name,
 	}
 	err := s.seatRepo.Insert(root)
@@ -156,7 +75,7 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	return root, nil
 }
 
-func (s *seatService) Retrieve(id core.ID[Seat]) (SeatRoot, error) {
+func (s *seatService) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
 	root, err := s.seatRepo.SelectById(id)
 	if err != nil {
 		return SeatRoot{}, err
@@ -169,12 +88,12 @@ func (s *seatService) Retrieve(id core.ID[Seat]) (SeatRoot, error) {
 }
 
 func (s *seatService) Establish(spec KinshipSpec) error {
-	var children []SeatTeaser
+	var children []SeatRef
 	for _, id := range spec.ChildrenIDs {
-		children = append(children, SeatTeaser{ID: id})
+		children = append(children, SeatRef{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   SeatTeaser{ID: spec.ParentID},
+		Parent:   SeatRef{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinshipRepo.Insert(root)
@@ -185,26 +104,26 @@ func (s *seatService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *seatService) RetreiveAll() ([]SeatTeaser, error) {
+func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 	return s.seatRepo.SelectAll()
 }
 
 // Port
 type seatRepo interface {
 	Insert(SeatRoot) error
-	SelectById(core.ID[Seat]) (SeatRoot, error)
-	SelectChildren(core.ID[Seat]) ([]SeatTeaser, error)
-	SelectAll() ([]SeatTeaser, error)
+	SelectById(id.ADT[ID]) (SeatRoot, error)
+	SelectChildren(id.ADT[ID]) ([]SeatRef, error)
+	SelectAll() ([]SeatRef, error)
 }
 
 type KinshipSpec struct {
-	ParentID    core.ID[Seat]
-	ChildrenIDs []core.ID[Seat]
+	ParentID    id.ADT[ID]
+	ChildrenIDs []id.ADT[ID]
 }
 
 type KinshipRoot struct {
-	Parent   SeatTeaser
-	Children []SeatTeaser
+	Parent   SeatRef
+	Children []SeatRef
 }
 
 type kinshipRepo interface {
@@ -215,17 +134,17 @@ type kinshipRepo interface {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	ToSeatTeaser func(SeatRoot) SeatTeaser
+	ToSeatRef func(SeatRoot) SeatRef
 )
 
-func toSame(id core.ID[Seat]) core.ID[Seat] {
+func toSame(id id.ADT[ID]) id.ADT[ID] {
 	return id
 }
 
-func toCore(id string) (core.ID[Seat], error) {
-	return core.FromString[Seat](id)
+func toCore(s string) (id.ADT[ID], error) {
+	return id.String[ID](s)
 }
 
-func toEdge(id core.ID[Seat]) string {
+func toEdge(id id.ADT[ID]) string {
 	return id.String()
 }

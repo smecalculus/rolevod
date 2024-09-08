@@ -1,9 +1,9 @@
 package seat
 
 import (
-	"github.com/go-resty/resty/v2"
+	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/lib/core"
+	"github.com/go-resty/resty/v2"
 )
 
 // Adapter
@@ -33,7 +33,7 @@ func (cl *seatClient) Create(spec SeatSpec) (SeatRoot, error) {
 	return MsgToSeatRoot(res)
 }
 
-func (c *seatClient) Retrieve(id core.ID[Seat]) (SeatRoot, error) {
+func (c *seatClient) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
 	var res SeatRootMsg
 	_, err := c.resty.R().
 		SetResult(&res).
@@ -45,9 +45,9 @@ func (c *seatClient) Retrieve(id core.ID[Seat]) (SeatRoot, error) {
 	return MsgToSeatRoot(res)
 }
 
-func (c *seatClient) RetreiveAll() ([]SeatTeaser, error) {
-	teasers := []SeatTeaser{}
-	return teasers, nil
+func (c *seatClient) RetreiveAll() ([]SeatRef, error) {
+	refs := []SeatRef{}
+	return refs, nil
 }
 
 func (c *seatClient) Establish(spec KinshipSpec) error {

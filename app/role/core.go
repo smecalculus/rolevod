@@ -4,7 +4,9 @@ import (
 	"errors"
 	"log/slog"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/app/internal/chnl"
 )
 
 var (
@@ -15,36 +17,28 @@ type Tpname = string
 type Expname = string
 
 // Aggregate Root
-type Role interface {
-	role()
-}
+type ID interface{}
 
 type RoleSpec struct {
 	Name Tpname
 	St   Stype
 }
 
-type RoleTeaser struct {
-	ID   core.ID[Role]
+type RoleRef struct {
+	ID   id.ADT[ID]
 	Name Tpname
 }
 
-func (RoleRoot) role() {}
-
+// Aggregate Root
 // aka TpDef
 type RoleRoot struct {
-	ID       core.ID[Role]
+	ID       id.ADT[ID]
 	Name     Tpname
-	Children []RoleTeaser
+	Children []RoleRef
 	St       Stype
 }
 
 type Label string
-type Choices map[Label]Stype
-
-type Chan struct {
-	V string
-}
 
 type Stype interface {
 	stype()
@@ -59,62 +53,62 @@ func (Plus) stype()   {}
 func (Up) stype()     {}
 func (Down) stype()   {}
 
-// External Choice
+// aka External Choice
 type With struct {
-	ID  core.ID[Role]
-	Chs Choices
+	ID      id.ADT[ID]
+	Choices map[Label]Stype
 }
 
-// Internal Choice
+// aka Internal Choice
 type Plus struct {
-	ID  core.ID[Role]
-	Chs Choices
+	ID      id.ADT[ID]
+	Choices map[Label]Stype
 }
 
 type Tensor struct {
-	ID core.ID[Role]
+	ID id.ADT[ID]
 	S  Stype
 	T  Stype
 }
 
 type Lolli struct {
-	ID core.ID[Role]
+	ID id.ADT[ID]
 	S  Stype
 	T  Stype
 }
 
 type One struct {
-	ID core.ID[Role]
+	ID id.ADT[ID]
 }
 
 // aka TpName
 type TpRef struct {
-	ID   core.ID[Role]
+	ID   id.ADT[ID]
 	Name Tpname
 }
 
 type Up struct {
-	ID core.ID[Role]
+	ID id.ADT[ID]
 	A  Stype
 }
 
 type Down struct {
-	ID core.ID[Role]
+	ID id.ADT[ID]
 	A  Stype
 }
 
 type ChanTp struct {
-	X  Chan
+	X  chnl.Ref
 	Tp Stype
 }
 
 // Port
 type RoleApi interface {
 	Create(RoleSpec) (RoleRoot, error)
-	Retrieve(core.ID[Role]) (RoleRoot, error)
+	Retrieve(id.ADT[ID]) (RoleRoot, error)
 	Update(RoleRoot) error
 	Establish(KinshipSpec) error
-	RetreiveAll() ([]RoleTeaser, error)
+	RetreiveAll() ([]RoleRef, error)
 }
 
 type roleService struct {
@@ -130,7 +124,7 @@ func newRoleService(rr roleRepo, kr kinshipRepo, l *slog.Logger) *roleService {
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	root := RoleRoot{
-		ID:   core.New[Role](),
+		ID:   id.New[ID](),
 		Name: spec.Name,
 		St:   elab(spec.St),
 	}
@@ -147,7 +141,7 @@ func (s *roleService) Update(rr RoleRoot) error {
 	return s.roleRepo.Insert(rr)
 }
 
-func (s *roleService) Retrieve(id core.ID[Role]) (RoleRoot, error) {
+func (s *roleService) Retrieve(id id.ADT[ID]) (RoleRoot, error) {
 	root, err := s.roleRepo.SelectById(id)
 	if err != nil {
 		return RoleRoot{}, err
@@ -159,17 +153,17 @@ func (s *roleService) Retrieve(id core.ID[Role]) (RoleRoot, error) {
 	return root, nil
 }
 
-func (s *roleService) RetreiveAll() ([]RoleTeaser, error) {
+func (s *roleService) RetreiveAll() ([]RoleRef, error) {
 	return s.roleRepo.SelectAll()
 }
 
 func (s *roleService) Establish(ks KinshipSpec) error {
-	var children []RoleTeaser
+	var children []RoleRef
 	for _, id := range ks.Children {
-		children = append(children, RoleTeaser{ID: id})
+		children = append(children, RoleRef{ID: id})
 	}
 	kr := KinshipRoot{
-		Parent:   RoleTeaser{ID: ks.Parent},
+		Parent:   RoleRef{ID: ks.Parent},
 		Children: children,
 	}
 	err := s.kinshipRepo.Insert(kr)
@@ -185,9 +179,9 @@ func elab(stype Stype) Stype {
 	case nil:
 		return nil
 	case One:
-		return One{ID: core.New[Role]()}
+		return One{ID: id.New[ID]()}
 	case TpRef:
-		return TpRef{ID: core.New[Role](), Name: st.Name}
+		return TpRef{ID: id.New[ID](), Name: st.Name}
 	default:
 		panic(ErrUnexpectedSt)
 	}
@@ -196,19 +190,19 @@ func elab(stype Stype) Stype {
 // Port
 type roleRepo interface {
 	Insert(RoleRoot) error
-	SelectById(core.ID[Role]) (RoleRoot, error)
-	SelectChildren(core.ID[Role]) ([]RoleTeaser, error)
-	SelectAll() ([]RoleTeaser, error)
+	SelectAll() ([]RoleRef, error)
+	SelectById(id.ADT[ID]) (RoleRoot, error)
+	SelectChildren(id.ADT[ID]) ([]RoleRef, error)
 }
 
 type KinshipSpec struct {
-	Parent   core.ID[Role]
-	Children []core.ID[Role]
+	Parent   id.ADT[ID]
+	Children []id.ADT[ID]
 }
 
 type KinshipRoot struct {
-	Parent   RoleTeaser
-	Children []RoleTeaser
+	Parent   RoleRef
+	Children []RoleRef
 }
 
 type kinshipRepo interface {
@@ -219,19 +213,19 @@ type kinshipRepo interface {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	ToRoleTeaser func(RoleRoot) RoleTeaser
-	ToCoreIDs    func([]string) ([]core.ID[Role], error)
-	ToEdgeIDs    func([]core.ID[Role]) []string
+	ToRoleRef func(RoleRoot) RoleRef
+	ToCoreIDs func([]string) ([]id.ADT[ID], error)
+	ToEdgeIDs func([]id.ADT[ID]) []string
 )
 
-func toSame(id core.ID[Role]) core.ID[Role] {
+func toSame(id id.ADT[ID]) id.ADT[ID] {
 	return id
 }
 
-func toCore(id string) (core.ID[Role], error) {
-	return core.FromString[Role](id)
+func toCore(s string) (id.ADT[ID], error) {
+	return id.String[ID](s)
 }
 
-func toEdge(id core.ID[Role]) string {
+func toEdge(id id.ADT[ID]) string {
 	return id.String()
 }

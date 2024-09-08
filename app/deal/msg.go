@@ -1,0 +1,85 @@
+package deal
+
+import (
+	"smecalculus/rolevod/app/seat"
+)
+
+type DealSpecMsg struct {
+	Name  string            `json:"name"`
+	Seats []seat.SeatRefMsg `json:"seats"`
+}
+
+type RefMsg struct {
+	ID string `param:"id" query:"id" json:"id"`
+}
+
+type DealRefMsg struct {
+	ID   string `param:"id" json:"id"`
+	Name string `query:"name" json:"name"`
+}
+
+type DealRootMsg struct {
+	ID       string            `json:"id"`
+	Name     string            `json:"name"`
+	Children []DealRefMsg      `json:"children"`
+	Seats    []seat.SeatRefMsg `json:"seats"`
+}
+
+type ProcessMsg struct {
+	ID string `json:"id"`
+}
+
+type MessageMsg struct {
+	ID string `json:"id"`
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend to.*
+var (
+	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
+	MsgFromDealSpec  func(DealSpec) DealSpecMsg
+	MsgToDealRoot    func(DealRootMsg) (DealRoot, error)
+	MsgFromDealRoot  func(DealRoot) DealRootMsg
+	MsgFromDealRoots func([]DealRoot) []DealRootMsg
+)
+
+type KinshipSpecMsg struct {
+	ParentID    string   `param:"id" json:"parent"`
+	ChildrenIDs []string `json:"children"`
+}
+
+type KinshipRootMsg struct {
+	Parent   DealRefMsg   `json:"parent"`
+	Children []DealRefMsg `json:"children"`
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend to.*
+var (
+	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
+	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
+	MsgFromKinshipRoot func(KinshipRoot) KinshipRootMsg
+	MsgToKinshipRoot   func(KinshipRootMsg) (KinshipRoot, error)
+)
+
+type PartSpecMsg struct {
+	DealID  string   `param:"id" json:"deal_id"`
+	SeatIDs []string `json:"seat_ids"`
+}
+
+type PartRootMsg struct {
+	Deal  DealRefMsg        `json:"deal"`
+	Seats []seat.SeatRefMsg `json:"seats"`
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend to.*
+var (
+	MsgFromPartSpec func(PartSpec) PartSpecMsg
+	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)
+	MsgFromPartRoot func(PartRoot) PartRootMsg
+	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
+)

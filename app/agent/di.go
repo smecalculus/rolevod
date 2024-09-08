@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package work
+package agent
 
 import (
 	"embed"
@@ -14,20 +14,20 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/work",
+var Module = fx.Module("app/agent",
 	fx.Provide(
-		fx.Annotate(newWorkService, fx.As(new(WorkApi))),
+		fx.Annotate(newAgentService, fx.As(new(AgentApi))),
 	),
 	fx.Provide(
 		fx.Private,
-		newWorkHandlerEcho,
-		fx.Annotate(newWorkRepoPgx, fx.As(new(workRepo))),
+		newAgentHandlerEcho,
+		fx.Annotate(newAgentRepoPgx, fx.As(new(agentRepo))),
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(
-		cfgWorkEcho,
+		cfgAgentEcho,
 		cfgKinshipEcho,
 	),
 )
@@ -36,21 +36,21 @@ var Module = fx.Module("app/work",
 var viesFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("work").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
+	t, err := template.New("agent").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgWorkEcho(e *echo.Echo, h *workHandlerEcho) error {
-	e.POST("/api/v1/works", h.ApiPostOne)
-	e.GET("/api/v1/works/:id", h.ApiGetOne)
-	e.GET("/ssr/works/:id", h.SsrGetOne)
+func cfgAgentEcho(e *echo.Echo, h *agentHandlerEcho) error {
+	e.POST("/api/v1/agents", h.ApiPostOne)
+	e.GET("/api/v1/agents/:id", h.ApiGetOne)
+	e.GET("/ssr/agents/:id", h.SsrGetOne)
 	return nil
 }
 
 func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
-	e.POST("/api/v1/works/:id/kinships", h.ApiPostOne)
+	e.POST("/api/v1/agents/:id/kinships", h.ApiPostOne)
 	return nil
 }

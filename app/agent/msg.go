@@ -1,6 +1,6 @@
-package force
+package agent
 
-type ForceSpecMsg struct {
+type AgentSpecMsg struct {
 	Name string `json:"name"`
 }
 
@@ -8,15 +8,15 @@ type RefMsg struct {
 	ID string `param:"id" query:"id" json:"id"`
 }
 
-type ForceRootMsg struct {
-	ID       string           `json:"id"`
-	Name     string           `json:"name"`
-	Children []ForceTeaserMsg `json:"children"`
+type AgentRootMsg struct {
+	ID       string        `json:"id"`
+	Name     string        `json:"name"`
+	Children []AgentRefMsg `json:"children"`
 }
 
-type ForceTeaserMsg struct {
+type AgentRefMsg struct {
 	ID   string `param:"id" json:"id"`
-	Name string `json:"name"`
+	Name string `query:"name" json:"name"`
 }
 
 type KinshipSpecMsg struct {
@@ -25,20 +25,20 @@ type KinshipSpecMsg struct {
 }
 
 type KinshipRootMsg struct {
-	Parent   ForceTeaserMsg   `json:"parent"`
-	Children []ForceTeaserMsg `json:"children"`
+	Parent   AgentRefMsg   `json:"parent"`
+	Children []AgentRefMsg `json:"children"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	// force
-	MsgToForceSpec    func(ForceSpecMsg) (ForceSpec, error)
-	MsgFromForceSpec  func(ForceSpec) ForceSpecMsg
-	MsgToForceRoot    func(ForceRootMsg) (ForceRoot, error)
-	MsgFromForceRoot  func(ForceRoot) ForceRootMsg
-	MsgFromForceRoots func([]ForceRoot) []ForceRootMsg
+	// agent
+	MsgToAgentSpec    func(AgentSpecMsg) (AgentSpec, error)
+	MsgFromAgentSpec  func(AgentSpec) AgentSpecMsg
+	MsgToAgentRoot    func(AgentRootMsg) (AgentRoot, error)
+	MsgFromAgentRoot  func(AgentRoot) AgentRootMsg
+	MsgFromAgentRoots func([]AgentRoot) []AgentRootMsg
 	// kinship
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)

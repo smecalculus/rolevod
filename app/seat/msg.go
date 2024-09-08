@@ -9,14 +9,14 @@ type RefMsg struct {
 }
 
 type SeatRootMsg struct {
-	ID       string          `json:"id"`
-	Name     string          `json:"name"`
-	Children []SeatTeaserMsg `json:"children"`
+	ID       string       `json:"id"`
+	Name     string       `json:"name"`
+	Children []SeatRefMsg `json:"children"`
 }
 
-type SeatTeaserMsg struct {
+type SeatRefMsg struct {
 	ID   string `param:"id" json:"id"`
-	Name string `json:"name"`
+	Name string `query:"name" json:"name"`
 }
 
 type KinshipSpecMsg struct {
@@ -25,8 +25,8 @@ type KinshipSpecMsg struct {
 }
 
 type KinshipRootMsg struct {
-	Parent   SeatTeaserMsg   `json:"parent"`
-	Children []SeatTeaserMsg `json:"children"`
+	Parent   SeatRefMsg   `json:"parent"`
+	Children []SeatRefMsg `json:"children"`
 }
 
 // goverter:variables

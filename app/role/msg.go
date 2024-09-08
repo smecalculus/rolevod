@@ -3,7 +3,7 @@ package role
 import (
 	"golang.org/x/exp/maps"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 type RoleSpecMsg struct {
@@ -16,15 +16,15 @@ type RefMsg struct {
 }
 
 type RoleRootMsg struct {
-	ID       string          `param:"id" json:"id"`
-	Name     string          `json:"name"`
-	Children []RoleTeaserMsg `json:"children"`
-	St       *StypeMsg       `json:"st,omitempty"`
+	ID       string       `param:"id" json:"id"`
+	Name     string       `json:"name"`
+	Children []RoleRefMsg `json:"children"`
+	St       *StypeMsg    `json:"st,omitempty"`
 }
 
-type RoleTeaserMsg struct {
+type RoleRefMsg struct {
 	ID   string `param:"id" json:"id"`
-	Name string `json:"name"`
+	Name string `query:"name" json:"name"`
 }
 
 type KinshipSpecMsg struct {
@@ -33,8 +33,8 @@ type KinshipSpecMsg struct {
 }
 
 type KinshipRootMsg struct {
-	Parent   RoleTeaserMsg   `json:"parent"`
-	Children []RoleTeaserMsg `json:"children"`
+	Parent   RoleRefMsg   `json:"parent"`
+	Children []RoleRefMsg `json:"children"`
 }
 
 type StypeMsg struct {
@@ -79,16 +79,16 @@ type TpRefMsg struct {
 // goverter:extend msg.*
 var (
 	// role
-	MsgToRoleSpec      func(RoleSpecMsg) (RoleSpec, error)
-	MsgFromRoleSpec    func(RoleSpec) RoleSpecMsg
-	MsgFromRoleRoot    func(RoleRoot) RoleRootMsg
-	MsgToRoleRoot      func(RoleRootMsg) (RoleRoot, error)
-	MsgFromRoleRoots   func([]RoleRoot) []RoleRootMsg
-	MsgToRoleRoots     func([]RoleRootMsg) ([]RoleRoot, error)
-	MsgFromRoleTeaser  func(RoleTeaser) RoleTeaserMsg
-	MsgToRoleTeaser    func(RoleTeaserMsg) (RoleTeaser, error)
-	MsgFromRoleTeasers func([]RoleTeaser) []RoleTeaserMsg
-	MsgToRoleTeasers   func([]RoleTeaserMsg) ([]RoleTeaser, error)
+	MsgToRoleSpec    func(RoleSpecMsg) (RoleSpec, error)
+	MsgFromRoleSpec  func(RoleSpec) RoleSpecMsg
+	MsgFromRoleRoot  func(RoleRoot) RoleRootMsg
+	MsgToRoleRoot    func(RoleRootMsg) (RoleRoot, error)
+	MsgFromRoleRoots func([]RoleRoot) []RoleRootMsg
+	MsgToRoleRoots   func([]RoleRootMsg) ([]RoleRoot, error)
+	MsgFromRoleRef   func(RoleRef) RoleRefMsg
+	MsgToRoleRef     func(RoleRefMsg) (RoleRef, error)
+	MsgFromRoleRefs  func([]RoleRef) []RoleRefMsg
+	MsgToRoleRefs    func([]RoleRefMsg) ([]RoleRef, error)
 	// kinship
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
@@ -119,15 +119,15 @@ func msgFromStype(stype Stype) *StypeMsg {
 			S:  msgFromStype(st.T),
 		}
 	case With:
-		sts := make([]ChoiceMsg, len(st.Chs))
-		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = ChoiceMsg{L: string(l), S: *msgFromStype(st.Chs[l])}
+		sts := make([]ChoiceMsg, len(st.Choices))
+		for i, l := range maps.Keys(st.Choices) {
+			sts[i] = ChoiceMsg{L: string(l), S: *msgFromStype(st.Choices[l])}
 		}
 		return &StypeMsg{K: WithK, ID: st.ID.String(), Chs: sts}
 	case Plus:
-		sts := make([]ChoiceMsg, len(st.Chs))
-		for i, l := range maps.Keys(st.Chs) {
-			sts[i] = ChoiceMsg{L: string(l), S: *msgFromStype(st.Chs[l])}
+		sts := make([]ChoiceMsg, len(st.Choices))
+		for i, l := range maps.Keys(st.Choices) {
+			sts[i] = ChoiceMsg{L: string(l), S: *msgFromStype(st.Choices[l])}
 		}
 		return &StypeMsg{K: PlusK, ID: st.ID.String(), Chs: sts}
 	default:
@@ -139,7 +139,7 @@ func msgToStype(msg *StypeMsg) (Stype, error) {
 	if msg == nil {
 		return nil, nil
 	}
-	id, err := core.FromString[Role](msg.ID)
+	id, err := id.String[ID](msg.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func msgToStype(msg *StypeMsg) (Stype, error) {
 		}
 		return Lolli{ID: id, S: m, T: s}, nil
 	case WithK:
-		sts := make(Choices, len(msg.Chs))
+		sts := make(map[Label]Stype, len(msg.Chs))
 		for _, ch := range msg.Chs {
 			st, err := msgToStype(&ch.S)
 			if err != nil {
@@ -177,9 +177,9 @@ func msgToStype(msg *StypeMsg) (Stype, error) {
 			}
 			sts[Label(ch.L)] = st
 		}
-		return With{ID: id, Chs: sts}, nil
+		return With{ID: id, Choices: sts}, nil
 	case PlusK:
-		sts := make(Choices, len(msg.Chs))
+		sts := make(map[Label]Stype, len(msg.Chs))
 		for _, ch := range msg.Chs {
 			st, err := msgToStype(&ch.S)
 			if err != nil {
@@ -187,7 +187,7 @@ func msgToStype(msg *StypeMsg) (Stype, error) {
 			}
 			sts[Label(ch.L)] = st
 		}
-		return Plus{ID: id, Chs: sts}, nil
+		return Plus{ID: id, Choices: sts}, nil
 	default:
 		panic(ErrUnexpectedSt)
 	}

@@ -1,9 +1,9 @@
 package role
 
 import (
-	"github.com/go-resty/resty/v2"
+	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/lib/core"
+	"github.com/go-resty/resty/v2"
 )
 
 // Adapter
@@ -33,7 +33,7 @@ func (cl *roleClient) Create(rs RoleSpec) (RoleRoot, error) {
 	return MsgToRoleRoot(res)
 }
 
-func (c *roleClient) Retrieve(id core.ID[Role]) (RoleRoot, error) {
+func (c *roleClient) Retrieve(id id.ADT[ID]) (RoleRoot, error) {
 	var res RoleRootMsg
 	_, err := c.resty.R().
 		SetResult(&res).
@@ -49,8 +49,8 @@ func (c *roleClient) Update(rr RoleRoot) error {
 	return nil
 }
 
-func (c *roleClient) RetreiveAll() ([]RoleTeaser, error) {
-	rts := []RoleTeaser{}
+func (c *roleClient) RetreiveAll() ([]RoleRef, error) {
+	rts := []RoleRef{}
 	return rts, nil
 }
 

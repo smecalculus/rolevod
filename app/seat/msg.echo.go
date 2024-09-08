@@ -6,7 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 )
 
@@ -45,7 +45,7 @@ func (h *seatHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Seat](mto.ID)
+	id, err := id.String[ID](mto.ID)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (h *seatHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Seat](mto.ID)
+	id, err := id.String[ID](mto.ID)
 	if err != nil {
 		return err
 	}

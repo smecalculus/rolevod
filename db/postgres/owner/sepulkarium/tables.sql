@@ -23,19 +23,19 @@ CREATE TABLE seats (
 	name varchar(20)
 );
 
-CREATE TABLE forces (
+CREATE TABLE agents (
 	id varchar(20) UNIQUE,
 	name varchar(20)
 );
 
-CREATE TABLE works (
+CREATE TABLE deals (
 	id varchar(20) UNIQUE,
 	name varchar(20)
 );
 
-CREATE TABLE introductions (
-	env_id varchar(20),
-	tp_id varchar(20)
+CREATE TABLE participations (
+	deal_id varchar(20),
+	seat_id varchar(20)
 );
 
 CREATE TABLE states (
@@ -49,4 +49,10 @@ CREATE TABLE transitions (
 	to_id varchar(20),
 	msg_id varchar(20),
 	msg_key varchar(20)
+);
+
+CREATE TABLE channels (
+	id varchar(20),
+	name varchar(20),
+	state_id varchar(20)
 );

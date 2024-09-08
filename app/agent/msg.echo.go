@@ -1,4 +1,4 @@
-package work
+package agent
 
 import (
 	"log/slog"
@@ -6,29 +6,29 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 )
 
 // Adapter
-type workHandlerEcho struct {
-	api WorkApi
+type agentHandlerEcho struct {
+	api AgentApi
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newWorkHandlerEcho(a WorkApi, r msg.Renderer, l *slog.Logger) *workHandlerEcho {
-	name := slog.String("name", "workHandlerEcho")
-	return &workHandlerEcho{a, r, l.With(name)}
+func newAgentHandlerEcho(a AgentApi, r msg.Renderer, l *slog.Logger) *agentHandlerEcho {
+	name := slog.String("name", "agentHandlerEcho")
+	return &agentHandlerEcho{a, r, l.With(name)}
 }
 
-func (h *workHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto WorkSpecMsg
+func (h *agentHandlerEcho) ApiPostOne(c echo.Context) error {
+	var mto AgentSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToWorkSpec(mto)
+	spec, err := MsgToAgentSpec(mto)
 	if err != nil {
 		return err
 	}
@@ -36,16 +36,16 @@ func (h *workHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromWorkRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromAgentRoot(root))
 }
 
-func (h *workHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *agentHandlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Work](mto.ID)
+	id, err := id.String[ID](mto.ID)
 	if err != nil {
 		return err
 	}
@@ -53,16 +53,16 @@ func (h *workHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromWorkRoot(root))
+	return c.JSON(http.StatusOK, MsgFromAgentRoot(root))
 }
 
-func (h *workHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *agentHandlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	id, err := core.FromString[Work](mto.ID)
+	id, err := id.String[ID](mto.ID)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (h *workHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("work", MsgFromWorkRoot(root))
+	html, err := h.ssr.Render("agent", MsgFromAgentRoot(root))
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,12 @@ func (h *workHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api WorkApi
+	api AgentApi
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a WorkApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a AgentApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }

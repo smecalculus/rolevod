@@ -1,4 +1,4 @@
-package force
+package agent
 
 import (
 	"context"
@@ -9,29 +9,29 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
-type forceRepoPgx struct {
+type agentRepoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newForceRepoPgx(p *pgxpool.Pool, l *slog.Logger) *forceRepoPgx {
-	name := slog.String("name", "forceRepoPgx")
-	return &forceRepoPgx{p, l.With(name)}
+func newAgentRepoPgx(p *pgxpool.Pool, l *slog.Logger) *agentRepoPgx {
+	name := slog.String("name", "agentRepoPgx")
+	return &agentRepoPgx{p, l.With(name)}
 }
 
-func (r *forceRepoPgx) Insert(root ForceRoot) error {
+func (r *agentRepoPgx) Insert(root AgentRoot) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := DataFromForceRoot(root)
+	dto := DataFromAgentRoot(root)
 	query := `
-		INSERT INTO forces (
+		INSERT INTO agents (
 			id, name
 		) VALUES (
 			@id, @name
@@ -42,22 +42,22 @@ func (r *forceRepoPgx) Insert(root ForceRoot) error {
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("force", args))
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("agent", args))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
 }
 
-func (r *forceRepoPgx) SelectById(id core.ID[Force]) (ForceRoot, error) {
-	return ForceRoot{ID: id, Name: "ForceRoot"}, nil
+func (r *agentRepoPgx) SelectById(id id.ADT[ID]) (AgentRoot, error) {
+	return AgentRoot{ID: id, Name: "AgentRoot"}, nil
 }
 
-func (r *forceRepoPgx) SelectChildren(id core.ID[Force]) ([]ForceTeaser, error) {
+func (r *agentRepoPgx) SelectChildren(id id.ADT[ID]) ([]AgentRef, error) {
 	query := `
 		SELECT
 			f.id,
 			f.name
-		FROM forces f
+		FROM agents f
 		LEFT JOIN kinships k
 			ON f.id = k.child_id
 		WHERE k.parent_id = $1`
@@ -67,17 +67,17 @@ func (r *forceRepoPgx) SelectChildren(id core.ID[Force]) ([]ForceTeaser, error) 
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[forceTeaserData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[agentRefData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToForceTeasers(dtos)
+	return DataToAgentRefs(dtos)
 }
 
-func (r *forceRepoPgx) SelectAll() ([]ForceTeaser, error) {
-	roots := make([]ForceTeaser, 5)
+func (r *agentRepoPgx) SelectAll() ([]AgentRef, error) {
+	roots := make([]AgentRef, 5)
 	for i := range 5 {
-		roots[i] = ForceTeaser{ID: core.New[Force](), Name: fmt.Sprintf("ForceRoot%v", i)}
+		roots[i] = AgentRef{ID: id.New[ID](), Name: fmt.Sprintf("AgentRoot%v", i)}
 	}
 	return roots, nil
 }

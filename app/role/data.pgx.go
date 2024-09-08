@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
@@ -119,33 +119,33 @@ func (r *roleRepoPgx) Insert(root RoleRoot) (err error) {
 	return tx.Commit(ctx)
 }
 
-func (r *roleRepoPgx) SelectById(id core.ID[Role]) (RoleRoot, error) {
-	fooId := core.New[Role]()
+func (r *roleRepoPgx) SelectById(rid id.ADT[ID]) (RoleRoot, error) {
+	fooId := id.New[ID]()
 	queue := With{
-		ID: core.New[Role](),
-		Chs: Choices{
+		ID: id.New[ID](),
+		Choices: map[Label]Stype{
 			"enq": Tensor{
-				ID: core.New[Role](),
+				ID: id.New[ID](),
 				S:  TpRef{fooId, "Foo"},
-				T:  TpRef{id, "Queue"},
+				T:  TpRef{rid, "Queue"},
 			},
 			"deq": Plus{
-				ID: core.New[Role](),
-				Chs: Choices{
+				ID: id.New[ID](),
+				Choices: map[Label]Stype{
 					"some": Lolli{
-						ID: core.New[Role](),
+						ID: id.New[ID](),
 						S:  TpRef{fooId, "Foo"},
-						T:  TpRef{id, "Queue"},
+						T:  TpRef{rid, "Queue"},
 					},
-					"none": One{ID: core.New[Role]()},
+					"none": One{ID: id.New[ID]()},
 				},
 			},
 		},
 	}
-	return RoleRoot{ID: id, Name: "Queue", St: queue}, nil
+	return RoleRoot{ID: rid, Name: "Queue", St: queue}, nil
 }
 
-func (r *roleRepoPgx) SelectChildren(id core.ID[Role]) ([]RoleTeaser, error) {
+func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
 	query := `
 		SELECT
 			r.id,
@@ -160,14 +160,14 @@ func (r *roleRepoPgx) SelectChildren(id core.ID[Role]) ([]RoleTeaser, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleTeaserData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToRoleTeasers(dtos)
+	return DataToRoleRefs(dtos)
 }
 
-func (r *roleRepoPgx) SelectAll() ([]RoleTeaser, error) {
+func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 	query := `
 		SELECT
 			id,
@@ -179,11 +179,11 @@ func (r *roleRepoPgx) SelectAll() ([]RoleTeaser, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleTeaserData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToRoleTeasers(dtos)
+	return DataToRoleRefs(dtos)
 }
 
 // Adapter

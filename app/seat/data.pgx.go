@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
@@ -48,11 +48,11 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectById(id core.ID[Seat]) (SeatRoot, error) {
+func (r *seatRepoPgx) SelectById(id id.ADT[ID]) (SeatRoot, error) {
 	return SeatRoot{ID: id, Name: "SeatRoot"}, nil
 }
 
-func (r *seatRepoPgx) SelectChildren(id core.ID[Seat]) ([]SeatTeaser, error) {
+func (r *seatRepoPgx) SelectChildren(id id.ADT[ID]) ([]SeatRef, error) {
 	query := `
 		SELECT
 			s.id,
@@ -67,17 +67,17 @@ func (r *seatRepoPgx) SelectChildren(id core.ID[Seat]) ([]SeatTeaser, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[seatTeaserData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[seatRefData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToSeatTeasers(dtos)
+	return DataToSeatRefs(dtos)
 }
 
-func (r *seatRepoPgx) SelectAll() ([]SeatTeaser, error) {
-	roots := make([]SeatTeaser, 5)
+func (r *seatRepoPgx) SelectAll() ([]SeatRef, error) {
+	roots := make([]SeatRef, 5)
 	for i := range 5 {
-		roots[i] = SeatTeaser{ID: core.New[Seat](), Name: fmt.Sprintf("SeatRoot%v", i)}
+		roots[i] = SeatRef{ID: id.New[ID](), Name: fmt.Sprintf("SeatRoot%v", i)}
 	}
 	return roots, nil
 }
