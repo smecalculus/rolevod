@@ -1,17 +1,16 @@
 package deal
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/seat"
-
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
+
+	"smecalculus/rolevod/app/seat"
 )
 
 type ID interface{}
@@ -33,37 +32,6 @@ type DealRoot struct {
 	Name     string
 	Children []DealRef
 	Seats    []seat.SeatRef
-	Prcs     map[chnl.Ref]Process
-	Msgs     map[chnl.Ref]Message
-	Srvs     map[chnl.Ref]Service
-}
-
-// aka exec.Proc
-type Process struct {
-	ID  id.ADT[ID]
-	Exp step.Root
-}
-
-// aka exec.Msg
-type Message struct {
-	ID      id.ADT[ID]
-	Comm    chnl.Ref
-	Payload Value
-}
-
-// aka ast.Msg
-type Value interface {
-	val()
-}
-
-type Service struct {
-	ID   id.ADT[ID]
-	Comm chnl.Ref
-	Cont Continuation
-}
-
-type Continuation interface {
-	cont()
 }
 
 // goverter:variables
@@ -85,7 +53,9 @@ type DealApi interface {
 type dealService struct {
 	deals    dealRepo
 	chnls    chnl.Repo
-	steps    step.Repo
+	procs    step.Repo[step.Process]
+	msgs     step.Repo[step.Message]
+	srvs     step.Repo[step.Service]
 	states   state.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
@@ -94,13 +64,15 @@ type dealService struct {
 func newDealService(
 	deals dealRepo,
 	chnls chnl.Repo,
-	steps step.Repo,
+	procs step.Repo[step.Process],
+	msgs step.Repo[step.Message],
+	srvs step.Repo[step.Service],
 	states state.Repo,
 	kinships kinshipRepo,
 	l *slog.Logger,
 ) *dealService {
 	name := slog.String("name", "dealService")
-	return &dealService{deals, chnls, steps, states, kinships, l.With(name)}
+	return &dealService{deals, chnls, procs, msgs, srvs, states, kinships, l.With(name)}
 }
 
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
@@ -116,7 +88,7 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 }
 
 func (s *dealService) Retrieve(id id.ADT[ID]) (DealRoot, error) {
-	root, err := s.deals.SelectById(id)
+	root, err := s.deals.SelectByID(id)
 	if err != nil {
 		return DealRoot{}, err
 	}
@@ -131,13 +103,13 @@ func (s *dealService) RetreiveAll() ([]DealRef, error) {
 	return s.deals.SelectAll()
 }
 
-func (s *dealService) Establish(spec KinshipSpec) error {
+func (s *dealService) Establish(rel KinshipSpec) error {
 	var children []DealRef
-	for _, id := range spec.ChildrenIDs {
+	for _, id := range rel.ChildrenIDs {
 		children = append(children, DealRef{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   DealRef{ID: spec.ParentID},
+		Parent:   DealRef{ID: rel.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(root)
@@ -153,115 +125,213 @@ func (s *dealService) Involve(spec PartSpec) error {
 }
 
 func (s *dealService) Take(rel Transition) error {
-	switch want := rel.Step.(type) {
+	switch want := rel.Term.(type) {
 	case step.Close:
-		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		curChnl, err := s.chnls.SelectByID(want.A.ID)
 		if err != nil {
 			return err
 		}
-		switch curState := curChnl.State.(type) {
+		switch curChnl.State.(type) {
+		case nil:
+			return fmt.Errorf("channel already finalized %+v", curChnl)
 		case state.One:
-			got, err := s.steps.SelectByChnl(curChnl.ID)
+			srv, err := s.srvs.SelectByViaID(curChnl.ID)
 			if err != nil {
 				return err
 			}
-			_, ok := got.(step.Wait)
+			if srv == nil {
+				newMsg := step.Message{
+					ID:    id.New[step.ID](),
+					ViaID: want.A.ID,
+					Val:   step.Unit,
+				}
+				return s.msgs.Insert(newMsg)
+			}
+			wait, ok := srv.Cont.(step.Wait)
 			if !ok {
-				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+				return fmt.Errorf("unexpected cont type; want %T; got %#v", step.Wait{}, wait)
 			}
-			return nil
-		default:
-			nextState, err := s.states.SelectNext(curState.Get())
-			if err != nil {
-				return err
-			}
-			_, ok := nextState.(state.One)
-			if !ok {
-				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
-			}
-			nextChnl := chnl.Root{
+			// consume channel
+			finChnl := chnl.Root{
 				ID:    id.New[chnl.ID](),
+				PreID: curChnl.ID,
 				Name:  curChnl.Name,
-				State: nextState,
+				State: nil,
 			}
-			want.Via = chnl.ToRef(nextChnl)
-			return s.steps.Insert(want)
+			err = s.chnls.Insert(finChnl)
+			if err != nil {
+				return err
+			}
+			// consume service
+			finSrv := step.Service{
+				ID:    id.New[step.ID](),
+				PreID: srv.ID,
+				Cont:  nil,
+			}
+			return s.srvs.Insert(finSrv)
+		default:
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.One{}, curChnl)
 		}
 	case step.Wait:
-		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		curChnl, err := s.chnls.SelectByID(want.X.ID)
 		if err != nil {
 			return err
 		}
 		switch curState := curChnl.State.(type) {
+		case nil:
+			return fmt.Errorf("channel already finalized %+v", curChnl)
 		case state.One:
-			got, err := s.steps.SelectByChnl(curChnl.ID)
+			msg, err := s.msgs.SelectByViaID(curChnl.ID)
 			if err != nil {
 				return err
 			}
-			_, ok := got.(step.Close)
+			if msg == nil {
+				newChnl := chnl.Root{
+					ID:    id.New[chnl.ID](),
+					Name:  curChnl.Name,
+					State: curState,
+				}
+				err = s.chnls.Insert(newChnl)
+				if err != nil {
+					return err
+				}
+				viaID := want.X.ID
+				want.X = chnl.ToRef(newChnl)
+				newSrv := step.Service{
+					ID:    id.New[step.ID](),
+					ViaID: viaID,
+					Cont:  want,
+				}
+				return s.srvs.Insert(newSrv)
+			}
+			close, ok := msg.Val.(step.Close)
 			if !ok {
-				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+				return fmt.Errorf("unexpected val type; want %T; got %#v", step.Close{}, close)
 			}
-			return nil
-		default:
-			nextState, err := s.states.SelectNext(curState.Get())
-			if err != nil {
-				return err
-			}
-			_, ok := nextState.(state.One)
-			if !ok {
-				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
-			}
-			nextChnl := chnl.Root{
+			// consume channel
+			finChnl := chnl.Root{
 				ID:    id.New[chnl.ID](),
+				PreID: curChnl.ID,
 				Name:  curChnl.Name,
-				State: nextState,
+				State: nil,
 			}
-			want.Via = chnl.ToRef(nextChnl)
-			return s.steps.Insert(want)
+			err = s.chnls.Insert(finChnl)
+			if err != nil {
+				return err
+			}
+			// consume message
+			finMsg := step.Message{
+				ID:    id.New[step.ID](),
+				PreID: msg.ID,
+				Val:   nil,
+			}
+			return s.msgs.Insert(finMsg)
+		default:
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.One{}, curChnl)
 		}
 	case step.Send:
-		curChnl, err := s.chnls.SelectById(want.Via.ID)
+		curChnl, err := s.chnls.SelectByID(want.A.ID)
 		if err != nil {
 			return err
 		}
 		switch curState := curChnl.State.(type) {
+		case nil:
+			return fmt.Errorf("channel already finalized %+v", curChnl)
 		case state.Tensor:
-			got, err := s.steps.SelectByChnl(curChnl.ID)
+			srv, err := s.srvs.SelectByViaID(curChnl.ID)
 			if err != nil {
 				return err
 			}
-			_, ok := got.(step.Recv)
-			if !ok {
-				return fmt.Errorf("Unexpected continuation step %+v in channel %+v", got, curChnl)
+			if srv == nil {
+				nextChnl := chnl.Root{
+					ID:    id.New[chnl.ID](),
+					Name:  curChnl.Name,
+					State: curState,
+				}
+				err = s.chnls.Insert(nextChnl)
+				if err != nil {
+					return err
+				}
+				viaID := want.A.ID
+				want.A = chnl.ToRef(nextChnl)
+				newMsg := step.Message{
+					ID:    id.New[step.ID](),
+					ViaID: viaID,
+					Val:   want,
+				}
+				return s.msgs.Insert(newMsg)
 			}
-			return nil
+			recv, ok := srv.Cont.(step.Recv)
+			if !ok {
+				return fmt.Errorf("unexpected cont type; want %T; got %#v", step.Recv{}, recv)
+			}
+			step.Subst(recv.Cont, recv.X, want.A)
+			step.Subst(recv.Cont, recv.Y, want.B)
+			newProc := step.Process{
+				ID:    id.New[step.ID](),
+				PreID: srv.ID,
+				Term:  recv.Cont,
+			}
+			return s.procs.Insert(newProc)
 		default:
-			nextState, err := s.states.SelectNext(curState.Get())
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.Tensor{}, curChnl)
+		}
+	case step.Recv:
+		curChnl, err := s.chnls.SelectByID(want.X.ID)
+		if err != nil {
+			return err
+		}
+		switch curState := curChnl.State.(type) {
+		case nil:
+			return fmt.Errorf("channel already finalized %+v", curChnl)
+		case state.Lolli:
+			msg, err := s.msgs.SelectByViaID(curChnl.ID)
 			if err != nil {
 				return err
 			}
-			_, ok := nextState.(state.Tensor)
+			if msg == nil {
+				newChnl := chnl.Root{
+					ID:    id.New[chnl.ID](),
+					Name:  curChnl.Name,
+					State: curState,
+				}
+				err = s.chnls.Insert(newChnl)
+				if err != nil {
+					return err
+				}
+				viaID := want.X.ID
+				want.X = chnl.ToRef(newChnl)
+				newSrv := step.Service{
+					ID:    id.New[step.ID](),
+					ViaID: viaID,
+					Cont:  want,
+				}
+				return s.srvs.Insert(newSrv)
+			}
+			send, ok := msg.Val.(step.Send)
 			if !ok {
-				return fmt.Errorf("Unexpected next state %+v in channel %+v", nextState, curChnl)
+				return fmt.Errorf("unexpected val type; want %T; got %#v", step.Send{}, send)
 			}
-			nextChnl := chnl.Root{
-				ID:    id.New[chnl.ID](),
-				Name:  curChnl.Name,
-				State: nextState,
+			step.Subst(want.Cont, want.X, send.A)
+			step.Subst(want.Cont, want.Y, send.B)
+			newProc := step.Process{
+				ID:    id.New[step.ID](),
+				PreID: msg.ID,
+				Term:  want.Cont,
 			}
-			want.Via = chnl.ToRef(nextChnl)
-			return s.steps.Insert(want)
+			return s.procs.Insert(newProc)
+		default:
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.Tensor{}, curChnl)
 		}
 	default:
-		panic(ErrUnexpectedStep)
+		panic(step.ErrUnexpectedTerm)
 	}
 }
 
 type dealRepo interface {
 	Insert(DealRoot) error
 	SelectAll() ([]DealRef, error)
-	SelectById(id.ADT[ID]) (DealRoot, error)
+	SelectByID(id.ADT[ID]) (DealRoot, error)
 	SelectChildren(id.ADT[ID]) ([]DealRef, error)
 	SelectSeats(id.ADT[ID]) ([]seat.SeatRef, error)
 }
@@ -299,14 +369,8 @@ type partRepo interface {
 // Transition Relation
 type Transition struct {
 	Deal DealRef
-	Step step.Root
+	Term step.Term
 }
-
-type Label string
-
-var (
-	ErrUnexpectedStep = errors.New("unexpected step type")
-)
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {
 	return id

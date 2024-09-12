@@ -24,8 +24,8 @@ CREATE TABLE participations (
 );
 
 CREATE TABLE states (
-	kind smallint,
 	id varchar(20) UNIQUE,
+	kind smallint,
 	name varchar(20)
 );
 
@@ -38,8 +38,17 @@ CREATE TABLE transitions (
 
 CREATE TABLE channels (
 	id varchar(20),
+	pre_id varchar(20),
 	name varchar(20),
-	state_id varchar(20)
+	state text
+);
+
+CREATE TABLE steps (
+	id varchar(20) UNIQUE,
+	pre_id varchar(20),
+	via_id varchar(20),
+	kind smallint,
+	payload text
 );
 
 CREATE TABLE kinships (

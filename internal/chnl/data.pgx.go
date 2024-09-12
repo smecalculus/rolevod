@@ -32,13 +32,15 @@ func (r *repoPgx) Insert(root Root) error {
 	dto := DataFromRoot(root)
 	query := `
 		INSERT INTO channels (
-			id, name
+			id, pre_id, name, state
 		) VALUES (
-			@id, @name
+			@id, @pre_id, @name, @state
 		)`
 	args := pgx.NamedArgs{
-		"id":   dto.ID,
-		"name": dto.Name,
+		"id":     dto.ID,
+		"pre_id": dto.PreID,
+		"name":   dto.Name,
+		"state":  dto.State,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
@@ -56,6 +58,21 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return roots, nil
 }
 
-func (r *repoPgx) SelectById(id id.ADT[ID]) (Root, error) {
-	return Root{ID: id, Name: "Root"}, nil
+func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
+	query := `
+		SELECT
+			id, pre_id, name, state
+		FROM channels
+		WHERE id=$1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		return Root{}, err
+	}
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	if err != nil {
+		return Root{}, err
+	}
+	return DataToRoot(dto)
 }

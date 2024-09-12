@@ -6,7 +6,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var Module = fx.Module("app/chnl",
+var Module = fx.Module("internal/chnl",
 	fx.Provide(
 		fx.Annotate(newRepoPgx, fx.As(new(Repo))),
 	),

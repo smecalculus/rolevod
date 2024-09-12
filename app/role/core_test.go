@@ -24,7 +24,7 @@ func (r *roleRepoFixture) Insert(rr RoleRoot) error {
 func (r *roleRepoFixture) SelectAll() ([]RoleRef, error) {
 	return []RoleRef{}, nil
 }
-func (r *roleRepoFixture) SelectById(id id.ADT[ID]) (RoleRoot, error) {
+func (r *roleRepoFixture) SelectByID(id id.ADT[ID]) (RoleRoot, error) {
 	return RoleRoot{}, nil
 }
 func (r *roleRepoFixture) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
@@ -43,7 +43,7 @@ func (r *stateRepoFixture) Insert(root state.Root) error {
 func (r *stateRepoFixture) SelectAll() ([]state.Ref, error) {
 	return []state.Ref{}, nil
 }
-func (r *stateRepoFixture) SelectById(sid id.ADT[state.ID]) (state.Root, error) {
+func (r *stateRepoFixture) SelectByID(sid id.ADT[state.ID]) (state.Root, error) {
 	return nil, nil
 }
 func (r *stateRepoFixture) SelectNext(sid id.ADT[state.ID]) (state.Ref, error) {

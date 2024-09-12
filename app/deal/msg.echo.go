@@ -148,18 +148,18 @@ func newStepHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *stepHandlerE
 }
 
 func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto DealSpecMsg
+	var mto TransitionMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToDealSpec(mto)
+	tran, err := MsgToTransition(mto)
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Create(spec)
+	err = h.api.Take(tran)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
+	return c.NoContent(http.StatusCreated)
 }

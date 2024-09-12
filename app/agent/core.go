@@ -33,14 +33,14 @@ type AgentApi interface {
 }
 
 type agentService struct {
-	agentRepo   agentRepo
-	kinshipRepo kinshipRepo
-	log         *slog.Logger
+	agents   agentRepo
+	kinships kinshipRepo
+	log      *slog.Logger
 }
 
-func newAgentService(sr agentRepo, kr kinshipRepo, l *slog.Logger) *agentService {
+func newAgentService(agents agentRepo, kinships kinshipRepo, l *slog.Logger) *agentService {
 	name := slog.String("name", "agentService")
-	return &agentService{sr, kr, l.With(name)}
+	return &agentService{agents, kinships, l.With(name)}
 }
 
 func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
@@ -48,7 +48,7 @@ func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
 		ID:   id.New[ID](),
 		Name: spec.Name,
 	}
-	err := s.agentRepo.Insert(root)
+	err := s.agents.Insert(root)
 	if err != nil {
 		return root, err
 	}
@@ -56,11 +56,11 @@ func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
 }
 
 func (s *agentService) Retrieve(id id.ADT[ID]) (AgentRoot, error) {
-	root, err := s.agentRepo.SelectById(id)
+	root, err := s.agents.SelectByID(id)
 	if err != nil {
 		return AgentRoot{}, err
 	}
-	root.Children, err = s.agentRepo.SelectChildren(id)
+	root.Children, err = s.agents.SelectChildren(id)
 	if err != nil {
 		return AgentRoot{}, err
 	}
@@ -76,7 +76,7 @@ func (s *agentService) Establish(spec KinshipSpec) error {
 		Parent:   AgentRef{ID: spec.ParentID},
 		Children: children,
 	}
-	err := s.kinshipRepo.Insert(root)
+	err := s.kinships.Insert(root)
 	if err != nil {
 		return err
 	}
@@ -85,13 +85,13 @@ func (s *agentService) Establish(spec KinshipSpec) error {
 }
 
 func (s *agentService) RetreiveAll() ([]AgentRef, error) {
-	return s.agentRepo.SelectAll()
+	return s.agents.SelectAll()
 }
 
 // Port
 type agentRepo interface {
 	Insert(AgentRoot) error
-	SelectById(id.ADT[ID]) (AgentRoot, error)
+	SelectByID(id.ADT[ID]) (AgentRoot, error)
 	SelectChildren(id.ADT[ID]) ([]AgentRef, error)
 	SelectAll() ([]AgentRef, error)
 }

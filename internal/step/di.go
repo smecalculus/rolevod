@@ -6,8 +6,10 @@ import (
 	"go.uber.org/fx"
 )
 
-var Module = fx.Module("app/step",
+var Module = fx.Module("internal/step",
 	fx.Provide(
-		fx.Annotate(newRepoPgx, fx.As(new(Repo))),
+		fx.Annotate(newRepoPgx[Process], fx.As(new(Repo[Process]))),
+		fx.Annotate(newRepoPgx[Message], fx.As(new(Repo[Message]))),
+		fx.Annotate(newRepoPgx[Service], fx.As(new(Repo[Service]))),
 	),
 )

@@ -22,7 +22,7 @@ tasks:
     cmds:
       # -g 'useUnderlyingTypeMethods yes'
       # -g 'output:file ./generated.go'
-      - go run github.com/jmattheis/goverter/cmd/goverter gen ./...
+      - go run github.com/jmattheis/goverter/cmd/goverter gen ../...
       - go run main.go
 
   image:

@@ -9,100 +9,57 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/chnl"
 )
 
 // Adapter
-type repoPgx struct {
+type repoPgx[T root] struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "step.repoPgx")
-	return &repoPgx{p, l.With(name)}
+func newRepoPgx[T root](p *pgxpool.Pool, l *slog.Logger) *repoPgx[T] {
+	name := slog.String("name", "step.repoPgx[T]")
+	return &repoPgx[T]{p, l.With(name)}
 }
 
-func (r *repoPgx) Insert(root Root) (err error) {
+// for compilation purposes
+func newRepo[T root]() Repo[T] {
+	return &repoPgx[T]{}
+}
+
+func (r *repoPgx[T]) Insert(root root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoot(root)
-	// steps
-	sq := `
+	dto, err := dataFromRoot(root)
+	if err != nil {
+		return err
+	}
+	query := `
 		INSERT INTO steps (
-			kind, id
+			id, pre_id, via_id, payload
 		) VALUES (
-			@kind, @id
+			@id, @pre_id, @via_id, @payload
 		)`
-	sb := pgx.Batch{}
-	for _, s := range dto.Steps {
-		sa := pgx.NamedArgs{
-			"kind": s.K,
-			"id":   s.ID,
-		}
-		sb.Queue(sq, sa)
+	args := pgx.NamedArgs{
+		"id":      dto.ID,
+		"pre_id":  dto.PreID,
+		"via_id":  dto.ViaID,
+		"payload": dto.Payload,
 	}
-	sbr := tx.SendBatch(ctx, &sb)
-	defer func() {
-		err = errors.Join(err, sbr.Close())
-	}()
-	for _, s := range dto.Steps {
-		_, err = sbr.Exec()
-		if err != nil {
-			r.log.Error("insert failed", slog.Any("reason", err), slog.Any("step", s))
-		}
-	}
+	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		return errors.Join(err, sbr.Close(), tx.Rollback(ctx))
-	}
-	err = sbr.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	// transitions
-	tq := `
-		INSERT INTO transitions (
-			from_id, to_id, msg_id, msg_key
-		) VALUES (
-			@from_id, @to_id, @msg_id, @msg_key
-		)`
-	tb := pgx.Batch{}
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			ta := pgx.NamedArgs{
-				"from_id": tr.FromID,
-				"to_id":   tr.ToID,
-				"msg_id":  tr.ValID,
-				"msg_key": tr.MsgKey,
-			}
-			tb.Queue(tq, ta)
-		}
-	}
-	tbr := tx.SendBatch(ctx, &tb)
-	defer func() {
-		err = errors.Join(err, tbr.Close())
-	}()
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			_, err = tbr.Exec()
-			if err != nil {
-				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("tr", tr))
-			}
-		}
-	}
-	if err != nil {
-		return errors.Join(err, tbr.Close(), tx.Rollback(ctx))
-	}
-	err = tbr.Close()
-	if err != nil {
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("step", args))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
 }
 
-func (r *repoPgx) SelectAll() ([]Ref, error) {
+func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
 			id
@@ -113,13 +70,63 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[step])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectById(sid id.ADT[ID]) (Root, error) {
-	return nil, nil
+func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
+	query := `
+		SELECT
+			id, pre_id, via_id, payload
+		FROM steps
+		WHERE id=$1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	if err != nil {
+		return nil, err
+	}
+	generic, err := dataToRoot(&dto)
+	if err != nil {
+		return nil, err
+	}
+	concrete, ok := generic.(T)
+	if !ok {
+		return nil, ErrUnexpectedStep
+	}
+	return &concrete, nil
+}
+
+func (r *repoPgx[T]) SelectByViaID(vid id.ADT[chnl.ID]) (*T, error) {
+	query := `
+		SELECT
+			id, pre_id, via_id, payload
+		FROM steps
+		WHERE via_id=$1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, vid.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	if err != nil {
+		return nil, err
+	}
+	generic, err := dataToRoot(&dto)
+	if err != nil {
+		return nil, err
+	}
+	concrete, ok := generic.(T)
+	if !ok {
+		return nil, ErrUnexpectedStep
+	}
+	return &concrete, nil
 }

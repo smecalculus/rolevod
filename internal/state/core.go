@@ -9,7 +9,7 @@ import (
 type ID interface{}
 
 type Ref interface {
-	Get() id.ADT[ID]
+	Sym() id.ADT[ID]
 }
 
 type Label string
@@ -25,7 +25,7 @@ type With struct {
 	Choices map[Label]Root
 }
 
-func (r With) Get() id.ADT[ID] { return r.ID }
+func (r With) Sym() id.ADT[ID] { return r.ID }
 
 // aka Internal Choice
 type Plus struct {
@@ -33,7 +33,7 @@ type Plus struct {
 	Choices map[Label]Root
 }
 
-func (r Plus) Get() id.ADT[ID] { return r.ID }
+func (r Plus) Sym() id.ADT[ID] { return r.ID }
 
 type Tensor struct {
 	ID id.ADT[ID]
@@ -41,7 +41,7 @@ type Tensor struct {
 	T  Root
 }
 
-func (r Tensor) Get() id.ADT[ID] { return r.ID }
+func (r Tensor) Sym() id.ADT[ID] { return r.ID }
 
 type Lolli struct {
 	ID id.ADT[ID]
@@ -49,13 +49,13 @@ type Lolli struct {
 	T  Root
 }
 
-func (r Lolli) Get() id.ADT[ID] { return r.ID }
+func (r Lolli) Sym() id.ADT[ID] { return r.ID }
 
 type One struct {
 	ID id.ADT[ID]
 }
 
-func (r One) Get() id.ADT[ID] { return r.ID }
+func (r One) Sym() id.ADT[ID] { return r.ID }
 
 // aka TpName
 type TpRef struct {
@@ -64,26 +64,26 @@ type TpRef struct {
 	Name string
 }
 
-func (r TpRef) Get() id.ADT[ID] { return r.ID }
+func (r TpRef) Sym() id.ADT[ID] { return r.ID }
 
 type Up struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r Up) Get() id.ADT[ID] { return r.ID }
+func (r Up) Sym() id.ADT[ID] { return r.ID }
 
 type Down struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r Down) Get() id.ADT[ID] { return r.ID }
+func (r Down) Sym() id.ADT[ID] { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectById(id.ADT[ID]) (Root, error)
+	SelectByID(id.ADT[ID]) (Root, error)
 	SelectNext(id.ADT[ID]) (Ref, error)
 }
 

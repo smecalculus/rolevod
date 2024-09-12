@@ -17,9 +17,14 @@ type Ref struct {
 	Name string
 }
 
+type Var struct {
+	Name string
+}
+
 // Aggregate Root
 type Root struct {
 	ID    id.ADT[ID]
+	PreID id.ADT[ID]
 	Name  string
 	State state.Ref
 }
@@ -27,7 +32,7 @@ type Root struct {
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectById(id.ADT[ID]) (Root, error)
+	SelectByID(id.ADT[ID]) (Root, error)
 }
 
 // goverter:variables

@@ -121,7 +121,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectById(sid id.ADT[ID]) (Root, error) {
+func (r *repoPgx) SelectByID(sid id.ADT[ID]) (Root, error) {
 	fooId := id.New[ID]()
 	queue := &With{
 		ID: id.New[ID](),
@@ -145,4 +145,8 @@ func (r *repoPgx) SelectById(sid id.ADT[ID]) (Root, error) {
 		},
 	}
 	return queue, nil
+}
+
+func (r *repoPgx) SelectNext(sid id.ADT[ID]) (Ref, error) {
+	return nil, nil
 }

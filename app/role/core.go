@@ -30,8 +30,8 @@ type RoleRef struct {
 type RoleRoot struct {
 	ID       id.ADT[ID]
 	Name     string
-	Children []RoleRef
 	State    state.Root
+	Children []RoleRef
 }
 
 // Port
@@ -44,15 +44,15 @@ type RoleApi interface {
 }
 
 type roleService struct {
-	roleRepo    roleRepo
-	stateRepo   state.Repo
-	kinshipRepo kinshipRepo
-	log         *slog.Logger
+	roles    roleRepo
+	states   state.Repo
+	kinships kinshipRepo
+	log      *slog.Logger
 }
 
-func newRoleService(rr roleRepo, sr state.Repo, kr kinshipRepo, l *slog.Logger) *roleService {
+func newRoleService(roles roleRepo, states state.Repo, kinships kinshipRepo, l *slog.Logger) *roleService {
 	name := slog.String("name", "roleService")
-	return &roleService{rr, sr, kr, l.With(name)}
+	return &roleService{roles, states, kinships, l.With(name)}
 }
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
@@ -61,13 +61,13 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 		Name: spec.Name,
 	}
 	if spec.State != nil {
-		err := s.stateRepo.Insert(elab(spec.State))
+		err := s.states.Insert(elab(spec.State))
 		if err != nil {
 			s.log.Error("creation failed", slog.Any("reason", err), slog.Any("state", spec.State))
 			return root, err
 		}
 	}
-	err := s.roleRepo.Insert(root)
+	err := s.roles.Insert(root)
 	if err != nil {
 		s.log.Error("creation failed", slog.Any("reason", err), slog.Any("spec", spec))
 		return root, err
@@ -77,15 +77,15 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 }
 
 func (s *roleService) Update(root RoleRoot) error {
-	return s.roleRepo.Insert(root)
+	return s.roles.Insert(root)
 }
 
 func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
-	root, err := s.roleRepo.SelectById(rid)
+	root, err := s.roles.SelectByID(rid)
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	root.Children, err = s.roleRepo.SelectChildren(rid)
+	root.Children, err = s.roles.SelectChildren(rid)
 	if err != nil {
 		return RoleRoot{}, err
 	}
@@ -98,7 +98,7 @@ func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	root.State, err = s.stateRepo.SelectById(stateID)
+	root.State, err = s.states.SelectByID(stateID)
 	if err != nil {
 		return RoleRoot{}, err
 	}
@@ -106,7 +106,7 @@ func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
 }
 
 func (s *roleService) RetreiveAll() ([]RoleRef, error) {
-	return s.roleRepo.SelectAll()
+	return s.roles.SelectAll()
 }
 
 func (s *roleService) Establish(spec KinshipSpec) error {
@@ -118,7 +118,7 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 		Parent:   RoleRef{ID: spec.Parent},
 		Children: children,
 	}
-	err := s.kinshipRepo.Insert(kr)
+	err := s.kinships.Insert(kr)
 	if err != nil {
 		return err
 	}
@@ -139,11 +139,10 @@ func elab(root state.Root) state.Root {
 	}
 }
 
-// Port
 type roleRepo interface {
 	Insert(RoleRoot) error
 	SelectAll() ([]RoleRef, error)
-	SelectById(id.ADT[ID]) (RoleRoot, error)
+	SelectByID(id.ADT[ID]) (RoleRoot, error)
 	SelectChildren(id.ADT[ID]) ([]RoleRef, error)
 }
 

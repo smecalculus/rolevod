@@ -68,7 +68,7 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 	return DataToRoleRefs(dtos)
 }
 
-func (r *roleRepoPgx) SelectById(rid id.ADT[ID]) (RoleRoot, error) {
+func (r *roleRepoPgx) SelectByID(rid id.ADT[ID]) (RoleRoot, error) {
 	fooID := id.New[state.ID]()
 	queueID, _ := id.String[state.ID](rid.String())
 	queue := &state.With{

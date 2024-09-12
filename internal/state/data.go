@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/json"
 	"errors"
 
 	"smecalculus/rolevod/lib/id"
@@ -46,9 +47,6 @@ type transition struct {
 // goverter:extend to.*
 // goverter:extend data.*
 var (
-	DataToRef func(RefData) (Ref, error)
-	// goverter:ignore K Name
-	DataFromRef   func(Ref) RefData
 	DataToRefs    func([]RefData) ([]Ref, error)
 	DataFromRefs  func([]Ref) []RefData
 	DataToRoots   func([]rootData) ([]Root, error)
@@ -64,7 +62,7 @@ func dataFromRoot(root Root) *rootData {
 		return nil
 	}
 	dto := &rootData{
-		ID:     root.Get().String(),
+		ID:     root.Sym().String(),
 		States: map[string]state{},
 		Trs:    map[string][]transition{},
 	}
@@ -163,8 +161,26 @@ func dataFromRef(ref Ref) RefData {
 	return RefData{}
 }
 
-func dataToRef(dto RefData) Ref {
-	return nil
+func dataToRef(dto RefData) (Ref, error) {
+	return nil, nil
+}
+
+func JsonFromRef(ref Ref) (string, error) {
+	dto := dataFromRef(ref)
+	str, err := json.Marshal(dto)
+	if err != nil {
+		return "", err
+	}
+	return string(str), nil
+}
+
+func JsonToRef(str string) (Ref, error) {
+	var dto RefData
+	err := json.Unmarshal([]byte(str), &dto)
+	if err != nil {
+		return nil, err
+	}
+	return dataToRef(dto)
 }
 
 var (

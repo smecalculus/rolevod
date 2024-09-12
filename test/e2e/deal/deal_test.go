@@ -5,6 +5,9 @@ import (
 	"slices"
 	"testing"
 
+	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/internal/state"
+	"smecalculus/rolevod/internal/step"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/deal"
@@ -19,7 +22,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestEstablish(t *testing.T) {
+func TestEstablishKinship(t *testing.T) {
 	// given
 	ps := deal.DealSpec{Name: "parent-deal"}
 	pr, err := dealApi.Create(ps)
@@ -51,4 +54,33 @@ func TestEstablish(t *testing.T) {
 	if !slices.Contains(actual.Children, expectedChild) {
 		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
 	}
+}
+
+func TestTakeTransition(t *testing.T) {
+	// given
+	ds := deal.DealSpec{Name: "parent-deal"}
+	dr, err := dealApi.Create(ds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	x := chnl.Root{
+		ID:    id.New[chnl.ID](),
+		Name:  "x",
+		State: state.One{},
+	}
+	// and
+	tran := deal.Transition{
+		Deal: deal.ToDealRef(dr),
+		Term: step.Wait{
+			X:    chnl.ToRef(x),
+			Cont: step.Close{},
+		},
+	}
+	// when
+	err = dealApi.Take(tran)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// then
 }

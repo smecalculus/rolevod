@@ -45,14 +45,14 @@ type SeatApi interface {
 }
 
 type seatService struct {
-	seatRepo    seatRepo
-	kinshipRepo kinshipRepo
-	log         *slog.Logger
+	seats    seatRepo
+	kinships kinshipRepo
+	log      *slog.Logger
 }
 
-func newSeatService(sr seatRepo, kr kinshipRepo, l *slog.Logger) *seatService {
+func newSeatService(seats seatRepo, kinships kinshipRepo, l *slog.Logger) *seatService {
 	name := slog.String("name", "seatService")
-	return &seatService{sr, kr, l.With(name)}
+	return &seatService{seats, kinships, l.With(name)}
 }
 
 func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
@@ -60,7 +60,7 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 		ID:   id.New[ID](),
 		Name: spec.Name,
 	}
-	err := s.seatRepo.Insert(root)
+	err := s.seats.Insert(root)
 	if err != nil {
 		return root, err
 	}
@@ -68,11 +68,11 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 }
 
 func (s *seatService) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
-	root, err := s.seatRepo.SelectById(id)
+	root, err := s.seats.SelectByID(id)
 	if err != nil {
 		return SeatRoot{}, err
 	}
-	root.Children, err = s.seatRepo.SelectChildren(id)
+	root.Children, err = s.seats.SelectChildren(id)
 	if err != nil {
 		return SeatRoot{}, err
 	}
@@ -88,7 +88,7 @@ func (s *seatService) Establish(spec KinshipSpec) error {
 		Parent:   SeatRef{ID: spec.ParentID},
 		Children: children,
 	}
-	err := s.kinshipRepo.Insert(root)
+	err := s.kinships.Insert(root)
 	if err != nil {
 		return err
 	}
@@ -97,14 +97,14 @@ func (s *seatService) Establish(spec KinshipSpec) error {
 }
 
 func (s *seatService) RetreiveAll() ([]SeatRef, error) {
-	return s.seatRepo.SelectAll()
+	return s.seats.SelectAll()
 }
 
 // Port
 type seatRepo interface {
 	Insert(SeatRoot) error
 	SelectAll() ([]SeatRef, error)
-	SelectById(id.ADT[ID]) (SeatRoot, error)
+	SelectByID(id.ADT[ID]) (SeatRoot, error)
 	SelectChildren(id.ADT[ID]) ([]SeatRef, error)
 }
 

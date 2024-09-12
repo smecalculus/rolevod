@@ -48,7 +48,7 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectById(id id.ADT[ID]) (SeatRoot, error) {
+func (r *seatRepoPgx) SelectByID(id id.ADT[ID]) (SeatRoot, error) {
 	return SeatRoot{ID: id, Name: "SeatRoot"}, nil
 }
 

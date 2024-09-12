@@ -48,7 +48,7 @@ func (r *agentRepoPgx) Insert(root AgentRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *agentRepoPgx) SelectById(id id.ADT[ID]) (AgentRoot, error) {
+func (r *agentRepoPgx) SelectByID(id id.ADT[ID]) (AgentRoot, error) {
 	return AgentRoot{ID: id, Name: "AgentRoot"}, nil
 }
 

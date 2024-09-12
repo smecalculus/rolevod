@@ -64,5 +64,10 @@ func (c *dealClient) Involve(spec PartSpec) error {
 }
 
 func (c *dealClient) Take(rel Transition) error {
-	return nil
+	req := MsgFromTransition(rel)
+	_, err := c.resty.R().
+		SetBody(&req).
+		SetPathParam("id", req.Deal.ID).
+		Post("/deals/{id}/steps")
+	return err
 }

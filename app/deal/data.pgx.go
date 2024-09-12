@@ -58,7 +58,7 @@ func (r *dealRepoPgx) SelectAll() ([]DealRef, error) {
 	return roots, nil
 }
 
-func (r *dealRepoPgx) SelectById(id id.ADT[ID]) (DealRoot, error) {
+func (r *dealRepoPgx) SelectByID(id id.ADT[ID]) (DealRoot, error) {
 	return DealRoot{ID: id, Name: "DealRoot"}, nil
 }
 

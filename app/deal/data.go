@@ -13,21 +13,6 @@ type dealRootData struct {
 	ID       string        `db:"id"`
 	Name     string        `db:"name"`
 	Children []dealRefData `db:"-"`
-	Prcs     []processData `db:"-"`
-	Msgs     []messageData `db:"-"`
-	Srvs     []serviceData `db:"-"`
-}
-
-type processData struct {
-	ID string `db:"id"`
-}
-
-type messageData struct {
-	ID string `db:"id"`
-}
-
-type serviceData struct {
-	ID string `db:"id"`
 }
 
 // goverter:variables
@@ -38,9 +23,8 @@ var (
 	DataFromDealRef  func(DealRef) dealRefData
 	DataToDealRefs   func([]dealRefData) ([]DealRef, error)
 	DataFromDealRefs func([]DealRef) []dealRefData
-	// goverter:ignore Seats Prcs Msgs Srvs
-	DataToDealRoot func(dealRootData) (DealRoot, error)
-	// goverter:ignore Prcs Msgs Srvs
+	// goverter:ignore Seats
+	DataToDealRoot   func(dealRootData) (DealRoot, error)
 	DataFromDealRoot func(DealRoot) dealRootData
 )
 

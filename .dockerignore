@@ -1,5 +1,6 @@
 *
 !app
 !lib
+!internal
 !go.mod
 !go.sum

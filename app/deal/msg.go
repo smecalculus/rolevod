@@ -2,6 +2,7 @@ package deal
 
 import (
 	"smecalculus/rolevod/app/seat"
+	"smecalculus/rolevod/internal/step"
 )
 
 type DealSpecMsg struct {
@@ -25,22 +26,15 @@ type DealRootMsg struct {
 	Seats    []seat.SeatRefMsg `json:"seats"`
 }
 
-type ProcessMsg struct {
-	ID string `json:"id"`
-}
-
-type MessageMsg struct {
-	ID string `json:"id"`
-}
-
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
-	MsgToDealSpec   func(DealSpecMsg) (DealSpec, error)
-	MsgFromDealSpec func(DealSpec) DealSpecMsg
-	// goverter:ignore Prcs Msgs Srvs
+	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
+	MsgFromDealSpec  func(DealSpec) DealSpecMsg
+	MsgToDealRef     func(DealRefMsg) (DealRef, error)
+	MsgFromDealRef   func(DealRef) *DealRefMsg
 	MsgToDealRoot    func(DealRootMsg) (DealRoot, error)
 	MsgFromDealRoot  func(DealRoot) DealRootMsg
 	MsgFromDealRoots func([]DealRoot) []DealRootMsg
@@ -86,4 +80,18 @@ var (
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)
 	MsgFromPartRoot func(PartRoot) PartRootMsg
 	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
+)
+
+type TransitionMsg struct {
+	Deal DealRefMsg    `json:"deal"`
+	Term *step.TermMsg `json:"term"`
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/internal/step:Msg.*
+var (
+	MsgFromTransition func(Transition) TransitionMsg
+	MsgToTransition   func(TransitionMsg) (Transition, error)
 )

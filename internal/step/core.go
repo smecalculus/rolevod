@@ -8,106 +8,164 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
+var (
+	Unit = Ref{}
+)
+
 type ID interface{}
 
-type Ref interface {
-	get() id.ADT[ID]
+type Ref struct {
+	ID id.ADT[ID]
 }
+
+func (Ref) val() {}
+
+type root interface {
+	step()
+}
+
+// aka exec.Proc
+type Process struct {
+	ID    id.ADT[ID]
+	PreID id.ADT[ID]
+	Term  Term
+}
+
+func (Process) step() {}
+
+// aka exec.Msg
+type Message struct {
+	ID    id.ADT[ID]
+	PreID id.ADT[ID]
+	ViaID id.ADT[chnl.ID]
+	Val   Value
+}
+
+func (Message) step() {}
+
+type Service struct {
+	ID    id.ADT[ID]
+	PreID id.ADT[ID]
+	ViaID id.ADT[chnl.ID]
+	Cont  Continuation
+}
+
+func (Service) step() {}
 
 type Label string
 
-// aka Stype
-type Root interface {
-	Ref
+// aka Expression
+type Term interface {
+	term()
+}
+
+// aka ast.Msg
+type Value interface {
+	val()
+}
+
+type Continuation interface {
+	cont()
 }
 
 type Fwd struct {
-	ID   id.ADT[ID]
-	From chnl.Ref
-	To   chnl.Ref
+	A chnl.Ref // from
+	C chnl.Ref // to
 }
 
-func (r Fwd) get() id.ADT[ID] { return r.ID }
+func (Fwd) term() {}
 
 type Spawn struct {
-	ID     id.ADT[ID]
-	Name   string
-	Via    chnl.Ref
-	Values []chnl.Ref
-	Cont   Root
+	Name string
+	C    chnl.Var
+	Ctx  []chnl.Ref
+	Cont Term
 }
 
-func (r Spawn) get() id.ADT[ID] { return r.ID }
+func (Spawn) term() {}
+
+type Lab struct {
+	C chnl.Ref
+	L Label
+	// Cont Term
+}
+
+func (Lab) term() {}
+func (Lab) val()  {}
+
+type Case struct {
+	X     chnl.Ref
+	Conts map[Label]Term
+}
+
+func (Case) term() {}
+func (Case) cont() {}
+
+type Send struct {
+	A chnl.Ref // channel
+	B chnl.Ref // value
+	// Cont  Term
+}
+
+func (Send) term() {}
+func (Send) val()  {}
+
+type Recv struct {
+	X    chnl.Ref // channel
+	Y    chnl.Ref // value
+	Cont Term
+}
+
+func (Recv) term() {}
+func (Recv) cont() {}
+
+type Close struct {
+	A chnl.Ref
+}
+
+func (Close) term() {}
+func (Close) val()  {}
+
+type Wait struct {
+	X    chnl.Ref
+	Cont Term
+}
+
+func (Wait) term() {}
+func (Wait) cont() {}
 
 // aka ExpName
 type ExpRef struct {
-	ID     id.ADT[ID]
-	Name   string
-	Via    chnl.Ref
-	Values []chnl.Ref
+	Name string
+	C    chnl.Var
+	Ctx  []chnl.Var
 }
 
-func (r ExpRef) get() id.ADT[ID] { return r.ID }
+func (ExpRef) term() {}
 
-type Lab struct {
-	ID   id.ADT[ID]
-	Via  chnl.Ref
-	Data Label
-	// Cont Root
-}
-
-func (r Lab) get() id.ADT[ID] { return r.ID }
-
-type Case struct {
-	ID    id.ADT[ID]
-	Via   chnl.Ref
-	Conts map[Label]Root
-}
-
-func (r Case) get() id.ADT[ID] { return r.ID }
-
-type Send struct {
-	ID    id.ADT[ID]
-	Via   chnl.Ref
-	Value chnl.Ref
-	// Cont  Root
-}
-
-func (r Send) get() id.ADT[ID] { return r.ID }
-
-type Recv struct {
-	ID    id.ADT[ID]
-	Via   chnl.Ref
-	Value chnl.Ref
-	Cont  Root
-}
-
-func (r Recv) get() id.ADT[ID] { return r.ID }
-
-type Close struct {
-	ID  id.ADT[ID]
-	Via chnl.Ref
-}
-
-func (r Close) get() id.ADT[ID] { return r.ID }
-
-type Wait struct {
-	ID   id.ADT[ID]
-	Via  chnl.Ref
-	Cont Root
-}
-
-func (r Wait) get() id.ADT[ID] { return r.ID }
-
-type Repo interface {
-	Insert(Root) error
+type Repo[T root] interface {
+	Insert(root) error
 	SelectAll() ([]Ref, error)
-	SelectById(id.ADT[ID]) (Root, error)
-	SelectByChnl(chnl.ID) (Root, error)
+	SelectByID(id.ADT[ID]) (*T, error)
+	SelectByViaID(id.ADT[chnl.ID]) (*T, error)
+}
+
+func Subst(t Term, from chnl.Ref, to chnl.Ref) {
+	switch term := t.(type) {
+	case Close:
+		if term.A != from {
+			return
+		}
+		term.A = to
+	default:
+		panic(ErrUnexpectedTerm)
+	}
 }
 
 var (
-	ErrUnexpectedSt = errors.New("unexpected step type")
+	ErrUnexpectedStep = errors.New("unexpected step type")
+	ErrUnexpectedTerm = errors.New("unexpected term type")
+	ErrUnexpectedKind = errors.New("unexpected kind")
 )
 
 // goverter:variables
