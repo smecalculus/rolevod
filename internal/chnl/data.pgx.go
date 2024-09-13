@@ -29,7 +29,10 @@ func (r *repoPgx) Insert(root Root) error {
 	if err != nil {
 		return err
 	}
-	dto := DataFromRoot(root)
+	dto, err := DataFromRoot(root)
+	if err != nil {
+		return err
+	}
 	query := `
 		INSERT INTO channels (
 			id, pre_id, name, state

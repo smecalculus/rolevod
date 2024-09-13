@@ -5,10 +5,11 @@ import (
 	"slices"
 	"testing"
 
+	"smecalculus/rolevod/lib/id"
+
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
-	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/deal"
 )
@@ -58,19 +59,20 @@ func TestEstablishKinship(t *testing.T) {
 
 func TestTakeTransition(t *testing.T) {
 	// given
-	ds := deal.DealSpec{Name: "parent-deal"}
+	ds := deal.DealSpec{Name: "big-deal"}
 	dr, err := dealApi.Create(ds)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
+	// TODO нужно как-то получить канал
 	x := chnl.Root{
 		ID:    id.New[chnl.ID](),
 		Name:  "x",
-		State: state.One{},
+		State: state.OneRef{},
 	}
 	// and
-	tran := deal.Transition{
+	transition := deal.Transition{
 		Deal: deal.ToDealRef(dr),
 		Term: step.Wait{
 			X:    chnl.ToRef(x),
@@ -78,7 +80,7 @@ func TestTakeTransition(t *testing.T) {
 		},
 	}
 	// when
-	err = dealApi.Take(tran)
+	err = dealApi.Take(transition)
 	if err != nil {
 		t.Fatal(err)
 	}

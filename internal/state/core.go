@@ -9,15 +9,30 @@ import (
 type ID interface{}
 
 type Ref interface {
-	Sym() id.ADT[ID]
+	ID() id.ADT[ID]
 }
 
-type Label string
+type ref struct {
+	id id.ADT[ID]
+}
+
+func (r ref) ID() id.ADT[ID] { return r.id }
+
+type WithRef struct{ ref }
+type PlusRef struct{ ref }
+type TensorRef struct{ ref }
+type LolliRef struct{ ref }
+type OneRef struct{ ref }
+type TpRefRef struct{ ref }
+type UpRef struct{ ref }
+type DownRef struct{ ref }
 
 // aka Stype
 type Root interface {
-	Ref
+	getID() id.ADT[ID]
 }
+
+type Label string
 
 // aka External Choice
 type With struct {
@@ -25,7 +40,7 @@ type With struct {
 	Choices map[Label]Root
 }
 
-func (r With) Sym() id.ADT[ID] { return r.ID }
+func (r With) getID() id.ADT[ID] { return r.ID }
 
 // aka Internal Choice
 type Plus struct {
@@ -33,7 +48,7 @@ type Plus struct {
 	Choices map[Label]Root
 }
 
-func (r Plus) Sym() id.ADT[ID] { return r.ID }
+func (r Plus) getID() id.ADT[ID] { return r.ID }
 
 type Tensor struct {
 	ID id.ADT[ID]
@@ -41,7 +56,7 @@ type Tensor struct {
 	T  Root
 }
 
-func (r Tensor) Sym() id.ADT[ID] { return r.ID }
+func (r Tensor) getID() id.ADT[ID] { return r.ID }
 
 type Lolli struct {
 	ID id.ADT[ID]
@@ -49,42 +64,41 @@ type Lolli struct {
 	T  Root
 }
 
-func (r Lolli) Sym() id.ADT[ID] { return r.ID }
+func (r Lolli) getID() id.ADT[ID] { return r.ID }
 
 type One struct {
 	ID id.ADT[ID]
 }
 
-func (r One) Sym() id.ADT[ID] { return r.ID }
+func (r One) getID() id.ADT[ID] { return r.ID }
 
+// TODO тут ссылка на role?
 // aka TpName
 type TpRef struct {
-	ID id.ADT[ID]
-	// TODO: выпилить
+	ID   id.ADT[ID]
 	Name string
 }
 
-func (r TpRef) Sym() id.ADT[ID] { return r.ID }
+func (r TpRef) getID() id.ADT[ID] { return r.ID }
 
 type Up struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r Up) Sym() id.ADT[ID] { return r.ID }
+func (r Up) GetID() id.ADT[ID] { return r.ID }
 
 type Down struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r Down) Sym() id.ADT[ID] { return r.ID }
+func (r Down) GetID() id.ADT[ID] { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(id.ADT[ID]) (Root, error)
-	SelectNext(id.ADT[ID]) (Ref, error)
 }
 
 var (

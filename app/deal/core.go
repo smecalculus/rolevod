@@ -125,18 +125,28 @@ func (s *dealService) Involve(spec PartSpec) error {
 }
 
 func (s *dealService) Take(rel Transition) error {
+	s.log.Debug("trying to take", slog.Any("transition", rel))
 	switch want := rel.Term.(type) {
 	case step.Close:
 		curChnl, err := s.chnls.SelectByID(want.A.ID)
 		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("channel", want.A),
+			)
 			return err
 		}
+		// TODO typecheck
 		switch curChnl.State.(type) {
 		case nil:
 			return fmt.Errorf("channel already finalized %+v", curChnl)
-		case state.One:
-			srv, err := s.srvs.SelectByViaID(curChnl.ID)
+		case state.OneRef:
+			// TODO выборка с проверкой потребления
+			srv, err := s.srvs.SelectByChID(curChnl.ID)
 			if err != nil {
+				s.log.Error("service selection failed",
+					slog.Any("reason", err),
+				)
 				return err
 			}
 			if srv == nil {
@@ -153,18 +163,19 @@ func (s *dealService) Take(rel Transition) error {
 			}
 			// consume channel
 			finChnl := chnl.Root{
-				ID:    id.New[chnl.ID](),
 				PreID: curChnl.ID,
-				Name:  curChnl.Name,
 				State: nil,
 			}
 			err = s.chnls.Insert(finChnl)
 			if err != nil {
+				s.log.Error("channel insertion failed",
+					slog.Any("reason", err),
+					slog.Any("channel", finChnl),
+				)
 				return err
 			}
 			// consume service
 			finSrv := step.Service{
-				ID:    id.New[step.ID](),
 				PreID: srv.ID,
 				Cont:  nil,
 			}
@@ -175,14 +186,21 @@ func (s *dealService) Take(rel Transition) error {
 	case step.Wait:
 		curChnl, err := s.chnls.SelectByID(want.X.ID)
 		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("channel", want.X),
+			)
 			return err
 		}
 		switch curState := curChnl.State.(type) {
 		case nil:
 			return fmt.Errorf("channel already finalized %+v", curChnl)
-		case state.One:
-			msg, err := s.msgs.SelectByViaID(curChnl.ID)
+		case state.OneRef:
+			msg, err := s.msgs.SelectByChID(curChnl.ID)
 			if err != nil {
+				s.log.Error("message selection failed",
+					slog.Any("reason", err),
+				)
 				return err
 			}
 			if msg == nil {
@@ -193,6 +211,10 @@ func (s *dealService) Take(rel Transition) error {
 				}
 				err = s.chnls.Insert(newChnl)
 				if err != nil {
+					s.log.Error("channel insertion failed",
+						slog.Any("reason", err),
+						slog.Any("channel", newChnl),
+					)
 					return err
 				}
 				viaID := want.X.ID
@@ -210,18 +232,16 @@ func (s *dealService) Take(rel Transition) error {
 			}
 			// consume channel
 			finChnl := chnl.Root{
-				ID:    id.New[chnl.ID](),
 				PreID: curChnl.ID,
-				Name:  curChnl.Name,
 				State: nil,
 			}
 			err = s.chnls.Insert(finChnl)
 			if err != nil {
+				s.log.Error("taking failed", slog.Any("reason", err))
 				return err
 			}
 			// consume message
 			finMsg := step.Message{
-				ID:    id.New[step.ID](),
 				PreID: msg.ID,
 				Val:   nil,
 			}
@@ -237,8 +257,8 @@ func (s *dealService) Take(rel Transition) error {
 		switch curState := curChnl.State.(type) {
 		case nil:
 			return fmt.Errorf("channel already finalized %+v", curChnl)
-		case state.Tensor:
-			srv, err := s.srvs.SelectByViaID(curChnl.ID)
+		case state.TensorRef:
+			srv, err := s.srvs.SelectByChID(curChnl.ID)
 			if err != nil {
 				return err
 			}
@@ -265,6 +285,7 @@ func (s *dealService) Take(rel Transition) error {
 			if !ok {
 				return fmt.Errorf("unexpected cont type; want %T; got %#v", step.Recv{}, recv)
 			}
+			// TODO смена состояния канала
 			step.Subst(recv.Cont, recv.X, want.A)
 			step.Subst(recv.Cont, recv.Y, want.B)
 			newProc := step.Process{
@@ -272,6 +293,7 @@ func (s *dealService) Take(rel Transition) error {
 				PreID: srv.ID,
 				Term:  recv.Cont,
 			}
+			// TODO рекурсивный вызов
 			return s.procs.Insert(newProc)
 		default:
 			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.Tensor{}, curChnl)
@@ -284,8 +306,8 @@ func (s *dealService) Take(rel Transition) error {
 		switch curState := curChnl.State.(type) {
 		case nil:
 			return fmt.Errorf("channel already finalized %+v", curChnl)
-		case state.Lolli:
-			msg, err := s.msgs.SelectByViaID(curChnl.ID)
+		case state.LolliRef:
+			msg, err := s.msgs.SelectByChID(curChnl.ID)
 			if err != nil {
 				return err
 			}

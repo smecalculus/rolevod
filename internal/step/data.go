@@ -65,11 +65,11 @@ var (
 	DataFromRef    func(Ref) refData
 	DataToRefs     func([]refData) ([]Ref, error)
 	DataFromRefs   func([]Ref) []refData
-	DataToTerms    func([]payload) ([]Term, error)
+	DataToTerms    func([]*payload) ([]Term, error)
 	DataFromTerms  func([]Term) []*payload
-	DataToValues   func([]payload) ([]Value, error)
+	DataToValues   func([]*payload) ([]Value, error)
 	DataFromValues func([]Value) []*payload
-	DataToConts    func([]payload) ([]Continuation, error)
+	DataToConts    func([]*payload) ([]Continuation, error)
 	DataFromConts  func([]Continuation) []*payload
 )
 
@@ -128,7 +128,7 @@ func dataToRoot(dto *rootData) (root, error) {
 	if err != nil {
 		return nil, err
 	}
-	var pl *payload
+	var pl payload
 	err = json.Unmarshal([]byte(dto.Payload), pl)
 	if err != nil {
 		return nil, err
@@ -140,19 +140,19 @@ func dataToRoot(dto *rootData) (root, error) {
 	}
 	switch dto.K {
 	case procK:
-		term, err := dataToTerm(pl)
+		term, err := dataToTerm(&pl)
 		if err != nil {
 			return nil, err
 		}
 		return Process{ID: rootID, PreID: preID, Term: term}, nil
 	case msgK:
-		val, err := dataToValue(pl)
+		val, err := dataToValue(&pl)
 		if err != nil {
 			return nil, err
 		}
 		return Message{ID: rootID, PreID: preID, ViaID: viaID, Val: val}, nil
 	case srvK:
-		cont, err := dataToCont(pl)
+		cont, err := dataToCont(&pl)
 		if err != nil {
 			return nil, err
 		}
@@ -178,11 +178,11 @@ func dataFromTerm(t Term) *payload {
 }
 
 func dataToTerm(dto *payload) (Term, error) {
-	xa, err := chnl.DataToRef(dto.Xa)
+	xa, err := chnl.DataToRef(*dto.Xa)
 	if err != nil {
 		return nil, err
 	}
-	yb, err := chnl.DataToRef(dto.Yb)
+	yb, err := chnl.DataToRef(*dto.Yb)
 	if err != nil {
 		return nil, err
 	}
@@ -216,11 +216,11 @@ func dataFromValue(v Value) *payload {
 }
 
 func dataToValue(dto *payload) (Value, error) {
-	xa, err := chnl.DataToRef(dto.Xa)
+	xa, err := chnl.DataToRef(*dto.Xa)
 	if err != nil {
 		return nil, err
 	}
-	yb, err := chnl.DataToRef(dto.Yb)
+	yb, err := chnl.DataToRef(*dto.Yb)
 	if err != nil {
 		return nil, err
 	}
@@ -246,11 +246,11 @@ func dataFromCont(c Continuation) *payload {
 }
 
 func dataToCont(dto *payload) (Continuation, error) {
-	xa, err := chnl.DataToRef(dto.Xa)
+	xa, err := chnl.DataToRef(*dto.Xa)
 	if err != nil {
 		return nil, err
 	}
-	yb, err := chnl.DataToRef(dto.Yb)
+	yb, err := chnl.DataToRef(*dto.Yb)
 	if err != nil {
 		return nil, err
 	}

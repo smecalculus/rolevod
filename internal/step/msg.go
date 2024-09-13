@@ -1,7 +1,6 @@
 package step
 
 import (
-	"fmt"
 	"smecalculus/rolevod/internal/chnl"
 )
 
@@ -99,8 +98,6 @@ func MsgFromTerm(t Term) *TermMsg {
 			},
 		}
 	case Wait:
-		fmt.Printf("%#v", term)
-		fmt.Printf("%#v", term.X)
 		x := chnl.MsgFromRef(term.X)
 		return &TermMsg{
 			Kind: string(WaitK),
@@ -137,13 +134,13 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 	}
 	switch mto.Kind {
 	case string(CloseK):
-		a, err := chnl.MsgToRef(mto.Close.A)
+		a, err := chnl.MsgToRef(*mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return Close{A: a}, nil
 	case string(WaitK):
-		x, err := chnl.MsgToRef(mto.Wait.X)
+		x, err := chnl.MsgToRef(*mto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -153,21 +150,21 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		}
 		return Wait{X: x, Cont: cont}, nil
 	case string(SendK):
-		a, err := chnl.MsgToRef(mto.Send.A)
+		a, err := chnl.MsgToRef(*mto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := chnl.MsgToRef(mto.Send.B)
+		b, err := chnl.MsgToRef(*mto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return Send{A: a, B: b}, nil
 	case string(RecvK):
-		x, err := chnl.MsgToRef(mto.Recv.X)
+		x, err := chnl.MsgToRef(*mto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := chnl.MsgToRef(mto.Recv.Y)
+		y, err := chnl.MsgToRef(*mto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}

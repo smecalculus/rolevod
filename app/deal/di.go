@@ -12,16 +12,9 @@ import (
 	"go.uber.org/fx"
 
 	"smecalculus/rolevod/lib/msg"
-
-	"smecalculus/rolevod/internal/chnl"
-	"smecalculus/rolevod/internal/state"
-	"smecalculus/rolevod/internal/step"
 )
 
 var Module = fx.Module("app/deal",
-	state.Module,
-	step.Module,
-	chnl.Module,
 	fx.Provide(
 		fx.Annotate(newDealService, fx.As(new(DealApi))),
 	),

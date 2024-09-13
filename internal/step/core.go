@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// TODO подобрать другой юнит
 	Unit = Ref{}
 )
 
@@ -147,7 +148,7 @@ type Repo[T root] interface {
 	Insert(root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(id.ADT[ID]) (*T, error)
-	SelectByViaID(id.ADT[chnl.ID]) (*T, error)
+	SelectByChID(id.ADT[chnl.ID]) (*T, error)
 }
 
 func Subst(t Term, from chnl.Ref, to chnl.Ref) {

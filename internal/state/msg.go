@@ -8,11 +8,12 @@ import (
 
 type RefMsg struct {
 	ID string `param:"id" json:"id"`
+	K  Kind   `json:"kind"`
 }
 
 type RootMsg struct {
-	K       Kind        `json:"kind"`
 	ID      string      `json:"id"`
+	K       Kind        `json:"kind"`
 	Name    string      `json:"name,omitempty"`
 	Value   *RootMsg    `json:"value,omitempty"`
 	State   *RootMsg    `json:"state,omitempty"`
@@ -38,21 +39,68 @@ const (
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend Msg.*
 var (
-	MsgFromRef  func(Ref) RefMsg
-	MsgToRef    func(RefMsg) (Ref, error)
 	MsgFromRefs func([]Ref) []RefMsg
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
+	ToRefMsg    func(*RootMsg) *RefMsg
 )
 
+func MsgFromRef(ref Ref) *RefMsg {
+	id := ref.ID().String()
+	switch ref.(type) {
+	case OneRef:
+		return &RefMsg{K: OneK, ID: id}
+	case TpRefRef:
+		return &RefMsg{K: RefK, ID: id}
+	case TensorRef:
+		return &RefMsg{K: TensorK, ID: id}
+	case LolliRef:
+		return &RefMsg{K: LolliK, ID: id}
+	case WithRef:
+		return &RefMsg{K: WithK, ID: id}
+	case PlusRef:
+		return &RefMsg{K: PlusK, ID: id}
+	default:
+		panic(ErrUnexpectedState)
+	}
+}
+
+func MsgToRef(mto *RefMsg) (Ref, error) {
+	if mto == nil {
+		return nil, nil
+	}
+	id, err := id.String[ID](mto.ID)
+	if err != nil {
+		return nil, err
+	}
+	switch mto.K {
+	case RefK:
+		return TpRefRef{ref{id}}, nil
+	case OneK:
+		return OneRef{ref{id}}, nil
+	case TensorK:
+		return TensorRef{ref{id}}, nil
+	case LolliK:
+		return LolliRef{ref{id}}, nil
+	case WithK:
+		return WithRef{ref{id}}, nil
+	case PlusK:
+		return PlusRef{ref{id}}, nil
+	default:
+		panic(ErrUnexpectedState)
+	}
+}
+
 func MsgFromRoot(root Root) *RootMsg {
-	switch state := root.(type) {
-	case nil:
+	if root == nil {
 		return nil
-	case *TpRef:
-		return &RootMsg{K: RefK, ID: state.ID.String()}
+	}
+	switch state := root.(type) {
 	case *One:
 		return &RootMsg{K: OneK, ID: state.ID.String()}
+	case *TpRef:
+		return &RootMsg{K: RefK, ID: state.ID.String()}
 	case *Tensor:
 		return &RootMsg{
 			K:     TensorK,

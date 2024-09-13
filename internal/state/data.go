@@ -62,7 +62,7 @@ func dataFromRoot(root Root) *rootData {
 		return nil
 	}
 	dto := &rootData{
-		ID:     root.Sym().String(),
+		ID:     root.getID().String(),
 		States: map[string]state{},
 		Trs:    map[string][]transition{},
 	}

@@ -15,11 +15,12 @@ type rootData struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
-	DataToRef    func(*RefData) (Ref, error)
+	DataToRef    func(RefData) (Ref, error)
 	DataFromRef  func(Ref) *RefData
 	DataToRefs   func([]RefData) ([]Ref, error)
 	DataFromRefs func([]Ref) []RefData
 	DataToRoot   func(rootData) (Root, error)
-	DataFromRoot func(Root) rootData
+	DataFromRoot func(Root) (rootData, error)
 )

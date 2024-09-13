@@ -9,6 +9,10 @@ import (
 	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/msg"
 
+	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/internal/state"
+	"smecalculus/rolevod/internal/step"
+
 	"smecalculus/rolevod/app/agent"
 	"smecalculus/rolevod/app/deal"
 	"smecalculus/rolevod/app/role"
@@ -22,6 +26,10 @@ func main() {
 		core.Module,
 		data.Module,
 		msg.Module,
+		// internal
+		state.Module,
+		step.Module,
+		chnl.Module,
 		// app
 		agent.Module,
 		deal.Module,

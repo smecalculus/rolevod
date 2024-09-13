@@ -104,7 +104,7 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 	return &concrete, nil
 }
 
-func (r *repoPgx[T]) SelectByViaID(vid id.ADT[chnl.ID]) (*T, error) {
+func (r *repoPgx[T]) SelectByChID(vid id.ADT[chnl.ID]) (*T, error) {
 	query := `
 		SELECT
 			id, pre_id, via_id, payload

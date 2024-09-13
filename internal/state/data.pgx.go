@@ -146,7 +146,3 @@ func (r *repoPgx) SelectByID(sid id.ADT[ID]) (Root, error) {
 	}
 	return queue, nil
 }
-
-func (r *repoPgx) SelectNext(sid id.ADT[ID]) (Ref, error) {
-	return nil, nil
-}
