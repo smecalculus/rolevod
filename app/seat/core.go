@@ -7,12 +7,21 @@ import (
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
+
+	"smecalculus/rolevod/app/role"
 )
 
 type ID interface{}
 
 type SeatSpec struct {
 	Name string
+	Via  ChanTp
+	Ctx  []ChanTp
+}
+
+type ChanTpSpec struct {
+	Z    chnl.Var
+	Role role.RoleRef
 }
 
 type SeatRef struct {
@@ -20,20 +29,19 @@ type SeatRef struct {
 	Name string
 }
 
-// Relation
-type ChanTp struct {
-	Comm  chnl.Ref
-	State state.Ref
-}
-
-// Aggregate Root
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       id.ADT[ID]
 	Name     string
-	Children []SeatRef
+	Via      ChanTp
 	Ctx      []ChanTp
-	Zc       ChanTp
+	Children []SeatRef
+}
+
+// TODO подобрать семантику для отношения
+type ChanTp struct {
+	Z    chnl.Var
+	Role role.RoleRef
 }
 
 // Port
@@ -45,20 +53,23 @@ type SeatApi interface {
 }
 
 type seatService struct {
-	seats    seatRepo
+	seats    SeatRepo
+	states   state.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
 
-func newSeatService(seats seatRepo, kinships kinshipRepo, l *slog.Logger) *seatService {
+func newSeatService(seats SeatRepo, states state.Repo, kinships kinshipRepo, l *slog.Logger) *seatService {
 	name := slog.String("name", "seatService")
-	return &seatService{seats, kinships, l.With(name)}
+	return &seatService{seats, states, kinships, l.With(name)}
 }
 
 func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	root := SeatRoot{
 		ID:   id.New[ID](),
 		Name: spec.Name,
+		Via:  spec.Via,
+		Ctx:  spec.Ctx,
 	}
 	err := s.seats.Insert(root)
 	if err != nil {
@@ -101,13 +112,14 @@ func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 }
 
 // Port
-type seatRepo interface {
+type SeatRepo interface {
 	Insert(SeatRoot) error
 	SelectAll() ([]SeatRef, error)
 	SelectByID(id.ADT[ID]) (SeatRoot, error)
 	SelectChildren(id.ADT[ID]) ([]SeatRef, error)
 }
 
+// Kinship Relation
 type KinshipSpec struct {
 	ParentID    id.ADT[ID]
 	ChildrenIDs []id.ADT[ID]
@@ -127,8 +139,8 @@ type kinshipRepo interface {
 // goverter:extend to.*
 var (
 	ToSeatRef func(SeatRoot) SeatRef
-	ToCore    func([]string) ([]id.ADT[ID], error)
-	ToEdge    func([]id.ADT[ID]) []string
+	ToCoreIDs func([]string) ([]id.ADT[ID], error)
+	ToEdgeIDs func([]id.ADT[ID]) []string
 )
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {

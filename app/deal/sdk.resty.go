@@ -1,6 +1,7 @@
 package deal
 
 import (
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
 
 	"github.com/go-resty/resty/v2"
@@ -59,8 +60,8 @@ func (c *dealClient) Establish(spec KinshipSpec) error {
 	return err
 }
 
-func (c *dealClient) Involve(spec PartSpec) error {
-	return nil
+func (c *dealClient) Involve(spec PartSpec) (chnl.Ref, error) {
+	return chnl.Ref{}, nil
 }
 
 func (c *dealClient) Take(rel Transition) error {

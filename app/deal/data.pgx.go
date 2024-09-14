@@ -172,25 +172,21 @@ func (r *partRepoPgx) Insert(root PartRoot) error {
 	}
 	batch := pgx.Batch{}
 	dto := DataFromPartRoot(root)
-	for _, seat := range dto.Seats {
-		args := pgx.NamedArgs{
-			"deal_id": dto.Deal.ID,
-			"seat_id": seat.ID,
-		}
-		batch.Queue(query, args)
+	args := pgx.NamedArgs{
+		"deal_id": dto.Deal.ID,
+		"seat_id": dto.Seat.ID,
 	}
+	batch.Queue(query, args)
 	br := tx.SendBatch(ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	for _, seat := range dto.Seats {
-		_, err = br.Exec()
-		if err != nil {
-			r.log.Error("insert failed",
-				slog.Any("reason", err),
-				slog.Any("deal", dto.Deal),
-				slog.Any("seat", seat))
-		}
+	_, err = br.Exec()
+	if err != nil {
+		r.log.Error("insert failed",
+			slog.Any("reason", err),
+			slog.Any("deal", dto.Deal),
+			slog.Any("seat", dto.Seat))
 	}
 	if err != nil {
 		return errors.Join(err, br.Close(), tx.Rollback(ctx))

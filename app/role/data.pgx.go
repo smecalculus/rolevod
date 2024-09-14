@@ -30,7 +30,10 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoleRoot(root)
+	dto, err := dataFromRoleRoot(root)
+	if err != nil {
+		return err
+	}
 	rq := `
 		INSERT INTO roles (
 			id, name
@@ -61,7 +64,7 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RoleRefData])
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +113,7 @@ func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[roleRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RoleRefData])
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +146,10 @@ func (r *kinshipRepoPgx) Insert(root KinshipRoot) error {
 		return err
 	}
 	batch := pgx.Batch{}
-	dto := DataFromKinshipRoot(root)
+	dto, err := DataFromKinshipRoot(root)
+	if err != nil {
+		return err
+	}
 	for _, child := range dto.Children {
 		args := pgx.NamedArgs{
 			"parent_id": dto.Parent.ID,

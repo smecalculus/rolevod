@@ -7,27 +7,29 @@ import (
 type roleRootData struct {
 	ID       string        `db:"id"`
 	Name     string        `db:"name"`
-	Children []roleRefData `db:"-"`
+	Children []RoleRefData `db:"-"`
 }
 
-type roleRefData struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
+type RoleRefData struct {
+	ID    string `db:"id"`
+	Name  string `db:"name"`
+	State string `db:"state"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend data.*
+// goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
-	DataToRoleRef     func(roleRefData) (RoleRef, error)
-	DataFromRoleRef   func(RoleRef) roleRefData
-	DataToRoleRefs    func([]roleRefData) ([]RoleRef, error)
-	DataFromRoleRefs  func([]RoleRef) []roleRefData
+	DataToRoleRef     func(RoleRefData) (RoleRef, error)
+	DataFromRoleRef   func(RoleRef) (RoleRefData, error)
+	DataToRoleRefs    func([]RoleRefData) ([]RoleRef, error)
+	DataFromRoleRefs  func([]RoleRef) ([]RoleRefData, error)
 	DataToRoleRoot    func(roleRootData) (RoleRoot, error)
-	DataFromRoleRoot  func(RoleRoot) roleRootData
+	DataFromRoleRoot  func(RoleRoot) (roleRootData, error)
 	DataToRoleRoots   func([]roleRootData) ([]RoleRoot, error)
-	DataFromRoleRoots func([]RoleRoot) []roleRootData
+	DataFromRoleRoots func([]RoleRoot) ([]roleRootData, error)
 )
 
 func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
@@ -46,23 +48,28 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 	}, nil
 }
 
-func dataFromRoleRoot(root RoleRoot) roleRootData {
+func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
+	dtos, err := DataFromRoleRefs(root.Children)
+	if err != nil {
+		return roleRootData{}, err
+	}
 	return roleRootData{
 		ID:       root.ID.String(),
 		Name:     root.Name,
-		Children: DataFromRoleRefs(root.Children),
-	}
+		Children: dtos,
+	}, nil
 }
 
 type kinshipRootData struct {
-	Parent   roleRefData
-	Children []roleRefData
+	Parent   RoleRefData
+	Children []RoleRefData
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
-	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
+	DataFromKinshipRoot func(KinshipRoot) (kinshipRootData, error)
 )

@@ -17,9 +17,7 @@ type Ref struct {
 	Name string
 }
 
-type Var struct {
-	Name string
-}
+type Var string
 
 // Aggregate Root
 type Root struct {

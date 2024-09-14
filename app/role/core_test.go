@@ -12,7 +12,7 @@ import (
 func TestKinshipEstalish(t *testing.T) {
 	s := newRoleService(&roleRepoFixture{}, &stateRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
 	children := []id.ADT[ID]{id.New[ID]()}
-	s.Establish(KinshipSpec{Parent: id.New[ID](), Children: children})
+	s.Establish(KinshipSpec{ParentID: id.New[ID](), ChildrenIDs: children})
 }
 
 type roleRepoFixture struct {

@@ -36,8 +36,8 @@ func TestEstablish(t *testing.T) {
 	}
 	// when
 	ks := role.KinshipSpec{
-		Parent:   pr.ID,
-		Children: []id.ADT[role.ID]{cr.ID},
+		ParentID:    pr.ID,
+		ChildrenIDs: []id.ADT[role.ID]{cr.ID},
 	}
 	err = roleApi.Establish(ks)
 	if err != nil {

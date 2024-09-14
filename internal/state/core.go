@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 
 	"smecalculus/rolevod/lib/id"
 )
@@ -105,6 +106,14 @@ var (
 	ErrUnexpectedState = errors.New("unexpected state type")
 )
 
+func ErrUnexpectedRef(r Ref) error {
+	return fmt.Errorf("unexpected ref %#v", r)
+}
+
+func ErrUnexpectedRoot(r Root) error {
+	return fmt.Errorf("unexpected root %#v", r)
+}
+
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
@@ -112,6 +121,28 @@ var (
 	ToCoreIDs func([]string) ([]id.ADT[ID], error)
 	ToEdgeIDs func([]id.ADT[ID]) []string
 )
+
+func ToRef(r Root) Ref {
+	if r == nil {
+		return nil
+	}
+	switch root := r.(type) {
+	case One:
+		return OneRef{ref{root.ID}}
+	case TpRef:
+		return TpRefRef{ref{root.ID}}
+	case Tensor:
+		return TensorRef{ref{root.ID}}
+	case Lolli:
+		return LolliRef{ref{root.ID}}
+	case With:
+		return WithRef{ref{root.ID}}
+	case Plus:
+		return PlusRef{ref{root.ID}}
+	default:
+		panic(ErrUnexpectedRoot(r))
+	}
+}
 
 func toCore(s string) (id.ADT[ID], error) {
 	return id.String[ID](s)

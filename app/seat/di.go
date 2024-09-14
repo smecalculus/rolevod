@@ -21,7 +21,7 @@ var Module = fx.Module("app/seat",
 	fx.Provide(
 		fx.Private,
 		newSeatHandlerEcho,
-		fx.Annotate(newSeatRepoPgx, fx.As(new(seatRepo))),
+		fx.Annotate(newSeatRepoPgx, fx.As(new(SeatRepo))),
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),

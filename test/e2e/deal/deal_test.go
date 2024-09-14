@@ -7,14 +7,17 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
 	"smecalculus/rolevod/app/deal"
+	"smecalculus/rolevod/app/role"
+	"smecalculus/rolevod/app/seat"
 )
 
 var (
+	roleApi = role.NewRoleApi()
+	seatApi = seat.NewSeatApi()
 	dealApi = deal.NewDealApi()
 )
 
@@ -59,23 +62,48 @@ func TestEstablishKinship(t *testing.T) {
 
 func TestTakeTransition(t *testing.T) {
 	// given
-	ds := deal.DealSpec{Name: "big-deal"}
+	rs := role.RoleSpec{
+		Name:  "role-1",
+		State: state.One{},
+	}
+	rr, err := roleApi.Create(rs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	ss := seat.SeatSpec{
+		Name: "seat-1",
+		Via: seat.ChanTp{
+			Z:    "z",
+			Role: role.ToRoleRef(rr),
+		},
+	}
+	sr, err := seatApi.Create(ss)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	ds := deal.DealSpec{
+		Name: "big-deal",
+	}
 	dr, err := dealApi.Create(ds)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	// TODO нужно как-то получить канал
-	x := chnl.Root{
-		ID:    id.New[chnl.ID](),
-		Name:  "x",
-		State: state.OneRef{},
+	ps := deal.PartSpec{
+		DealID: dr.ID,
+		SeatID: sr.ID,
+	}
+	a, err := dealApi.Involve(ps)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// and
 	transition := deal.Transition{
 		Deal: deal.ToDealRef(dr),
 		Term: step.Wait{
-			X:    chnl.ToRef(x),
+			X:    a,
 			Cont: step.Close{},
 		},
 	}

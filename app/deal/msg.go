@@ -61,13 +61,13 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID  string   `param:"id" json:"deal_id"`
-	SeatIDs []string `json:"seat_ids"`
+	DealID string `param:"id" json:"deal_id"`
+	SeatID string `json:"seat_id"`
 }
 
 type PartRootMsg struct {
-	Deal  DealRefMsg        `json:"deal"`
-	Seats []seat.SeatRefMsg `json:"seats"`
+	Deal DealRefMsg      `json:"deal"`
+	Seat seat.SeatRefMsg `json:"seat"`
 }
 
 // goverter:variables

@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	"golang.org/x/exp/maps"
 
 	"smecalculus/rolevod/lib/id"
@@ -21,8 +23,8 @@ type RootMsg struct {
 }
 
 type ChoiceMsg struct {
-	Label  string  `json:"label"`
-	String RootMsg `json:"state"`
+	Label string   `json:"label"`
+	State *RootMsg `json:"state"`
 }
 
 type Kind string
@@ -41,12 +43,15 @@ const (
 // goverter:extend to.*
 // goverter:extend Msg.*
 var (
+	ToRefMsg    func(*RootMsg) *RefMsg
 	MsgFromRefs func([]Ref) []RefMsg
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
-	ToRefMsg    func(*RootMsg) *RefMsg
 )
 
 func MsgFromRef(ref Ref) *RefMsg {
+	if ref == nil {
+		return nil
+	}
 	id := ref.ID().String()
 	switch ref.(type) {
 	case OneRef:
@@ -62,7 +67,7 @@ func MsgFromRef(ref Ref) *RefMsg {
 	case PlusRef:
 		return &RefMsg{K: PlusK, ID: id}
 	default:
-		panic(ErrUnexpectedState)
+		panic(ErrUnexpectedRef(ref))
 	}
 }
 
@@ -88,47 +93,48 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	case PlusK:
 		return PlusRef{ref{id}}, nil
 	default:
-		panic(ErrUnexpectedState)
+		panic(ErrUnexpectedKind(mto.K))
 	}
 }
 
-func MsgFromRoot(root Root) *RootMsg {
-	if root == nil {
+func MsgFromRoot(r Root) *RootMsg {
+	if r == nil {
 		return nil
 	}
-	switch state := root.(type) {
-	case *One:
-		return &RootMsg{K: OneK, ID: state.ID.String()}
-	case *TpRef:
-		return &RootMsg{K: RefK, ID: state.ID.String()}
-	case *Tensor:
+	id := r.getID().String()
+	switch root := r.(type) {
+	case One:
+		return &RootMsg{K: OneK, ID: id}
+	case TpRef:
+		return &RootMsg{K: RefK, ID: id}
+	case Tensor:
 		return &RootMsg{
 			K:     TensorK,
-			ID:    state.ID.String(),
-			Value: MsgFromRoot(state.S),
-			State: MsgFromRoot(state.T),
+			ID:    id,
+			Value: MsgFromRoot(root.S),
+			State: MsgFromRoot(root.T),
 		}
-	case *Lolli:
+	case Lolli:
 		return &RootMsg{
 			K:     LolliK,
-			ID:    state.ID.String(),
-			Value: MsgFromRoot(state.S),
-			State: MsgFromRoot(state.T),
+			ID:    id,
+			Value: MsgFromRoot(root.S),
+			State: MsgFromRoot(root.T),
 		}
-	case *With:
-		sts := make([]ChoiceMsg, len(state.Choices))
-		for i, l := range maps.Keys(state.Choices) {
-			sts[i] = ChoiceMsg{Label: string(l), String: *MsgFromRoot(state.Choices[l])}
+	case With:
+		choices := make([]ChoiceMsg, len(root.Choices))
+		for i, l := range maps.Keys(root.Choices) {
+			choices[i] = ChoiceMsg{Label: string(l), State: MsgFromRoot(root.Choices[l])}
 		}
-		return &RootMsg{K: WithK, ID: state.ID.String(), Choices: sts}
-	case *Plus:
-		sts := make([]ChoiceMsg, len(state.Choices))
-		for i, l := range maps.Keys(state.Choices) {
-			sts[i] = ChoiceMsg{Label: string(l), String: *MsgFromRoot(state.Choices[l])}
+		return &RootMsg{K: WithK, ID: id, Choices: choices}
+	case Plus:
+		choices := make([]ChoiceMsg, len(root.Choices))
+		for i, l := range maps.Keys(root.Choices) {
+			choices[i] = ChoiceMsg{Label: string(l), State: MsgFromRoot(root.Choices[l])}
 		}
-		return &RootMsg{K: PlusK, ID: state.ID.String(), Choices: sts}
+		return &RootMsg{K: PlusK, ID: id, Choices: choices}
 	default:
-		panic(ErrUnexpectedState)
+		panic(ErrUnexpectedRoot(r))
 	}
 }
 
@@ -142,11 +148,11 @@ func MsgToRoot(mto *RootMsg) (Root, error) {
 	}
 	switch mto.K {
 	case OneK:
-		return &One{ID: id}, nil
+		return One{ID: id}, nil
 	case RefK:
-		return &TpRef{ID: id, Name: mto.Name}, nil
+		return TpRef{ID: id, Name: mto.Name}, nil
 	case TensorK:
-		m, err := MsgToRoot(mto.Value)
+		v, err := MsgToRoot(mto.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -154,9 +160,9 @@ func MsgToRoot(mto *RootMsg) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Tensor{ID: id, S: m, T: s}, nil
+		return Tensor{ID: id, S: v, T: s}, nil
 	case LolliK:
-		m, err := MsgToRoot(mto.Value)
+		v, err := MsgToRoot(mto.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -164,28 +170,32 @@ func MsgToRoot(mto *RootMsg) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Lolli{ID: id, S: m, T: s}, nil
+		return Lolli{ID: id, S: v, T: s}, nil
 	case WithK:
-		sts := make(map[Label]Root, len(mto.Choices))
-		for _, ch := range mto.Choices {
-			st, err := MsgToRoot(&ch.String)
+		choices := make(map[Label]Root, len(mto.Choices))
+		for _, mto := range mto.Choices {
+			choice, err := MsgToRoot(mto.State)
 			if err != nil {
 				return nil, err
 			}
-			sts[Label(ch.Label)] = st
+			choices[Label(mto.Label)] = choice
 		}
-		return &With{ID: id, Choices: sts}, nil
+		return With{ID: id, Choices: choices}, nil
 	case PlusK:
-		sts := make(map[Label]Root, len(mto.Choices))
-		for _, ch := range mto.Choices {
-			st, err := MsgToRoot(&ch.String)
+		choices := make(map[Label]Root, len(mto.Choices))
+		for _, mto := range mto.Choices {
+			choice, err := MsgToRoot(mto.State)
 			if err != nil {
 				return nil, err
 			}
-			sts[Label(ch.Label)] = st
+			choices[Label(mto.Label)] = choice
 		}
-		return &Plus{ID: id, Choices: sts}, nil
+		return Plus{ID: id, Choices: choices}, nil
 	default:
-		panic(ErrUnexpectedState)
+		panic(ErrUnexpectedKind(mto.K))
 	}
+}
+
+func ErrUnexpectedKind(k Kind) error {
+	return fmt.Errorf("unextected kind %q", k)
 }

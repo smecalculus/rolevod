@@ -10,19 +10,20 @@ type RoleSpecMsg struct {
 }
 
 type RefMsg struct {
-	ID string `param:"id" query:"id" json:"id"`
-}
-
-type RoleRootMsg struct {
-	ID       string         `param:"id" json:"id"`
-	Name     string         `json:"name"`
-	Children []RoleRefMsg   `json:"children"`
-	State    *state.RootMsg `json:"state,omitempty"`
+	ID string `json:"id" param:"id"`
 }
 
 type RoleRefMsg struct {
-	ID   string `param:"id" json:"id"`
-	Name string `query:"name" json:"name"`
+	ID    string        `json:"id" param:"id"`
+	Name  string        `json:"name"`
+	State *state.RefMsg `json:"state"`
+}
+
+type RoleRootMsg struct {
+	ID       string         `json:"id" param:"id"`
+	Name     string         `json:"name"`
+	State    *state.RootMsg `json:"state,omitempty"`
+	Children []RoleRefMsg   `json:"children"`
 }
 
 // goverter:variables
@@ -30,21 +31,21 @@ type RoleRefMsg struct {
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToRoleSpec    func(RoleSpecMsg) (RoleSpec, error)
 	MsgFromRoleSpec  func(RoleSpec) RoleSpecMsg
-	MsgFromRoleRoot  func(RoleRoot) RoleRootMsg
-	MsgToRoleRoot    func(RoleRootMsg) (RoleRoot, error)
-	MsgFromRoleRoots func([]RoleRoot) []RoleRootMsg
-	MsgToRoleRoots   func([]RoleRootMsg) ([]RoleRoot, error)
+	MsgToRoleSpec    func(RoleSpecMsg) (RoleSpec, error)
 	MsgFromRoleRef   func(RoleRef) RoleRefMsg
 	MsgToRoleRef     func(RoleRefMsg) (RoleRef, error)
 	MsgFromRoleRefs  func([]RoleRef) []RoleRefMsg
 	MsgToRoleRefs    func([]RoleRefMsg) ([]RoleRef, error)
+	MsgFromRoleRoot  func(RoleRoot) RoleRootMsg
+	MsgToRoleRoot    func(RoleRootMsg) (RoleRoot, error)
+	MsgFromRoleRoots func([]RoleRoot) []RoleRootMsg
+	MsgToRoleRoots   func([]RoleRootMsg) ([]RoleRoot, error)
 )
 
 type KinshipSpecMsg struct {
-	Parent   string   `param:"id" json:"parent"`
-	Children []string `json:"children"`
+	ParentID    string   `json:"parent_id" param:"id"`
+	ChildrenIDs []string `json:"children_ids"`
 }
 
 type KinshipRootMsg struct {
@@ -55,6 +56,7 @@ type KinshipRootMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)

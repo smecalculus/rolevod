@@ -58,7 +58,7 @@ func (c *roleClient) Establish(ks KinshipSpec) error {
 	req := MsgFromKinshipSpec(ks)
 	_, err := c.resty.R().
 		SetBody(&req).
-		SetPathParam("id", req.Parent).
+		SetPathParam("id", req.ParentID).
 		Post("/roles/{id}/kinships")
 	return err
 }

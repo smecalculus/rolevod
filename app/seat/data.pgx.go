@@ -29,7 +29,10 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	if err != nil {
 		return err
 	}
-	dto := DataFromSeatRoot(root)
+	dto, err := DataFromSeatRoot(root)
+	if err != nil {
+		return err
+	}
 	query := `
 		INSERT INTO seats (
 			id, name

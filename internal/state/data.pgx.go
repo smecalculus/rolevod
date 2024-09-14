@@ -114,7 +114,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[*RefData])
 	if err != nil {
 		return nil, err
 	}

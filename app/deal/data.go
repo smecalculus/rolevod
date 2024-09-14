@@ -42,8 +42,8 @@ var (
 )
 
 type partRootData struct {
-	Deal  dealRefData
-	Seats []seat.SeatRefData
+	Deal dealRefData
+	Seat seat.SeatRefData
 }
 
 // goverter:variables

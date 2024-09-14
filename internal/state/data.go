@@ -3,6 +3,7 @@ package state
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"smecalculus/rolevod/lib/id"
 )
@@ -47,8 +48,8 @@ type transition struct {
 // goverter:extend to.*
 // goverter:extend data.*
 var (
-	DataToRefs    func([]RefData) ([]Ref, error)
-	DataFromRefs  func([]Ref) []RefData
+	DataToRefs    func([]*RefData) ([]Ref, error)
+	DataFromRefs  func([]Ref) []*RefData
 	DataToRoots   func([]rootData) ([]Root, error)
 	DataFromRoots func([]Root) []*rootData
 )
@@ -71,40 +72,40 @@ func dataFromRoot(root Root) *rootData {
 	return dto
 }
 
-func dataFromState(dto *rootData, root Root) state {
-	switch st := root.(type) {
-	case *TpRef:
-		return state{K: refK, ID: st.ID.String()}
-	case *One:
-		return state{K: oneK, ID: st.ID.String()}
-	case *Tensor:
-		from := state{K: tensorK, ID: st.ID.String()}
-		msg := dataFromState(dto, st.S)
-		to := dataFromState(dto, st.T)
+func dataFromState(dto *rootData, r Root) state {
+	switch root := r.(type) {
+	case TpRef:
+		return state{K: refK, ID: root.ID.String()}
+	case One:
+		return state{K: oneK, ID: root.ID.String()}
+	case Tensor:
+		from := state{K: tensorK, ID: root.ID.String()}
+		msg := dataFromState(dto, root.S)
+		to := dataFromState(dto, root.T)
 		tr := transition{FromID: from.ID, ToID: to.ID, MsgID: msg.ID}
 		dto.States[to.ID] = to
 		dto.Trs[from.ID] = append(dto.Trs[from.ID], tr)
 		return from
-	case *Lolli:
-		from := state{K: lolliK, ID: st.ID.String()}
-		msg := dataFromState(dto, st.S)
-		to := dataFromState(dto, st.T)
+	case Lolli:
+		from := state{K: lolliK, ID: root.ID.String()}
+		msg := dataFromState(dto, root.S)
+		to := dataFromState(dto, root.T)
 		tr := transition{FromID: from.ID, ToID: to.ID, MsgID: msg.ID}
 		dto.States[to.ID] = to
 		dto.Trs[from.ID] = append(dto.Trs[from.ID], tr)
 		return from
-	case *With:
-		from := state{K: withK, ID: st.ID.String()}
-		for l, st := range st.Choices {
+	case With:
+		from := state{K: withK, ID: root.ID.String()}
+		for l, st := range root.Choices {
 			to := dataFromState(dto, st)
 			tr := transition{FromID: from.ID, ToID: to.ID, MsgKey: string(l)}
 			dto.States[to.ID] = to
 			dto.Trs[from.ID] = append(dto.Trs[from.ID], tr)
 		}
 		return from
-	case *Plus:
-		from := state{K: plusK, ID: st.ID.String()}
-		for l, st := range st.Choices {
+	case Plus:
+		from := state{K: plusK, ID: root.ID.String()}
+		for l, st := range root.Choices {
 			to := dataFromState(dto, st)
 			tr := transition{FromID: from.ID, ToID: to.ID, MsgKey: string(l)}
 			dto.States[to.ID] = to
@@ -112,7 +113,7 @@ func dataFromState(dto *rootData, root Root) state {
 		}
 		return from
 	default:
-		panic(ErrUnexpectedState)
+		panic(ErrUnexpectedRoot(r))
 	}
 }
 
@@ -123,46 +124,86 @@ func dataToState(root rootData, state state) Root {
 	}
 	switch state.K {
 	case refK:
-		return &TpRef{ID: id}
+		return TpRef{ID: id}
 	case oneK:
-		return &One{ID: id}
+		return One{ID: id}
 	case tensorK:
 		tr := root.Trs[state.ID][0]
-		return &Tensor{
+		return Tensor{
 			ID: id,
 			S:  dataToState(root, root.States[tr.MsgID]),
 			T:  dataToState(root, root.States[tr.ToID]),
 		}
 	case lolliK:
 		tr := root.Trs[state.ID][0]
-		return &Lolli{
+		return Lolli{
 			ID: id,
 			S:  dataToState(root, root.States[tr.MsgID]),
 			T:  dataToState(root, root.States[tr.ToID]),
 		}
 	case withK:
-		st := &With{ID: id}
+		st := With{ID: id}
 		for _, tr := range root.Trs[state.ID] {
 			st.Choices[Label(tr.MsgKey)] = dataToState(root, root.States[tr.ToID])
 		}
 		return st
 	case plusK:
-		st := &Plus{ID: id}
+		st := Plus{ID: id}
 		for _, tr := range root.Trs[state.ID] {
 			st.Choices[Label(tr.MsgKey)] = dataToState(root, root.States[tr.ToID])
 		}
 		return st
 	default:
-		panic(ErrUnexpectedState)
+		panic(errUnexpectedKind(state.K))
 	}
 }
 
-func dataFromRef(ref Ref) RefData {
-	return RefData{}
+func dataFromRef(r Ref) *RefData {
+	if r == nil {
+		return nil
+	}
+	switch ref := r.(type) {
+	case OneRef:
+		return &RefData{K: oneK, ID: ref.ID().String()}
+	case TpRefRef:
+		return &RefData{K: refK, ID: ref.ID().String()}
+	case TensorRef:
+		return &RefData{K: tensorK, ID: ref.ID().String()}
+	case LolliRef:
+		return &RefData{K: lolliK, ID: ref.ID().String()}
+	case WithRef:
+		return &RefData{K: withK, ID: ref.ID().String()}
+	case PlusRef:
+		return &RefData{K: plusK, ID: ref.ID().String()}
+	default:
+		panic(ErrUnexpectedRef(r))
+	}
 }
 
-func dataToRef(dto RefData) (Ref, error) {
-	return nil, nil
+func dataToRef(dto *RefData) (Ref, error) {
+	if dto == nil {
+		return nil, nil
+	}
+	id, err := id.String[ID](dto.ID)
+	if err != nil {
+		return nil, err
+	}
+	switch dto.K {
+	case oneK:
+		return OneRef{ref{id}}, nil
+	case refK:
+		return TpRefRef{ref{id}}, nil
+	case tensorK:
+		return TensorRef{ref{id}}, nil
+	case lolliK:
+		return LolliRef{ref{id}}, nil
+	case withK:
+		return WithRef{ref{id}}, nil
+	case plusK:
+		return PlusRef{ref{id}}, nil
+	default:
+		panic(errUnexpectedKind(dto.K))
+	}
 }
 
 func JsonFromRef(ref Ref) (string, error) {
@@ -174,15 +215,19 @@ func JsonFromRef(ref Ref) (string, error) {
 	return string(str), nil
 }
 
-func JsonToRef(str string) (Ref, error) {
+func JsonToRef(data string) (Ref, error) {
 	var dto RefData
-	err := json.Unmarshal([]byte(str), &dto)
+	err := json.Unmarshal([]byte(data), &dto)
 	if err != nil {
 		return nil, err
 	}
-	return dataToRef(dto)
+	return dataToRef(&dto)
 }
 
 var (
 	errInvalidID = errors.New("invalid state id")
 )
+
+func errUnexpectedKind(k kind) error {
+	return fmt.Errorf("unexpected kind %q", k)
+}

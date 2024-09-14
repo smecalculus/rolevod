@@ -46,12 +46,13 @@ type DealApi interface {
 	Retrieve(id.ADT[ID]) (DealRoot, error)
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
-	Involve(PartSpec) error
+	Involve(PartSpec) (chnl.Ref, error)
 	Take(Transition) error
 }
 
 type dealService struct {
 	deals    dealRepo
+	seats    seat.SeatApi
 	chnls    chnl.Repo
 	procs    step.Repo[step.Process]
 	msgs     step.Repo[step.Message]
@@ -63,6 +64,7 @@ type dealService struct {
 
 func newDealService(
 	deals dealRepo,
+	seats seat.SeatApi,
 	chnls chnl.Repo,
 	procs step.Repo[step.Process],
 	msgs step.Repo[step.Message],
@@ -72,7 +74,7 @@ func newDealService(
 	l *slog.Logger,
 ) *dealService {
 	name := slog.String("name", "dealService")
-	return &dealService{deals, chnls, procs, msgs, srvs, states, kinships, l.With(name)}
+	return &dealService{deals, seats, chnls, procs, msgs, srvs, states, kinships, l.With(name)}
 }
 
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
@@ -120,8 +122,23 @@ func (s *dealService) Establish(rel KinshipSpec) error {
 	return nil
 }
 
-func (s *dealService) Involve(spec PartSpec) error {
-	return nil
+func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
+	sr, err := s.seats.Retrieve(spec.SeatID)
+	if err != nil {
+		return chnl.Ref{}, err
+	}
+	// производим внешний spawn
+	// TODO переоформление контекста
+	c := chnl.Root{
+		ID:    id.New[chnl.ID](),
+		Name:  string(sr.Via.Z),
+		State: sr.Via.Role.State,
+	}
+	err = s.chnls.Insert(c)
+	if err != nil {
+		return chnl.Ref{}, err
+	}
+	return chnl.ToRef(c), nil
 }
 
 func (s *dealService) Take(rel Transition) error {
@@ -375,13 +392,13 @@ type kinshipRepo interface {
 
 // Partitcipation Relation
 type PartSpec struct {
-	DealID  id.ADT[ID]
-	SeatIDs []id.ADT[seat.ID]
+	DealID id.ADT[ID]
+	SeatID id.ADT[seat.ID]
 }
 
 type PartRoot struct {
-	Deal  DealRef
-	Seats []seat.SeatRef
+	Deal DealRef
+	Seat seat.SeatRef
 }
 
 type partRepo interface {

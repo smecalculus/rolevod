@@ -1,16 +1,11 @@
 package role
 
 import (
-	"errors"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/state"
-)
-
-var (
-	ErrUnexpectedSt = errors.New("unexpected session type")
 )
 
 type ID interface{}
@@ -21,11 +16,11 @@ type RoleSpec struct {
 }
 
 type RoleRef struct {
-	ID   id.ADT[ID]
-	Name string
+	ID    id.ADT[ID]
+	Name  string
+	State state.Ref
 }
 
-// Aggregate Root
 // aka TpDef
 type RoleRoot struct {
 	ID       id.ADT[ID]
@@ -38,9 +33,9 @@ type RoleRoot struct {
 type RoleApi interface {
 	Create(RoleSpec) (RoleRoot, error)
 	Retrieve(id.ADT[ID]) (RoleRoot, error)
+	RetreiveAll() ([]RoleRef, error)
 	Update(RoleRoot) error
 	Establish(KinshipSpec) error
-	RetreiveAll() ([]RoleRef, error)
 }
 
 type roleService struct {
@@ -111,11 +106,11 @@ func (s *roleService) RetreiveAll() ([]RoleRef, error) {
 
 func (s *roleService) Establish(spec KinshipSpec) error {
 	var children []RoleRef
-	for _, id := range spec.Children {
+	for _, id := range spec.ChildrenIDs {
 		children = append(children, RoleRef{ID: id})
 	}
 	kr := KinshipRoot{
-		Parent:   RoleRef{ID: spec.Parent},
+		Parent:   RoleRef{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(kr)
@@ -126,16 +121,17 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func elab(root state.Root) state.Root {
-	switch st := root.(type) {
-	case nil:
+func elab(r state.Root) state.Root {
+	if r == nil {
 		return nil
-	case *state.One:
-		return &state.One{ID: id.New[state.ID]()}
-	case *state.TpRef:
-		return &state.TpRef{ID: id.New[state.ID](), Name: st.Name}
+	}
+	switch root := r.(type) {
+	case state.One:
+		return state.One{ID: id.New[state.ID]()}
+	case state.TpRef:
+		return state.TpRef{ID: id.New[state.ID](), Name: root.Name}
 	default:
-		panic(ErrUnexpectedSt)
+		panic(state.ErrUnexpectedRoot(root))
 	}
 }
 
@@ -147,8 +143,8 @@ type roleRepo interface {
 }
 
 type KinshipSpec struct {
-	Parent   id.ADT[ID]
-	Children []id.ADT[ID]
+	ParentID    id.ADT[ID]
+	ChildrenIDs []id.ADT[ID]
 }
 
 type KinshipRoot struct {
@@ -163,6 +159,7 @@ type kinshipRepo interface {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/internal/state:To.*
 var (
 	ToRoleRef func(RoleRoot) RoleRef
 	ToCoreIDs func([]string) ([]id.ADT[ID], error)
