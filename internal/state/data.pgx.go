@@ -18,7 +18,7 @@ type repoPgx struct {
 }
 
 func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "state.repoPgx")
+	name := slog.String("name", "stateRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
 
@@ -32,15 +32,15 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	// states
 	sq := `
 		INSERT INTO states (
-			kind, id
+			id, kind
 		) VALUES (
-			@kind, @id
+			@id, @kind
 		)`
 	sb := pgx.Batch{}
 	for _, s := range dto.States {
 		sa := pgx.NamedArgs{
-			"kind": s.K,
 			"id":   s.ID,
+			"kind": s.K,
 		}
 		sb.Queue(sq, sa)
 	}
@@ -51,7 +51,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	for _, s := range dto.States {
 		_, err = sbr.Exec()
 		if err != nil {
-			r.log.Error("insert failed", slog.Any("reason", err), slog.Any("state", s))
+			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("state", s))
 		}
 	}
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 		for _, tr := range trs {
 			_, err = tbr.Exec()
 			if err != nil {
-				r.log.Error("insert failed", slog.Any("reason", err), slog.Any("tr", tr))
+				r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("tr", tr))
 			}
 		}
 	}
@@ -123,23 +123,23 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 
 func (r *repoPgx) SelectByID(sid id.ADT[ID]) (Root, error) {
 	fooId := id.New[ID]()
-	queue := &With{
+	queue := &WithRoot{
 		ID: id.New[ID](),
 		Choices: map[Label]Root{
-			"enq": &Tensor{
+			"enq": &TensorRoot{
 				ID: id.New[ID](),
-				S:  &TpRef{ID: fooId, Name: "Foo"},
-				T:  &TpRef{ID: sid, Name: "Queue"},
+				S:  &TpRefRoot{ID: fooId, Name: "Foo"},
+				T:  &TpRefRoot{ID: sid, Name: "Queue"},
 			},
-			"deq": &Plus{
+			"deq": &PlusRoot{
 				ID: id.New[ID](),
 				Choices: map[Label]Root{
-					"some": &Lolli{
+					"some": &LolliRoot{
 						ID: id.New[ID](),
-						S:  &TpRef{ID: fooId, Name: "Foo"},
-						T:  &TpRef{ID: sid, Name: "Queue"},
+						S:  &TpRefRoot{ID: fooId, Name: "Foo"},
+						T:  &TpRefRoot{ID: sid, Name: "Queue"},
 					},
-					"none": &One{ID: id.New[ID]()},
+					"none": &OneRoot{ID: id.New[ID]()},
 				},
 			},
 		},

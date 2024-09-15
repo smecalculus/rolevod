@@ -21,36 +21,36 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestEstablish(t *testing.T) {
+func TestKinshipEstablishment(t *testing.T) {
 	// given
-	ps := role.RoleSpec{Name: "parent-role"}
-	pr, err := roleApi.Create(ps)
+	parSpec := role.RoleSpec{Name: "parent-role"}
+	parRoot, err := roleApi.Create(parSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	cs := role.RoleSpec{Name: "child-role", State: &state.One{}}
-	cr, err := roleApi.Create(cs)
+	childSpec := role.RoleSpec{Name: "child-role", State: state.OneSpec{}}
+	childRoot, err := roleApi.Create(childSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// when
-	ks := role.KinshipSpec{
-		ParentID:    pr.ID,
-		ChildrenIDs: []id.ADT[role.ID]{cr.ID},
+	kinshipSpec := role.KinshipSpec{
+		ParentID:    parRoot.ID,
+		ChildrenIDs: []id.ADT[role.ID]{childRoot.ID},
 	}
-	err = roleApi.Establish(ks)
+	err = roleApi.Establish(kinshipSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := roleApi.Retrieve(pr.ID)
+	actual, err := roleApi.Retrieve(parRoot.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := role.ToRoleRef(cr)
+	expectedChild := role.ToRoleRef(childRoot)
 	if !slices.Contains(actual.Children, expectedChild) {
-		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
+		t.Errorf("unexpected children in %q; want: %+v, got: %+v", parRoot.Name, expectedChild, actual.Children)
 	}
 }

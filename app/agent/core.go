@@ -80,7 +80,7 @@ func (s *agentService) Establish(spec KinshipSpec) error {
 	if err != nil {
 		return err
 	}
-	s.log.Debug("establishment succeed", slog.Any("kinship", root))
+	s.log.Debug("establishment succeeded", slog.Any("kinship", root))
 	return nil
 }
 

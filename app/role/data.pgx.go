@@ -9,8 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/id"
-
-	"smecalculus/rolevod/internal/state"
 )
 
 // Adapter
@@ -36,16 +34,18 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	}
 	rq := `
 		INSERT INTO roles (
-			id, name
+			id, name, state
 		) VALUES (
-			@id, @name
+			@id, @name, @state
 		)`
 	ra := pgx.NamedArgs{
-		"id":   dto.ID,
-		"name": dto.Name,
+		"id":    dto.ID,
+		"name":  dto.Name,
+		"state": dto.State,
 	}
 	_, err = tx.Exec(ctx, rq, ra)
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
@@ -71,37 +71,57 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 }
 
 func (r *roleRepoPgx) SelectByID(rid id.ADT[ID]) (RoleRoot, error) {
-	fooID := id.New[state.ID]()
-	queueID, _ := id.String[state.ID](rid.String())
-	queue := &state.With{
-		ID: id.New[state.ID](),
-		Choices: map[state.Label]state.Root{
-			"enq": &state.Tensor{
-				ID: id.New[state.ID](),
-				S:  &state.TpRef{ID: fooID, Name: "Foo"},
-				T:  &state.TpRef{ID: queueID, Name: "Queue"},
-			},
-			"deq": &state.Plus{
-				ID: id.New[state.ID](),
-				Choices: map[state.Label]state.Root{
-					"some": &state.Lolli{
-						ID: id.New[state.ID](),
-						S:  &state.TpRef{ID: fooID, Name: "Foo"},
-						T:  &state.TpRef{ID: queueID, Name: "Queue"},
-					},
-					"none": &state.One{ID: id.New[state.ID]()},
-				},
-			},
-		},
+	// fooID := id.New[state.ID]()
+	// queueID, _ := id.String[state.ID](rid.String())
+	// queue := &state.WithRoot{
+	// 	ID: id.New[state.ID](),
+	// 	Choices: map[state.Label]state.Root{
+	// 		"enq": &state.TensorRoot{
+	// 			ID: id.New[state.ID](),
+	// 			S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
+	// 			T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
+	// 		},
+	// 		"deq": &state.PlusRoot{
+	// 			ID: id.New[state.ID](),
+	// 			Choices: map[state.Label]state.Root{
+	// 				"some": &state.LolliRoot{
+	// 					ID: id.New[state.ID](),
+	// 					S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
+	// 					T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
+	// 				},
+	// 				"none": &state.OneRoot{ID: id.New[state.ID]()},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// return RoleRoot{ID: rid, Name: "Queue", State: state.ConvertRootToRef(queue)}, nil
+	query := `
+		SELECT
+			id, name, state
+		FROM roles
+		WHERE id=$1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return RoleRoot{}, err
 	}
-	return RoleRoot{ID: rid, Name: "Queue", State: queue}, nil
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[roleRootData])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return RoleRoot{}, err
+	}
+	r.log.Debug("role selection succeeded", slog.Any("dto", dto))
+	return dataToRoleRoot(dto)
 }
 
 func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
 	query := `
 		SELECT
 			r.id,
-			r.name
+			r.name,
+			r.state
 		FROM roles r
 		LEFT JOIN kinships k
 			ON r.id = k.child_id

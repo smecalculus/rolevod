@@ -2,7 +2,6 @@ package step
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -130,12 +129,12 @@ func dataToRoot(dto *rootData) (root, error) {
 		return nil, err
 	}
 	var pl payload
-	err = json.Unmarshal([]byte(dto.Payload), pl)
+	err = json.Unmarshal([]byte(dto.Payload), &pl)
 	if err != nil {
 		return nil, err
 	}
-	var ref *chnl.RefData
-	err = json.Unmarshal([]byte(dto.ViaID), ref)
+	var ref chnl.RefData
+	err = json.Unmarshal([]byte(dto.ViaID), &ref)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func dataToRoot(dto *rootData) (root, error) {
 		}
 		return Service{ID: rootID, PreID: preID, ViaID: viaID, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedStepKind(dto.K))
+		panic(errUnexpectedStepKind(dto.K))
 	}
 }
 
@@ -219,7 +218,7 @@ func dataToTerm(dto *payload) (Term, error) {
 	case recvK:
 		return Recv{X: xa, Y: yb, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedTermKind(dto.K))
+		panic(errUnexpectedTermKind(dto.K))
 	}
 }
 
@@ -249,7 +248,7 @@ func dataToValue(dto *payload) (Value, error) {
 	case sendK:
 		return Send{A: xa, B: yb}, nil
 	default:
-		panic(ErrUnexpectedTermKind(dto.K))
+		panic(errUnexpectedTermKind(dto.K))
 	}
 }
 
@@ -291,18 +290,14 @@ func dataToCont(dto *payload) (Continuation, error) {
 	case recvK:
 		return Recv{X: xa, Y: yb, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedTermKind(dto.K))
+		panic(errUnexpectedTermKind(dto.K))
 	}
 }
 
-var (
-	errInvalidID = errors.New("invalid step id")
-)
-
-func ErrUnexpectedTermKind(k termKind) error {
+func errUnexpectedTermKind(k termKind) error {
 	return fmt.Errorf("unexpected term kind %v", k)
 }
 
-func ErrUnexpectedStepKind(k stepKind) error {
+func errUnexpectedStepKind(k stepKind) error {
 	return fmt.Errorf("unexpected step kind %v", k)
 }

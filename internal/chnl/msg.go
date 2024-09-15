@@ -9,8 +9,8 @@ type SpecMsg struct {
 }
 
 type RefMsg struct {
-	ID   string `param:"id" json:"id"`
-	Name string `query:"name" json:"name"`
+	ID   string `json:"id" param:"id"`
+	Name string `json:"name"`
 }
 
 type RootMsg struct {

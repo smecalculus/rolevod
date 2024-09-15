@@ -52,14 +52,14 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectByID(id id.ADT[ID]) (SeatRoot, error) {
+func (r *seatRepoPgx) SelectByID(rid id.ADT[ID]) (SeatRoot, error) {
 	query := `
-	SELECT
-		id, name, via, ctx
-	FROM seats
-	WHERE id=$1`
+		SELECT
+			id, name, via, ctx
+		FROM seats
+		WHERE id=$1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, id.String())
+	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return SeatRoot{}, err
@@ -70,7 +70,7 @@ func (r *seatRepoPgx) SelectByID(id id.ADT[ID]) (SeatRoot, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return SeatRoot{}, err
 	}
-	r.log.Debug("seat selection succeed", slog.Any("dto", dto))
+	r.log.Debug("seat selection succeeded", slog.Any("dto", dto))
 	return DataToSeatRoot(dto)
 }
 

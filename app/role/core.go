@@ -12,7 +12,7 @@ type ID interface{}
 
 type RoleSpec struct {
 	Name  string
-	State state.Root
+	State state.Spec
 }
 
 type RoleRef struct {
@@ -25,11 +25,10 @@ type RoleRef struct {
 type RoleRoot struct {
 	ID       id.ADT[ID]
 	Name     string
-	State    state.Root
+	State    state.Ref
 	Children []RoleRef
 }
 
-// Port
 type RoleApi interface {
 	Create(RoleSpec) (RoleRoot, error)
 	Retrieve(id.ADT[ID]) (RoleRoot, error)
@@ -45,17 +44,23 @@ type roleService struct {
 	log      *slog.Logger
 }
 
-func newRoleService(roles roleRepo, states state.Repo, kinships kinshipRepo, l *slog.Logger) *roleService {
+func newRoleService(
+	roles roleRepo,
+	states state.Repo,
+	kinships kinshipRepo,
+	l *slog.Logger,
+) *roleService {
 	name := slog.String("name", "roleService")
 	return &roleService{roles, states, kinships, l.With(name)}
 }
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
+	st := state.ConvertSpecToRoot(spec.State)
 	root := RoleRoot{
 		ID:    id.New[ID](),
 		Name:  spec.Name,
-		State: spec.State,
+		State: state.ConvertRootToRef(st),
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -66,16 +71,16 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 		return root, err
 	}
 	if spec.State != nil {
-		err := s.states.Insert(elab(spec.State))
+		err := s.states.Insert(st)
 		if err != nil {
 			s.log.Error("state insertion failed",
 				slog.Any("reason", err),
-				slog.Any("state", spec.State),
+				slog.Any("root", st),
 			)
 			return root, err
 		}
 	}
-	s.log.Debug("role creation succeed", slog.Any("root", root))
+	s.log.Debug("role creation succeeded", slog.Any("root", root))
 	return root, nil
 }
 
@@ -92,19 +97,6 @@ func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
 	if err != nil {
 		return RoleRoot{}, err
 	}
-	// TODO: связка ролей и состояний
-	// 1. переиспользуем идентификатор (/)
-	// 2. складываем в отдельное поле
-	// 3. строим отдельное отношение
-	// - дополнительное обращение к БД
-	stateID, err := id.String[state.ID](rid.String())
-	if err != nil {
-		return RoleRoot{}, err
-	}
-	root.State, err = s.states.SelectByID(stateID)
-	if err != nil {
-		return RoleRoot{}, err
-	}
 	return root, nil
 }
 
@@ -117,30 +109,16 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 	for _, id := range spec.ChildrenIDs {
 		children = append(children, RoleRef{ID: id})
 	}
-	kr := KinshipRoot{
+	root := KinshipRoot{
 		Parent:   RoleRef{ID: spec.ParentID},
 		Children: children,
 	}
-	err := s.kinships.Insert(kr)
+	err := s.kinships.Insert(root)
 	if err != nil {
 		return err
 	}
-	s.log.Debug("establishment succeed", slog.Any("kinship", kr))
+	s.log.Debug("kinship establishment succeeded", slog.Any("root", root))
 	return nil
-}
-
-func elab(r state.Root) state.Root {
-	if r == nil {
-		return nil
-	}
-	switch root := r.(type) {
-	case state.One:
-		return state.One{ID: id.New[state.ID]()}
-	case state.TpRef:
-		return state.TpRef{ID: id.New[state.ID](), Name: root.Name}
-	default:
-		panic(state.ErrUnexpectedRoot(root))
-	}
 }
 
 type roleRepo interface {
@@ -168,6 +146,7 @@ type kinshipRepo interface {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/internal/state:To.*
+// goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
 	ToRoleRef func(RoleRoot) RoleRef
 	ToCoreIDs func([]string) ([]id.ADT[ID], error)

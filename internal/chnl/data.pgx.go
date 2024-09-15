@@ -19,7 +19,7 @@ type repoPgx struct {
 }
 
 func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "chnl.repoPgx")
+	name := slog.String("name", "chnlRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
 
@@ -78,6 +78,6 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
-	r.log.Debug("channel selection succeed", slog.Any("dto", dto))
+	r.log.Debug("channel selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }

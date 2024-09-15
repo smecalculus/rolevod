@@ -80,16 +80,16 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 		)
 		return root, err
 	}
-	s.log.Debug("seat creation succeed", slog.Any("root", root))
+	s.log.Debug("seat creation succeeded", slog.Any("root", root))
 	return root, nil
 }
 
-func (s *seatService) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
-	root, err := s.seats.SelectByID(id)
+func (s *seatService) Retrieve(rid id.ADT[ID]) (SeatRoot, error) {
+	root, err := s.seats.SelectByID(rid)
 	if err != nil {
 		return SeatRoot{}, err
 	}
-	root.Children, err = s.seats.SelectChildren(id)
+	root.Children, err = s.seats.SelectChildren(rid)
 	if err != nil {
 		return SeatRoot{}, err
 	}
@@ -109,7 +109,7 @@ func (s *seatService) Establish(spec KinshipSpec) error {
 	if err != nil {
 		return err
 	}
-	s.log.Debug("establishment succeed", slog.Any("kinship", root))
+	s.log.Debug("establishment succeeded", slog.Any("kinship", root))
 	return nil
 }
 

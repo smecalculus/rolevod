@@ -6,7 +6,7 @@ import (
 
 type RoleSpecMsg struct {
 	Name  string         `json:"name"`
-	State *state.RootMsg `json:"state,omitempty"`
+	State *state.SpecMsg `json:"state"`
 }
 
 type RefMsg struct {
@@ -20,10 +20,10 @@ type RoleRefMsg struct {
 }
 
 type RoleRootMsg struct {
-	ID       string         `json:"id" param:"id"`
-	Name     string         `json:"name"`
-	State    *state.RootMsg `json:"state,omitempty"`
-	Children []RoleRefMsg   `json:"children"`
+	ID       string        `json:"id" param:"id"`
+	Name     string        `json:"name"`
+	State    *state.RefMsg `json:"state"`
+	Children []RoleRefMsg  `json:"children"`
 }
 
 // goverter:variables

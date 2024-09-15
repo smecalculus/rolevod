@@ -62,53 +62,53 @@ func TestEstablishKinship(t *testing.T) {
 
 func TestTakeTransition(t *testing.T) {
 	// given
-	rs := role.RoleSpec{
+	roleSpec := role.RoleSpec{
 		Name:  "role-1",
-		State: state.One{},
+		State: state.OneSpec{},
 	}
-	rr, err := roleApi.Create(rs)
+	roleRoot, err := roleApi.Create(roleSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	ss := seat.SeatSpec{
+	seatSpec := seat.SeatSpec{
 		Name: "seat-1",
 		Via: seat.ChanTp{
-			Z:     "z",
-			State: state.ToRef(rr.State),
+			Z:     "z-1",
+			State: roleRoot.State,
 		},
 	}
-	sr, err := seatApi.Create(ss)
+	seatRoot, err := seatApi.Create(seatSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	ds := deal.DealSpec{
-		Name: "big-deal",
+	dealSpec := deal.DealSpec{
+		Name: "deal-1",
 	}
-	dr, err := dealApi.Create(ds)
+	dealRoot, err := dealApi.Create(dealSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	ps := deal.PartSpec{
-		DealID: dr.ID,
-		SeatID: sr.ID,
+	partSpec := deal.PartSpec{
+		DealID: dealRoot.ID,
+		SeatID: seatRoot.ID,
 	}
-	a, err := dealApi.Involve(ps)
+	chnlRef, err := dealApi.Involve(partSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	transition := deal.Transition{
-		Deal: deal.ToDealRef(dr),
+	tranSpec := deal.TranSpec{
+		DealID: dealRoot.ID,
 		Term: step.Wait{
-			X:    a,
+			X:    chnlRef,
 			Cont: nil,
 		},
 	}
 	// when
-	err = dealApi.Take(transition)
+	err = dealApi.Take(tranSpec)
 	if err != nil {
 		t.Fatal(err)
 	}

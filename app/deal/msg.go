@@ -1,24 +1,24 @@
 package deal
 
 import (
-	"smecalculus/rolevod/app/seat"
+	valid "github.com/go-ozzo/ozzo-validation"
+
 	"smecalculus/rolevod/internal/step"
 
-	valid "github.com/go-ozzo/ozzo-validation"
+	"smecalculus/rolevod/app/seat"
 )
 
 type DealSpecMsg struct {
-	Name  string            `json:"name"`
-	Seats []seat.SeatRefMsg `json:"seats"`
+	Name string `json:"name"`
 }
 
 type RefMsg struct {
-	ID string `param:"id" query:"id" json:"id"`
+	ID string `json:"id" param:"id"`
 }
 
 type DealRefMsg struct {
-	ID   string `param:"id" json:"id"`
-	Name string `query:"name" json:"name"`
+	ID   string `json:"id" param:"id"`
+	Name string `json:"name"`
 }
 
 func (v DealRefMsg) Validate() error {
@@ -31,8 +31,8 @@ func (v DealRefMsg) Validate() error {
 type DealRootMsg struct {
 	ID       string            `json:"id"`
 	Name     string            `json:"name"`
-	Children []DealRefMsg      `json:"children"`
 	Seats    []seat.SeatRefMsg `json:"seats"`
+	Children []DealRefMsg      `json:"children"`
 }
 
 // goverter:variables
@@ -50,8 +50,8 @@ var (
 )
 
 type KinshipSpecMsg struct {
-	ParentID    string   `param:"id" json:"parent"`
-	ChildrenIDs []string `json:"children"`
+	ParentID    string   `json:"parent_id" param:"id"`
+	ChildrenIDs []string `json:"children_ids"`
 }
 
 type KinshipRootMsg struct {
@@ -70,7 +70,7 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string `param:"id" json:"deal_id"`
+	DealID string `json:"deal_id", param:"id"`
 	SeatID string `json:"seat_id"`
 }
 
@@ -91,16 +91,21 @@ var (
 	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
 )
 
-type TransitionMsg struct {
-	Deal DealRefMsg    `json:"deal"`
-	Term *step.TermMsg `json:"term"`
+type TranSpecMsg struct {
+	DealID string        `json:"deal_id"`
+	Term   *step.TermMsg `json:"term"`
 }
 
-func (v TransitionMsg) Validate() error {
-	return valid.ValidateStruct(&v,
-		valid.Field(&v.Deal, valid.Required),
-		valid.Field(&v.Term, valid.NotNil),
+func (mto *TranSpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.DealID, valid.Required),
+		valid.Field(&mto.Term, valid.Required),
 	)
+}
+
+type TranRootMsg struct {
+	Deal DealRefMsg    `json:"deal"`
+	Term *step.TermMsg `json:"term"`
 }
 
 // goverter:variables
@@ -108,6 +113,8 @@ func (v TransitionMsg) Validate() error {
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/internal/step:Msg.*
 var (
-	MsgFromTransition func(Transition) TransitionMsg
-	MsgToTransition   func(TransitionMsg) (Transition, error)
+	MsgFromTranSpec func(TranSpec) TranSpecMsg
+	MsgToTranSpec   func(TranSpecMsg) (TranSpec, error)
+	MsgFromTranRoot func(TranRoot) TranRootMsg
+	MsgToTranRoot   func(TranRootMsg) (TranRoot, error)
 )

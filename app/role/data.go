@@ -1,6 +1,7 @@
 package role
 
 import (
+	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -13,6 +14,7 @@ type RoleRefData struct {
 type roleRootData struct {
 	ID       string        `db:"id"`
 	Name     string        `db:"name"`
+	State    string        `db:"state"`
 	Children []RoleRefData `db:"-"`
 }
 
@@ -37,6 +39,10 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 	if err != nil {
 		return RoleRoot{}, nil
 	}
+	state, err := state.JsonToRef(dto.State)
+	if err != nil {
+		return RoleRoot{}, nil
+	}
 	children, err := DataToRoleRefs(dto.Children)
 	if err != nil {
 		return RoleRoot{}, nil
@@ -44,11 +50,16 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 	return RoleRoot{
 		ID:       id,
 		Name:     dto.Name,
+		State:    state,
 		Children: children,
 	}, nil
 }
 
 func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
+	stateJson, err := state.JsonFromRef(root.State)
+	if err != nil {
+		return roleRootData{}, err
+	}
 	dtos, err := DataFromRoleRefs(root.Children)
 	if err != nil {
 		return roleRootData{}, err
@@ -56,6 +67,7 @@ func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
 	return roleRootData{
 		ID:       root.ID.String(),
 		Name:     root.Name,
+		State:    stateJson,
 		Children: dtos,
 	}, nil
 }

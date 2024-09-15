@@ -16,8 +16,7 @@ import (
 type ID interface{}
 
 type DealSpec struct {
-	Name  string
-	Seats []seat.SeatRef
+	Name string
 }
 
 type DealRef struct {
@@ -47,7 +46,7 @@ type DealApi interface {
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
 	Involve(PartSpec) (chnl.Ref, error)
-	Take(Transition) error
+	Take(TranSpec) error
 }
 
 type dealService struct {
@@ -91,7 +90,7 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 		)
 		return root, err
 	}
-	s.log.Debug("deal creation succeed", slog.Any("root", root))
+	s.log.Debug("deal creation succeeded", slog.Any("root", root))
 	return root, nil
 }
 
@@ -111,20 +110,21 @@ func (s *dealService) RetreiveAll() ([]DealRef, error) {
 	return s.deals.SelectAll()
 }
 
-func (s *dealService) Establish(rel KinshipSpec) error {
+func (s *dealService) Establish(spec KinshipSpec) error {
+	s.log.Debug("kinship establishment started", slog.Any("spec", spec))
 	var children []DealRef
-	for _, id := range rel.ChildrenIDs {
+	for _, id := range spec.ChildrenIDs {
 		children = append(children, DealRef{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   DealRef{ID: rel.ParentID},
+		Parent:   DealRef{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(root)
 	if err != nil {
 		return err
 	}
-	s.log.Debug("establishment succeed", slog.Any("kinship", root))
+	s.log.Debug("kinship establishment succeeded", slog.Any("root", root))
 	return nil
 }
 
@@ -140,32 +140,32 @@ func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
 	}
 	// производим внешний spawn
 	// TODO переоформление контекста
-	ch := chnl.Root{
+	newChnl := chnl.Root{
 		ID:    id.New[chnl.ID](),
 		Name:  string(seat.Via.Z),
 		State: seat.Via.State,
 	}
-	err = s.chnls.Insert(ch)
+	err = s.chnls.Insert(newChnl)
 	if err != nil {
 		s.log.Error("channel insertion failed",
 			slog.Any("reason", err),
-			slog.Any("channel", ch),
+			slog.Any("channel", newChnl),
 		)
 		return chnl.Ref{}, err
 	}
-	s.log.Debug("seat involvement succeed", slog.Any("channel", ch))
-	return chnl.ToRef(ch), nil
+	s.log.Debug("seat involvement succeeded", slog.Any("channel", newChnl))
+	return chnl.ToRef(newChnl), nil
 }
 
-func (s *dealService) Take(rel Transition) error {
-	s.log.Debug("transition taking started", slog.Any("spec", rel))
-	switch want := rel.Term.(type) {
+func (s *dealService) Take(spec TranSpec) error {
+	s.log.Debug("transition taking started", slog.Any("spec", spec))
+	switch term := spec.Term.(type) {
 	case step.Close:
-		curChnl, err := s.chnls.SelectByID(want.A.ID)
+		curChnl, err := s.chnls.SelectByID(term.A.ID)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", want.A),
+				slog.Any("channel", term.A),
 			)
 			return err
 		}
@@ -186,7 +186,7 @@ func (s *dealService) Take(rel Transition) error {
 			if srv == nil {
 				newMsg := step.Message{
 					ID:    id.New[step.ID](),
-					ViaID: want.A.ID,
+					ViaID: term.A.ID,
 					Val:   step.Unit,
 				}
 				return s.msgs.Insert(newMsg)
@@ -215,14 +215,14 @@ func (s *dealService) Take(rel Transition) error {
 			}
 			return s.srvs.Insert(finSrv)
 		default:
-			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.One{}, curChnl)
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.OneRoot{}, curChnl)
 		}
 	case step.Wait:
-		curChnl, err := s.chnls.SelectByID(want.X.ID)
+		curChnl, err := s.chnls.SelectByID(term.X.ID)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", want.X),
+				slog.Any("channel", term.X),
 			)
 			return err
 		}
@@ -252,12 +252,12 @@ func (s *dealService) Take(rel Transition) error {
 					)
 					return err
 				}
-				viaID := want.X.ID
-				want.X = chnl.ToRef(newChnl)
+				viaID := term.X.ID
+				term.X = chnl.ToRef(newChnl)
 				newSrv := step.Service{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,
-					Cont:  want,
+					Cont:  term,
 				}
 				err = s.srvs.Insert(newSrv)
 				if err != nil {
@@ -267,7 +267,7 @@ func (s *dealService) Take(rel Transition) error {
 					)
 					return err
 				}
-				s.log.Debug("transition taking succeed", slog.Any("service", newSrv))
+				s.log.Debug("transition taking succeeded", slog.Any("service", newSrv))
 				return nil
 			}
 			close, ok := msg.Val.(step.Close)
@@ -300,13 +300,13 @@ func (s *dealService) Take(rel Transition) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeed", slog.Any("message", finMsg))
+			s.log.Debug("transition taking succeeded", slog.Any("message", finMsg))
 			return nil
 		default:
-			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.One{}, curChnl)
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.OneRoot{}, curChnl)
 		}
 	case step.Send:
-		curChnl, err := s.chnls.SelectByID(want.A.ID)
+		curChnl, err := s.chnls.SelectByID(term.A.ID)
 		if err != nil {
 			return err
 		}
@@ -328,12 +328,12 @@ func (s *dealService) Take(rel Transition) error {
 				if err != nil {
 					return err
 				}
-				viaID := want.A.ID
-				want.A = chnl.ToRef(nextChnl)
+				viaID := term.A.ID
+				term.A = chnl.ToRef(nextChnl)
 				newMsg := step.Message{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,
-					Val:   want,
+					Val:   term,
 				}
 				return s.msgs.Insert(newMsg)
 			}
@@ -342,8 +342,8 @@ func (s *dealService) Take(rel Transition) error {
 				return fmt.Errorf("unexpected cont type; want %T; got %#v", step.Recv{}, recv)
 			}
 			// TODO смена состояния канала
-			step.Subst(recv.Cont, recv.X, want.A)
-			step.Subst(recv.Cont, recv.Y, want.B)
+			step.Subst(recv.Cont, recv.X, term.A)
+			step.Subst(recv.Cont, recv.Y, term.B)
 			newProc := step.Process{
 				ID:    id.New[step.ID](),
 				PreID: srv.ID,
@@ -352,10 +352,10 @@ func (s *dealService) Take(rel Transition) error {
 			// TODO рекурсивный вызов
 			return s.procs.Insert(newProc)
 		default:
-			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.Tensor{}, curChnl)
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.TensorRoot{}, curChnl)
 		}
 	case step.Recv:
-		curChnl, err := s.chnls.SelectByID(want.X.ID)
+		curChnl, err := s.chnls.SelectByID(term.X.ID)
 		if err != nil {
 			return err
 		}
@@ -377,12 +377,12 @@ func (s *dealService) Take(rel Transition) error {
 				if err != nil {
 					return err
 				}
-				viaID := want.X.ID
-				want.X = chnl.ToRef(newChnl)
+				viaID := term.X.ID
+				term.X = chnl.ToRef(newChnl)
 				newSrv := step.Service{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,
-					Cont:  want,
+					Cont:  term,
 				}
 				return s.srvs.Insert(newSrv)
 			}
@@ -390,16 +390,16 @@ func (s *dealService) Take(rel Transition) error {
 			if !ok {
 				return fmt.Errorf("unexpected val type; want %T; got %#v", step.Send{}, send)
 			}
-			step.Subst(want.Cont, want.X, send.A)
-			step.Subst(want.Cont, want.Y, send.B)
+			step.Subst(term.Cont, term.X, send.A)
+			step.Subst(term.Cont, term.Y, send.B)
 			newProc := step.Process{
 				ID:    id.New[step.ID](),
 				PreID: msg.ID,
-				Term:  want.Cont,
+				Term:  term.Cont,
 			}
 			return s.procs.Insert(newProc)
 		default:
-			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.Tensor{}, curChnl)
+			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.TensorRoot{}, curChnl)
 		}
 	default:
 		panic(step.ErrUnexpectedTerm)
@@ -444,8 +444,13 @@ type partRepo interface {
 	Insert(PartRoot) error
 }
 
-// Transition Relation
-type Transition struct {
+// Transition
+type TranSpec struct {
+	DealID id.ADT[ID]
+	Term   step.Term
+}
+
+type TranRoot struct {
 	Deal DealRef
 	Term step.Term
 }

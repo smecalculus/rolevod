@@ -149,20 +149,21 @@ func newStepHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *stepHandlerE
 }
 
 func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto TransitionMsg
+	var mto TranSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
+	h.log.Debug("transition posting started", slog.Any("mto", mto))
 	err = mto.Validate()
 	if err != nil {
 		return err
 	}
-	tran, err := MsgToTransition(mto)
+	spec, err := MsgToTranSpec(mto)
 	if err != nil {
 		return err
 	}
-	err = h.api.Take(tran)
+	err = h.api.Take(spec)
 	if err != nil {
 		return err
 	}

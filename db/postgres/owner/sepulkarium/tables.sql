@@ -1,6 +1,7 @@
 CREATE TABLE roles (
 	id varchar(20) UNIQUE,
-	name varchar(20)
+	name varchar(20),
+	state text
 );
 
 CREATE TABLE seats (

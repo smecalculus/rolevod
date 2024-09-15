@@ -20,7 +20,7 @@ type repoPgx[T root] struct {
 }
 
 func newRepoPgx[T root](p *pgxpool.Pool, l *slog.Logger) *repoPgx[T] {
-	name := slog.String("name", "step.repoPgx[T]")
+	name := slog.String("name", "stepRepoPgx[T]")
 	return &repoPgx[T]{p, l.With(name)}
 }
 
@@ -98,7 +98,7 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	r.log.Debug("step selection succeed", slog.Any("dto", dto))
+	r.log.Debug("step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (r *repoPgx[T]) SelectByChID(vid id.ADT[chnl.ID]) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	r.log.Debug("step selection succeed", slog.Any("dto", dto))
+	r.log.Debug("step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err

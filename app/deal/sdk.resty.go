@@ -74,11 +74,11 @@ func (c *dealClient) Involve(spec PartSpec) (chnl.Ref, error) {
 	return chnl.MsgToRef(res)
 }
 
-func (c *dealClient) Take(rel Transition) error {
-	req := MsgFromTransition(rel)
+func (c *dealClient) Take(spec TranSpec) error {
+	req := MsgFromTranSpec(spec)
 	_, err := c.resty.R().
 		SetBody(&req).
-		SetPathParam("id", req.Deal.ID).
+		SetPathParam("id", req.DealID).
 		Post("/deals/{id}/steps")
 	return err
 }

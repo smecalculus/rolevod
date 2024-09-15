@@ -1,64 +1,28 @@
 package step
 
 import (
+	"fmt"
+
+	valid "github.com/go-ozzo/ozzo-validation"
+
 	"smecalculus/rolevod/internal/chnl"
 )
 
 type RefMsg struct {
-	ID string `param:"id" json:"id"`
+	ID string `json:"id" param:"id"`
 }
 
-type RootMsg struct {
-	ID   string `json:"id"`
-	Kind string `json:"kind"`
-}
-
-type RootKind string
+type StepKind string
 
 const (
-	ProcK = RootKind("proc")
-	MsgK  = RootKind("msg")
-	SrvK  = RootKind("srv")
+	ProcK = StepKind("proc")
+	MsgK  = StepKind("msg")
+	SrvK  = StepKind("srv")
 )
 
-type TermMsg struct {
-	Kind  string    `json:"kind"`
-	Close *CloseMsg `json:"close,omitempty"`
-	Wait  *WaitMsg  `json:"wait,omitempty"`
-	Send  *SendMsg  `json:"send,omitempty"`
-	Recv  *RecvMsg  `json:"recv,omitempty"`
-	Lab   *LabMsg   `json:"lab,omitempty"`
-	Case  *CaseMsg  `json:"case,omitempty"`
-}
-
-type CloseMsg struct {
-	A *chnl.RefMsg `json:"a"`
-}
-
-type WaitMsg struct {
-	X    *chnl.RefMsg `json:"x"`
-	Cont *TermMsg     `json:"cont"`
-}
-
-type SendMsg struct {
-	A *chnl.RefMsg `json:"a"`
-	B *chnl.RefMsg `json:"b"`
-}
-
-type RecvMsg struct {
-	X    *chnl.RefMsg `json:"x"`
-	Y    *chnl.RefMsg `json:"y"`
-	Cont *TermMsg     `json:"cont"`
-}
-
-type LabMsg struct {
-	C     *chnl.RefMsg `json:"c"`
-	Label string       `json:"label"`
-}
-
-type CaseMsg struct {
-	X     *chnl.RefMsg        `json:"x"`
-	Conts map[string]*TermMsg `json:"conts"`
+type RootMsg struct {
+	ID string   `json:"id"`
+	K  StepKind `json:"kind"`
 }
 
 type TermKind string
@@ -75,14 +39,105 @@ const (
 	CaseK  = TermKind("case")
 )
 
+type TermMsg struct {
+	K     TermKind  `json:"kind"`
+	Close *CloseMsg `json:"close,omitempty"`
+	Wait  *WaitMsg  `json:"wait,omitempty"`
+	Send  *SendMsg  `json:"send,omitempty"`
+	Recv  *RecvMsg  `json:"recv,omitempty"`
+	Lab   *LabMsg   `json:"lab,omitempty"`
+	Case  *CaseMsg  `json:"case,omitempty"`
+}
+
+func (mto *TermMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.K,
+			valid.Required,
+			valid.In(FwdK, SpawnK, CloseK, WaitK, RefK, SendK, RecvK, LabK, CaseK),
+		),
+	)
+}
+
+type CloseMsg struct {
+	A *chnl.RefMsg `json:"a"`
+}
+
+func (mto *CloseMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.A, valid.Required),
+	)
+}
+
+type WaitMsg struct {
+	X    *chnl.RefMsg `json:"x"`
+	Cont *TermMsg     `json:"cont"`
+}
+
+func (mto *WaitMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.X, valid.Required),
+		valid.Field(&mto.Cont, valid.Required),
+	)
+}
+
+type SendMsg struct {
+	A *chnl.RefMsg `json:"a"`
+	B *chnl.RefMsg `json:"b"`
+}
+
+func (mto *SendMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.A, valid.Required),
+		valid.Field(&mto.B, valid.Required),
+	)
+}
+
+type RecvMsg struct {
+	X    *chnl.RefMsg `json:"x"`
+	Y    *chnl.RefMsg `json:"y"`
+	Cont *TermMsg     `json:"cont"`
+}
+
+func (mto *RecvMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.X, valid.Required),
+		valid.Field(&mto.Y, valid.Required),
+		valid.Field(&mto.Cont, valid.Required),
+	)
+}
+
+type LabMsg struct {
+	C     *chnl.RefMsg `json:"c"`
+	Label string       `json:"label"`
+}
+
+func (mto *LabMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.C, valid.Required),
+		valid.Field(&mto.Label, valid.Required),
+	)
+}
+
+type CaseMsg struct {
+	Z     *chnl.RefMsg        `json:"z"`
+	Conts map[string]*TermMsg `json:"conts"`
+}
+
+func (mto *CaseMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Z, valid.Required),
+		valid.Field(&mto.Conts, valid.Required, valid.Length(1, 10)),
+	)
+}
+
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	MsgFromRef  func(Ref) RefMsg
 	MsgToRef    func(RefMsg) (Ref, error)
-	MsgFromRefs func([]Ref) []RefMsg
+	MsgFromRef  func(Ref) RefMsg
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
+	MsgFromRefs func([]Ref) []RefMsg
 )
 
 func MsgFromTerm(t Term) *TermMsg {
@@ -92,7 +147,7 @@ func MsgFromTerm(t Term) *TermMsg {
 	switch term := t.(type) {
 	case Close:
 		return &TermMsg{
-			Kind: string(CloseK),
+			K: CloseK,
 			Close: &CloseMsg{
 				A: chnl.MsgFromRef(term.A),
 			},
@@ -100,7 +155,7 @@ func MsgFromTerm(t Term) *TermMsg {
 	case Wait:
 		x := chnl.MsgFromRef(term.X)
 		return &TermMsg{
-			Kind: string(WaitK),
+			K: WaitK,
 			Wait: &WaitMsg{
 				X:    x,
 				Cont: MsgFromTerm(term.Cont),
@@ -108,7 +163,7 @@ func MsgFromTerm(t Term) *TermMsg {
 		}
 	case Send:
 		return &TermMsg{
-			Kind: string(SendK),
+			K: SendK,
 			Send: &SendMsg{
 				A: chnl.MsgFromRef(term.A),
 				B: chnl.MsgFromRef(term.B),
@@ -116,7 +171,7 @@ func MsgFromTerm(t Term) *TermMsg {
 		}
 	case Recv:
 		return &TermMsg{
-			Kind: string(RecvK),
+			K: RecvK,
 			Recv: &RecvMsg{
 				X:    chnl.MsgFromRef(term.X),
 				Y:    chnl.MsgFromRef(term.Y),
@@ -124,7 +179,7 @@ func MsgFromTerm(t Term) *TermMsg {
 			},
 		}
 	default:
-		panic(ErrUnexpectedTerm)
+		panic(ErrUnexpectedTerm(term))
 	}
 }
 
@@ -132,14 +187,14 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 	if mto == nil {
 		return nil, nil
 	}
-	switch mto.Kind {
-	case string(CloseK):
+	switch mto.K {
+	case CloseK:
 		a, err := chnl.MsgToRef(*mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return Close{A: a}, nil
-	case string(WaitK):
+	case WaitK:
 		x, err := chnl.MsgToRef(*mto.Wait.X)
 		if err != nil {
 			return nil, err
@@ -149,7 +204,7 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 			return nil, err
 		}
 		return Wait{X: x, Cont: cont}, nil
-	case string(SendK):
+	case SendK:
 		a, err := chnl.MsgToRef(*mto.Send.A)
 		if err != nil {
 			return nil, err
@@ -159,7 +214,7 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 			return nil, err
 		}
 		return Send{A: a, B: b}, nil
-	case string(RecvK):
+	case RecvK:
 		x, err := chnl.MsgToRef(*mto.Recv.X)
 		if err != nil {
 			return nil, err
@@ -174,6 +229,14 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		}
 		return Recv{X: x, Y: y, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedTermKind)
+		panic(ErrUnexpectedTermKind(mto.K))
 	}
+}
+
+func ErrUnexpectedTermKind(k TermKind) error {
+	return fmt.Errorf("unexpected term kind %v", k)
+}
+
+func ErrUnexpectedStepKind(k StepKind) error {
+	return fmt.Errorf("unexpected step kind %v", k)
 }
