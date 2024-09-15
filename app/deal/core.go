@@ -78,14 +78,20 @@ func newDealService(
 }
 
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
+	s.log.Debug("deal creation started", slog.Any("spec", spec))
 	root := DealRoot{
 		ID:   id.New[ID](),
 		Name: spec.Name,
 	}
 	err := s.deals.Insert(root)
 	if err != nil {
+		s.log.Error("deal insertion failed",
+			slog.Any("reason", err),
+			slog.Any("deal", root),
+		)
 		return root, err
 	}
+	s.log.Debug("deal creation succeed", slog.Any("root", root))
 	return root, nil
 }
 
@@ -123,26 +129,36 @@ func (s *dealService) Establish(rel KinshipSpec) error {
 }
 
 func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
-	sr, err := s.seats.Retrieve(spec.SeatID)
+	s.log.Debug("seat involvement started", slog.Any("spec", spec))
+	seat, err := s.seats.Retrieve(spec.SeatID)
 	if err != nil {
+		s.log.Error("seat selection failed",
+			slog.Any("reason", err),
+			slog.Any("spec", spec),
+		)
 		return chnl.Ref{}, err
 	}
 	// производим внешний spawn
 	// TODO переоформление контекста
-	c := chnl.Root{
+	ch := chnl.Root{
 		ID:    id.New[chnl.ID](),
-		Name:  string(sr.Via.Z),
-		State: sr.Via.Role.State,
+		Name:  string(seat.Via.Z),
+		State: seat.Via.State,
 	}
-	err = s.chnls.Insert(c)
+	err = s.chnls.Insert(ch)
 	if err != nil {
+		s.log.Error("channel insertion failed",
+			slog.Any("reason", err),
+			slog.Any("channel", ch),
+		)
 		return chnl.Ref{}, err
 	}
-	return chnl.ToRef(c), nil
+	s.log.Debug("seat involvement succeed", slog.Any("channel", ch))
+	return chnl.ToRef(ch), nil
 }
 
 func (s *dealService) Take(rel Transition) error {
-	s.log.Debug("trying to take", slog.Any("transition", rel))
+	s.log.Debug("transition taking started", slog.Any("spec", rel))
 	switch want := rel.Term.(type) {
 	case step.Close:
 		curChnl, err := s.chnls.SelectByID(want.A.ID)
@@ -163,6 +179,7 @@ func (s *dealService) Take(rel Transition) error {
 			if err != nil {
 				s.log.Error("service selection failed",
 					slog.Any("reason", err),
+					slog.Any("channel", curChnl),
 				)
 				return err
 			}
@@ -217,6 +234,7 @@ func (s *dealService) Take(rel Transition) error {
 			if err != nil {
 				s.log.Error("message selection failed",
 					slog.Any("reason", err),
+					slog.Any("channel", curChnl),
 				)
 				return err
 			}
@@ -241,7 +259,16 @@ func (s *dealService) Take(rel Transition) error {
 					ViaID: viaID,
 					Cont:  want,
 				}
-				return s.srvs.Insert(newSrv)
+				err = s.srvs.Insert(newSrv)
+				if err != nil {
+					s.log.Error("service insertion failed",
+						slog.Any("reason", err),
+						slog.Any("service", newSrv),
+					)
+					return err
+				}
+				s.log.Debug("transition taking succeed", slog.Any("service", newSrv))
+				return nil
 			}
 			close, ok := msg.Val.(step.Close)
 			if !ok {
@@ -254,7 +281,10 @@ func (s *dealService) Take(rel Transition) error {
 			}
 			err = s.chnls.Insert(finChnl)
 			if err != nil {
-				s.log.Error("taking failed", slog.Any("reason", err))
+				s.log.Error("channel insertion failed",
+					slog.Any("reason", err),
+					slog.Any("channel", finChnl),
+				)
 				return err
 			}
 			// consume message
@@ -262,7 +292,16 @@ func (s *dealService) Take(rel Transition) error {
 				PreID: msg.ID,
 				Val:   nil,
 			}
-			return s.msgs.Insert(finMsg)
+			err = s.msgs.Insert(finMsg)
+			if err != nil {
+				s.log.Error("message insertion failed",
+					slog.Any("reason", err),
+					slog.Any("message", finMsg),
+				)
+				return err
+			}
+			s.log.Debug("transition taking succeed", slog.Any("message", finMsg))
+			return nil
 		default:
 			return fmt.Errorf("unexpected channel state; want %T; got %#v", state.One{}, curChnl)
 		}

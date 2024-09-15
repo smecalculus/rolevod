@@ -1,7 +1,7 @@
 package step
 
 import (
-	"errors"
+	"fmt"
 
 	"smecalculus/rolevod/lib/id"
 
@@ -159,15 +159,25 @@ func Subst(t Term, from chnl.Ref, to chnl.Ref) {
 		}
 		term.A = to
 	default:
-		panic(ErrUnexpectedTerm)
+		panic(ErrUnexpectedTerm(term))
 	}
 }
 
-var (
-	ErrUnexpectedStep = errors.New("unexpected step type")
-	ErrUnexpectedTerm = errors.New("unexpected term type")
-	ErrUnexpectedKind = errors.New("unexpected kind")
-)
+func ErrUnexpectedStep(s root) error {
+	return fmt.Errorf("unexpected steo %#v", s)
+}
+
+func ErrUnexpectedTerm(t Term) error {
+	return fmt.Errorf("unexpected term %#v", t)
+}
+
+func ErrUnexpectedValue(v Value) error {
+	return fmt.Errorf("unexpected value %#v", v)
+}
+
+func ErrUnexpectedCont(c Continuation) error {
+	return fmt.Errorf("unexpected continuation %#v", c)
+}
 
 // goverter:variables
 // goverter:output:format assign-variable

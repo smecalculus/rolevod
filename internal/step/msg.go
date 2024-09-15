@@ -174,6 +174,6 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		}
 		return Recv{X: x, Y: y, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedKind)
+		panic(ErrUnexpectedTermKind)
 	}
 }

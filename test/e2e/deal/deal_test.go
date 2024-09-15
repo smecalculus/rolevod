@@ -74,8 +74,8 @@ func TestTakeTransition(t *testing.T) {
 	ss := seat.SeatSpec{
 		Name: "seat-1",
 		Via: seat.ChanTp{
-			Z:    "z",
-			Role: role.ToRoleRef(rr),
+			Z:     "z",
+			State: state.ToRef(rr.State),
 		},
 	}
 	sr, err := seatApi.Create(ss)
@@ -104,7 +104,7 @@ func TestTakeTransition(t *testing.T) {
 		Deal: deal.ToDealRef(dr),
 		Term: step.Wait{
 			X:    a,
-			Cont: step.Close{},
+			Cont: nil,
 		},
 	}
 	// when

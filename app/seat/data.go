@@ -3,7 +3,7 @@ package seat
 import (
 	"encoding/json"
 
-	"smecalculus/rolevod/app/role"
+	"smecalculus/rolevod/internal/state"
 )
 
 type SeatRefData struct {
@@ -15,20 +15,20 @@ type seatRootData struct {
 	ID       string        `db:"id"`
 	Name     string        `db:"name"`
 	Via      string        `db:"via"` // chanTpData
-	Ctx      string        `db:"ctx"` // ctxData
+	Ctx      string        `db:"ctx"` // []chanTpData
 	Children []SeatRefData `db:"-"`
 }
 
 type chanTpData struct {
-	Z    string           `json:"z"`
-	Role role.RoleRefData `json:"role"`
+	Z     string         `json:"z"`
+	State *state.RefData `json:"state"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend json.*
-// goverter:extend smecalculus/rolevod/app/role:Data.*
+// goverter:extend smecalculus/rolevod/internal/state:Data.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
 	DataToSeatRef    func(SeatRefData) (SeatRef, error)

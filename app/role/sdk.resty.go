@@ -20,8 +20,8 @@ func NewRoleApi() RoleApi {
 	return newRoleClient()
 }
 
-func (cl *roleClient) Create(rs RoleSpec) (RoleRoot, error) {
-	req := MsgFromRoleSpec(rs)
+func (cl *roleClient) Create(spec RoleSpec) (RoleRoot, error) {
+	req := MsgFromRoleSpec(spec)
 	var res RoleRootMsg
 	_, err := cl.resty.R().
 		SetResult(&res).
@@ -45,7 +45,7 @@ func (c *roleClient) Retrieve(id id.ADT[ID]) (RoleRoot, error) {
 	return MsgToRoleRoot(res)
 }
 
-func (c *roleClient) Update(rr RoleRoot) error {
+func (c *roleClient) Update(root RoleRoot) error {
 	return nil
 }
 

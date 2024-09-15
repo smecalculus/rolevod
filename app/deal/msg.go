@@ -3,6 +3,8 @@ package deal
 import (
 	"smecalculus/rolevod/app/seat"
 	"smecalculus/rolevod/internal/step"
+
+	valid "github.com/go-ozzo/ozzo-validation"
 )
 
 type DealSpecMsg struct {
@@ -17,6 +19,13 @@ type RefMsg struct {
 type DealRefMsg struct {
 	ID   string `param:"id" json:"id"`
 	Name string `query:"name" json:"name"`
+}
+
+func (v DealRefMsg) Validate() error {
+	return valid.ValidateStruct(&v,
+		valid.Field(&v.ID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&v.Name, valid.Required, valid.Length(1, 64)),
+	)
 }
 
 type DealRootMsg struct {
@@ -85,6 +94,13 @@ var (
 type TransitionMsg struct {
 	Deal DealRefMsg    `json:"deal"`
 	Term *step.TermMsg `json:"term"`
+}
+
+func (v TransitionMsg) Validate() error {
+	return valid.ValidateStruct(&v,
+		valid.Field(&v.Deal, valid.Required),
+		valid.Field(&v.Term, valid.NotNil),
+	)
 }
 
 // goverter:variables

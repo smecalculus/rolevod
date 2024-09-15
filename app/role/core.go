@@ -51,23 +51,31 @@ func newRoleService(roles roleRepo, states state.Repo, kinships kinshipRepo, l *
 }
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
+	s.log.Debug("role creation started", slog.Any("spec", spec))
 	root := RoleRoot{
-		ID:   id.New[ID](),
-		Name: spec.Name,
+		ID:    id.New[ID](),
+		Name:  spec.Name,
+		State: spec.State,
+	}
+	err := s.roles.Insert(root)
+	if err != nil {
+		s.log.Error("role insertion failed",
+			slog.Any("reason", err),
+			slog.Any("spec", spec),
+		)
+		return root, err
 	}
 	if spec.State != nil {
 		err := s.states.Insert(elab(spec.State))
 		if err != nil {
-			s.log.Error("creation failed", slog.Any("reason", err), slog.Any("state", spec.State))
+			s.log.Error("state insertion failed",
+				slog.Any("reason", err),
+				slog.Any("state", spec.State),
+			)
 			return root, err
 		}
 	}
-	err := s.roles.Insert(root)
-	if err != nil {
-		s.log.Error("creation failed", slog.Any("reason", err), slog.Any("spec", spec))
-		return root, err
-	}
-	s.log.Debug("creation succeed", slog.Any("root", root))
+	s.log.Debug("role creation succeed", slog.Any("root", root))
 	return root, nil
 }
 

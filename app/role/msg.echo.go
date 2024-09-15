@@ -28,15 +28,15 @@ func (h *roleHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	rs, err := MsgToRoleSpec(mto)
+	spec, err := MsgToRoleSpec(mto)
 	if err != nil {
 		return err
 	}
-	rr, err := h.api.Create(rs)
+	root, err := h.api.Create(spec)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromRoleRoot(rr))
+	return c.JSON(http.StatusCreated, MsgFromRoleRoot(root))
 }
 
 func (h *roleHandlerEcho) ApiGetOne(c echo.Context) error {

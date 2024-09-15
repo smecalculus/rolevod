@@ -41,19 +41,20 @@ func (r *repoPgx[T]) Insert(root root) error {
 	}
 	query := `
 		INSERT INTO steps (
-			id, pre_id, via_id, payload
+			id, kind, pre_id, via_id, payload
 		) VALUES (
-			@id, @pre_id, @via_id, @payload
+			@id, @kind, @pre_id, @via_id, @payload
 		)`
 	args := pgx.NamedArgs{
 		"id":      dto.ID,
+		"kind":    dto.K,
 		"pre_id":  dto.PreID,
 		"via_id":  dto.ViaID,
 		"payload": dto.Payload,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("step", args))
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
@@ -67,11 +68,13 @@ func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
+		r.log.Error("rows collection failed", slog.Any("reason", err))
 		return nil, err
 	}
 	return DataToRefs(dtos)
@@ -80,26 +83,29 @@ func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
 func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 	query := `
 		SELECT
-			id, pre_id, via_id, payload
+			id, kind, pre_id, via_id, payload
 		FROM steps
 		WHERE id=$1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return nil, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
+	r.log.Debug("step selection succeed", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err
 	}
 	concrete, ok := generic.(T)
 	if !ok {
-		return nil, ErrUnexpectedStep
+		return nil, ErrUnexpectedStep(generic)
 	}
 	return &concrete, nil
 }
@@ -107,26 +113,32 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 func (r *repoPgx[T]) SelectByChID(vid id.ADT[chnl.ID]) (*T, error) {
 	query := `
 		SELECT
-			id, pre_id, via_id, payload
+			id, kind, pre_id, via_id, payload
 		FROM steps
 		WHERE via_id=$1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, vid.String())
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return nil, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
+	r.log.Debug("step selection succeed", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err
 	}
 	concrete, ok := generic.(T)
 	if !ok {
-		return nil, ErrUnexpectedStep
+		return nil, ErrUnexpectedStep(generic)
 	}
 	return &concrete, nil
 }

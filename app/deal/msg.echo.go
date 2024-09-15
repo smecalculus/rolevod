@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 )
@@ -119,20 +120,20 @@ func newPartHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *partHandlerE
 }
 
 func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto DealSpecMsg
+	var mto PartSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToDealSpec(mto)
+	spec, err := MsgToPartSpec(mto)
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Create(spec)
+	ch, err := h.api.Involve(spec)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
+	return c.JSON(http.StatusCreated, chnl.MsgFromRef(ch))
 }
 
 // Adapter
@@ -150,6 +151,10 @@ func newStepHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *stepHandlerE
 func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
 	var mto TransitionMsg
 	err := c.Bind(&mto)
+	if err != nil {
+		return err
+	}
+	err = mto.Validate()
 	if err != nil {
 		return err
 	}

@@ -4,16 +4,16 @@ import (
 	"smecalculus/rolevod/lib/id"
 )
 
-type roleRootData struct {
-	ID       string        `db:"id"`
-	Name     string        `db:"name"`
-	Children []RoleRefData `db:"-"`
-}
-
 type RoleRefData struct {
 	ID    string `db:"id"`
 	Name  string `db:"name"`
 	State string `db:"state"`
+}
+
+type roleRootData struct {
+	ID       string        `db:"id"`
+	Name     string        `db:"name"`
+	Children []RoleRefData `db:"-"`
 }
 
 // goverter:variables

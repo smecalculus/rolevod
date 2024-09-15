@@ -40,8 +40,8 @@ type SeatRoot struct {
 
 // TODO подобрать семантику для отношения
 type ChanTp struct {
-	Z    chnl.Var
-	Role role.RoleRef
+	Z     chnl.Var
+	State state.Ref
 }
 
 // Port
@@ -65,6 +65,7 @@ func newSeatService(seats SeatRepo, states state.Repo, kinships kinshipRepo, l *
 }
 
 func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
+	s.log.Debug("seat creation started", slog.Any("spec", spec))
 	root := SeatRoot{
 		ID:   id.New[ID](),
 		Name: spec.Name,
@@ -73,8 +74,13 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	}
 	err := s.seats.Insert(root)
 	if err != nil {
+		s.log.Error("seat insertion failed",
+			slog.Any("reason", err),
+			slog.Any("seat", root),
+		)
 		return root, err
 	}
+	s.log.Debug("seat creation succeed", slog.Any("root", root))
 	return root, nil
 }
 

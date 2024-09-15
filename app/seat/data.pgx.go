@@ -35,24 +35,43 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	}
 	query := `
 		INSERT INTO seats (
-			id, name
+			id, name, via, ctx
 		) VALUES (
-			@id, @name
+			@id, @name, @via, @ctx
 		)`
 	args := pgx.NamedArgs{
 		"id":   dto.ID,
 		"name": dto.Name,
+		"via":  dto.Via,
+		"ctx":  dto.Ctx,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("seat", args))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
 }
 
 func (r *seatRepoPgx) SelectByID(id id.ADT[ID]) (SeatRoot, error) {
-	return SeatRoot{ID: id, Name: "SeatRoot"}, nil
+	query := `
+	SELECT
+		id, name, via, ctx
+	FROM seats
+	WHERE id=$1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, id.String())
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return SeatRoot{}, err
+	}
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[seatRootData])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return SeatRoot{}, err
+	}
+	r.log.Debug("seat selection succeed", slog.Any("dto", dto))
+	return DataToSeatRoot(dto)
 }
 
 func (r *seatRepoPgx) SelectChildren(id id.ADT[ID]) ([]SeatRef, error) {

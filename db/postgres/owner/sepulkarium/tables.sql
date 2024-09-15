@@ -5,7 +5,9 @@ CREATE TABLE roles (
 
 CREATE TABLE seats (
 	id varchar(20) UNIQUE,
-	name varchar(20)
+	name varchar(20),
+	via text,
+	ctx text
 );
 
 CREATE TABLE agents (

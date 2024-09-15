@@ -47,7 +47,6 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("channel", args))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
@@ -70,12 +69,15 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
+	r.log.Debug("channel selection succeed", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }

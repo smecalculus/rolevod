@@ -1,7 +1,7 @@
 package seat
 
 import (
-	"smecalculus/rolevod/app/role"
+	"smecalculus/rolevod/internal/state"
 	id "smecalculus/rolevod/lib/id"
 )
 
@@ -12,8 +12,8 @@ type SeatSpecMsg struct {
 }
 
 type ChanTpMsg struct {
-	Z    string          `json:"z"`
-	Role role.RoleRefMsg `json:"role"`
+	Z     string        `json:"z"`
+	State *state.RefMsg `json:"state"`
 }
 
 type RefMsg struct {

@@ -61,7 +61,17 @@ func (c *dealClient) Establish(spec KinshipSpec) error {
 }
 
 func (c *dealClient) Involve(spec PartSpec) (chnl.Ref, error) {
-	return chnl.Ref{}, nil
+	req := MsgFromPartSpec(spec)
+	var res chnl.RefMsg
+	_, err := c.resty.R().
+		SetResult(&res).
+		SetBody(&req).
+		SetPathParam("id", req.DealID).
+		Post("/deals/{id}/parts")
+	if err != nil {
+		return chnl.Ref{}, err
+	}
+	return chnl.MsgToRef(res)
 }
 
 func (c *dealClient) Take(rel Transition) error {

@@ -3,6 +3,7 @@ package step
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
@@ -76,7 +77,7 @@ var (
 func dataFromRoot(r root) (*rootData, error) {
 	switch root := r.(type) {
 	case Process:
-		data, err := json.Marshal(dataFromTerm(root.Term))
+		pl, err := json.Marshal(dataFromTerm(root.Term))
 		if err != nil {
 			return nil, err
 		}
@@ -84,10 +85,10 @@ func dataFromRoot(r root) (*rootData, error) {
 			K:       procK,
 			ID:      root.ID.String(),
 			PreID:   root.PreID.String(),
-			Payload: string(data),
+			Payload: string(pl),
 		}, nil
 	case Message:
-		data, err := json.Marshal(dataFromValue(root.Val))
+		pl, err := json.Marshal(dataFromValue(root.Val))
 		if err != nil {
 			return nil, err
 		}
@@ -96,10 +97,10 @@ func dataFromRoot(r root) (*rootData, error) {
 			ID:      root.ID.String(),
 			PreID:   root.PreID.String(),
 			ViaID:   root.ViaID.String(),
-			Payload: string(data),
+			Payload: string(pl),
 		}, nil
 	case Service:
-		data, err := json.Marshal(dataFromCont(root.Cont))
+		pl, err := json.Marshal(dataFromCont(root.Cont))
 		if err != nil {
 			return nil, err
 		}
@@ -108,10 +109,10 @@ func dataFromRoot(r root) (*rootData, error) {
 			ID:      root.ID.String(),
 			PreID:   root.PreID.String(),
 			ViaID:   root.ViaID.String(),
-			Payload: string(data),
+			Payload: string(pl),
 		}, nil
 	default:
-		panic(ErrUnexpectedStep)
+		panic(ErrUnexpectedStep(root))
 	}
 }
 
@@ -158,22 +159,40 @@ func dataToRoot(dto *rootData) (root, error) {
 		}
 		return Service{ID: rootID, PreID: preID, ViaID: viaID, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedKind)
+		panic(ErrUnexpectedStepKind(dto.K))
 	}
 }
 
 func dataFromTerm(t Term) *payload {
+	if t == nil {
+		return nil
+	}
 	switch term := t.(type) {
 	case Close:
-		return &payload{K: closeK, Xa: chnl.DataFromRef(term.A)}
+		return &payload{
+			K:  closeK,
+			Xa: chnl.DataFromRef(term.A),
+		}
 	case Wait:
-		return &payload{K: waitK, Xa: chnl.DataFromRef(term.X), Cont: dataFromTerm(term.Cont)}
+		return &payload{
+			K:    waitK,
+			Xa:   chnl.DataFromRef(term.X),
+			Cont: dataFromTerm(term.Cont),
+		}
 	case Send:
-		return &payload{K: sendK, Xa: chnl.DataFromRef(term.A), Yb: chnl.DataFromRef(term.B)}
+		return &payload{
+			K:  sendK,
+			Xa: chnl.DataFromRef(term.A),
+			Yb: chnl.DataFromRef(term.B),
+		}
 	case Recv:
-		return &payload{K: recvK, Xa: chnl.DataFromRef(term.X), Yb: chnl.DataFromRef(term.Y)}
+		return &payload{
+			K:  recvK,
+			Xa: chnl.DataFromRef(term.X),
+			Yb: chnl.DataFromRef(term.Y),
+		}
 	default:
-		panic(ErrUnexpectedTerm)
+		panic(ErrUnexpectedTerm(term))
 	}
 }
 
@@ -200,7 +219,7 @@ func dataToTerm(dto *payload) (Term, error) {
 	case recvK:
 		return Recv{X: xa, Y: yb, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedKind)
+		panic(ErrUnexpectedTermKind(dto.K))
 	}
 }
 
@@ -211,7 +230,7 @@ func dataFromValue(v Value) *payload {
 	case Send:
 		return &payload{K: sendK, Xa: chnl.DataFromRef(val.A), Yb: chnl.DataFromRef(val.B)}
 	default:
-		panic(ErrUnexpectedTerm)
+		panic(ErrUnexpectedValue(val))
 	}
 }
 
@@ -230,18 +249,26 @@ func dataToValue(dto *payload) (Value, error) {
 	case sendK:
 		return Send{A: xa, B: yb}, nil
 	default:
-		panic(ErrUnexpectedKind)
+		panic(ErrUnexpectedTermKind(dto.K))
 	}
 }
 
 func dataFromCont(c Continuation) *payload {
 	switch cont := c.(type) {
 	case Wait:
-		return &payload{K: waitK, Xa: chnl.DataFromRef(cont.X), Cont: dataFromTerm(cont.Cont)}
+		return &payload{
+			K:    waitK,
+			Xa:   chnl.DataFromRef(cont.X),
+			Cont: dataFromTerm(cont.Cont),
+		}
 	case Recv:
-		return &payload{K: recvK, Xa: chnl.DataFromRef(cont.X), Yb: chnl.DataFromRef(cont.Y)}
+		return &payload{
+			K:  recvK,
+			Xa: chnl.DataFromRef(cont.X),
+			Yb: chnl.DataFromRef(cont.Y),
+		}
 	default:
-		panic(ErrUnexpectedTerm)
+		panic(ErrUnexpectedCont(cont))
 	}
 }
 
@@ -264,10 +291,18 @@ func dataToCont(dto *payload) (Continuation, error) {
 	case recvK:
 		return Recv{X: xa, Y: yb, Cont: cont}, nil
 	default:
-		panic(ErrUnexpectedKind)
+		panic(ErrUnexpectedTermKind(dto.K))
 	}
 }
 
 var (
 	errInvalidID = errors.New("invalid step id")
 )
+
+func ErrUnexpectedTermKind(k termKind) error {
+	return fmt.Errorf("unexpected term kind %v", k)
+}
+
+func ErrUnexpectedStepKind(k stepKind) error {
+	return fmt.Errorf("unexpected step kind %v", k)
+}

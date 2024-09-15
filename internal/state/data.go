@@ -47,6 +47,8 @@ type transition struct {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend data.*
+// goverter:extend DataFromRef
+// goverter:extend DataToRef
 var (
 	DataToRefs    func([]*RefData) ([]Ref, error)
 	DataFromRefs  func([]Ref) []*RefData
@@ -158,7 +160,7 @@ func dataToState(root rootData, state state) Root {
 	}
 }
 
-func dataFromRef(r Ref) *RefData {
+func DataFromRef(r Ref) *RefData {
 	if r == nil {
 		return nil
 	}
@@ -180,7 +182,7 @@ func dataFromRef(r Ref) *RefData {
 	}
 }
 
-func dataToRef(dto *RefData) (Ref, error) {
+func DataToRef(dto *RefData) (Ref, error) {
 	if dto == nil {
 		return nil, nil
 	}
@@ -207,7 +209,7 @@ func dataToRef(dto *RefData) (Ref, error) {
 }
 
 func JsonFromRef(ref Ref) (string, error) {
-	dto := dataFromRef(ref)
+	dto := DataFromRef(ref)
 	str, err := json.Marshal(dto)
 	if err != nil {
 		return "", err
@@ -221,7 +223,7 @@ func JsonToRef(data string) (Ref, error) {
 	if err != nil {
 		return nil, err
 	}
-	return dataToRef(&dto)
+	return DataToRef(&dto)
 }
 
 var (

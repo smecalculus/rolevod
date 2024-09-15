@@ -46,7 +46,6 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	}
 	_, err = tx.Exec(ctx, rq, ra)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("role", ra))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
