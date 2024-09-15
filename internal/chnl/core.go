@@ -37,7 +37,7 @@ type Repo interface {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	ToRef func(Root) Ref
+	ConvertRootToRef func(Root) Ref
 )
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {

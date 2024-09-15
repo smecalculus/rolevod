@@ -54,7 +54,7 @@ func TestEstablishKinship(t *testing.T) {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := deal.ToDealRef(cr)
+	expectedChild := deal.ConvertRootToRef(cr)
 	if !slices.Contains(actual.Children, expectedChild) {
 		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
 	}

@@ -179,14 +179,6 @@ func ErrUnexpectedCont(c Continuation) error {
 	return fmt.Errorf("unexpected continuation %#v", c)
 }
 
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend to.*
-var (
-	ToCoreIDs func([]string) ([]id.ADT[ID], error)
-	ToEdgeIDs func([]id.ADT[ID]) []string
-)
-
 func toCore(s string) (id.ADT[ID], error) {
 	return id.String[ID](s)
 }

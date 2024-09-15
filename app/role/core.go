@@ -145,12 +145,9 @@ type kinshipRepo interface {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
-// goverter:extend smecalculus/rolevod/internal/state:To.*
 // goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
-	ToRoleRef func(RoleRoot) RoleRef
-	ToCoreIDs func([]string) ([]id.ADT[ID], error)
-	ToEdgeIDs func([]id.ADT[ID]) []string
+	ConverRootToRef func(RoleRoot) RoleRef
 )
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {

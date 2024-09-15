@@ -24,7 +24,6 @@ type DealRef struct {
 	Name string
 }
 
-// Aggregate Root
 // aka Configuration or Eta
 type DealRoot struct {
 	ID       id.ADT[ID]
@@ -37,7 +36,7 @@ type DealRoot struct {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	ToDealRef func(DealRoot) DealRef
+	ConvertRootToRef func(DealRoot) DealRef
 )
 
 type DealApi interface {
@@ -154,7 +153,7 @@ func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
 		return chnl.Ref{}, err
 	}
 	s.log.Debug("seat involvement succeeded", slog.Any("channel", newChnl))
-	return chnl.ToRef(newChnl), nil
+	return chnl.ConvertRootToRef(newChnl), nil
 }
 
 func (s *dealService) Take(spec TranSpec) error {
@@ -253,7 +252,7 @@ func (s *dealService) Take(spec TranSpec) error {
 					return err
 				}
 				viaID := term.X.ID
-				term.X = chnl.ToRef(newChnl)
+				term.X = chnl.ConvertRootToRef(newChnl)
 				newSrv := step.Service{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,
@@ -329,7 +328,7 @@ func (s *dealService) Take(spec TranSpec) error {
 					return err
 				}
 				viaID := term.A.ID
-				term.A = chnl.ToRef(nextChnl)
+				term.A = chnl.ConvertRootToRef(nextChnl)
 				newMsg := step.Message{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,
@@ -378,7 +377,7 @@ func (s *dealService) Take(spec TranSpec) error {
 					return err
 				}
 				viaID := term.X.ID
-				term.X = chnl.ToRef(newChnl)
+				term.X = chnl.ConvertRootToRef(newChnl)
 				newSrv := step.Service{
 					ID:    id.New[step.ID](),
 					ViaID: viaID,

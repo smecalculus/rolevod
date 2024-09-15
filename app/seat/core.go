@@ -117,7 +117,6 @@ func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 	return s.seats.SelectAll()
 }
 
-// Port
 type SeatRepo interface {
 	Insert(SeatRoot) error
 	SelectAll() ([]SeatRef, error)
@@ -144,9 +143,7 @@ type kinshipRepo interface {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 var (
-	ToSeatRef func(SeatRoot) SeatRef
-	ToCoreIDs func([]string) ([]id.ADT[ID], error)
-	ToEdgeIDs func([]id.ADT[ID]) []string
+	ConvertRootToRef func(SeatRoot) SeatRef
 )
 
 func toSame(id id.ADT[ID]) id.ADT[ID] {

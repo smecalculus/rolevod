@@ -207,14 +207,6 @@ func ErrUnexpectedRoot(v Root) error {
 	return fmt.Errorf("unexpected root %#v", v)
 }
 
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend to.*
-var (
-	ToCoreIDs func([]string) ([]id.ADT[ID], error)
-	ToEdgeIDs func([]id.ADT[ID]) []string
-)
-
 func ConvertSpecToRoot(s Spec) Root {
 	if s == nil {
 		return nil

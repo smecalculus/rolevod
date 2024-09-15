@@ -49,7 +49,7 @@ func TestKinshipEstablishment(t *testing.T) {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := role.ToRoleRef(childRoot)
+	expectedChild := role.ConverRootToRef(childRoot)
 	if !slices.Contains(actual.Children, expectedChild) {
 		t.Errorf("unexpected children in %q; want: %+v, got: %+v", parRoot.Name, expectedChild, actual.Children)
 	}

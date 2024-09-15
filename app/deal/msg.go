@@ -70,7 +70,7 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string `json:"deal_id", param:"id"`
+	DealID string `json:"deal_id" param:"id"`
 	SeatID string `json:"seat_id"`
 }
 
@@ -82,7 +82,6 @@ type PartRootMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
-// goverter:extend smecalculus/rolevod/app/seat:To.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
