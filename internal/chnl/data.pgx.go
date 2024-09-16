@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -78,6 +79,6 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
-	r.log.Debug("channel selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "channel selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }

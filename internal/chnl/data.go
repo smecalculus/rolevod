@@ -1,15 +1,17 @@
 package chnl
 
+import "database/sql"
+
 type RefData struct {
 	ID   string `db:"id" json:"id,omitempty" `
 	Name string `db:"name" json:"name,omitempty"`
 }
 
 type rootData struct {
-	ID    string `db:"id"`
-	PreID string `db:"pre_id"`
-	Name  string `db:"name"`
-	State string `db:"state"`
+	ID    string         `db:"id"`
+	PreID string         `db:"pre_id"`
+	Name  string         `db:"name"`
+	State sql.NullString `db:"state"`
 }
 
 // goverter:variables
@@ -18,7 +20,7 @@ type rootData struct {
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
 	DataToRef    func(RefData) (Ref, error)
-	DataFromRef  func(Ref) *RefData
+	DataFromRef  func(Ref) RefData
 	DataToRefs   func([]RefData) ([]Ref, error)
 	DataFromRefs func([]Ref) []RefData
 	DataToRoot   func(rootData) (Root, error)

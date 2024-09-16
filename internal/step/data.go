@@ -14,44 +14,80 @@ type refData struct {
 }
 
 type rootData struct {
-	K       stepKind `db:"kind"`
-	ID      string   `db:"id"`
-	ViaID   string   `db:"via_id"`
-	PreID   string   `db:"pre_id"`
-	Payload string   `db:"payload"`
-}
-
-type payload struct {
-	K     termKind      `json:"kind"`
-	Xa    *chnl.RefData `json:"xa,omitempty"`
-	Yb    *chnl.RefData `json:"yb,omitempty"`
-	Zc    *chnl.RefData `json:"zc,omitempty"`
-	Cont  *payload      `json:"cont,omitempty"`
-	Label string        `json:"label,omitempty"`
-	Conts []payload     `json:"conts,omitempty"`
-	Name  string        `json:"name,omitempty"`
-	Ctx   []string      `json:"ctx,omitempty"`
+	K     stepKind `db:"kind"`
+	ID    string   `db:"id"`
+	ViaID string   `db:"via_id"`
+	PreID string   `db:"pre_id"`
+	Term  string   `db:"payload"`
 }
 
 type stepKind int
 
 const (
-	procK = iota
-	msgK
-	srvK
+	proc = iota
+	msg
+	srv
 )
+
+type termData struct {
+	K termKind `json:"kind"`
+	// Xa    *chnl.RefData `json:"xa,omitempty"`
+	// Yb    *chnl.RefData `json:"yb,omitempty"`
+	// Zc    *chnl.RefData `json:"zc,omitempty"`
+	// Cont  *termData     `json:"cont,omitempty"`
+	// Label string        `json:"label,omitempty"`
+	// Conts []termData    `json:"conts,omitempty"`
+	// Name  string        `json:"name,omitempty"`
+	// Ctx   []string      `json:"ctx,omitempty"`
+	Close *closeData `json:"close,omitempty"`
+	Wait  *waitData  `json:"wait,omitempty"`
+	Send  *sendData  `json:"send,omitempty"`
+	Recv  *recvData  `json:"recv,omitempty"`
+	Lab   *labData   `json:"lab,omitempty"`
+	Case  *caseData  `json:"case,omitempty"`
+}
+
+type closeData struct {
+	A chnl.RefData `json:"a"`
+}
+
+type waitData struct {
+	X    chnl.RefData `json:"x"`
+	Cont *termData    `json:"cont"`
+}
+
+type sendData struct {
+	A chnl.RefData `json:"a"`
+	B chnl.RefData `json:"b"`
+}
+
+type recvData struct {
+	X    chnl.RefData `json:"x"`
+	Y    chnl.RefData `json:"y"`
+	Cont *termData    `json:"cont"`
+}
+
+type labData struct {
+	C     chnl.RefData `json:"c"`
+	Label string       `json:"label"`
+}
+
+type caseData struct {
+	Z     chnl.RefData         `json:"z"`
+	Conts map[string]*termData `json:"conts"`
+}
 
 type termKind int
 
 const (
-	fwdK = iota
-	spawnK
-	closeK
-	waitK
-	refK
-	sendK
-	recvK
-	labK
+	fwd = iota
+	spawn
+	close
+	wait
+	rec
+	send
+	recv
+	lab
 	caseK
 )
 
@@ -60,55 +96,57 @@ const (
 // goverter:extend to.*
 // goverter:extend data.*
 var (
-	DataToRef func(refData) (Ref, error)
-	// goverter:ignore K
-	DataFromRef    func(Ref) refData
-	DataToRefs     func([]refData) ([]Ref, error)
-	DataFromRefs   func([]Ref) []refData
-	DataToTerms    func([]*payload) ([]Term, error)
-	DataFromTerms  func([]Term) []*payload
-	DataToValues   func([]*payload) ([]Value, error)
-	DataFromValues func([]Value) []*payload
-	DataToConts    func([]*payload) ([]Continuation, error)
-	DataFromConts  func([]Continuation) []*payload
+	// DataToRef func(refData) (Ref, error)
+	// DataFromRef    func(Ref) refData
+	// DataToRefs     func([]refData) ([]Ref, error)
+	// DataFromRefs   func([]Ref) []refData
+	DataToTerms    func([]*termData) ([]Term, error)
+	DataFromTerms  func([]Term) []*termData
+	DataToValues   func([]*termData) ([]Value, error)
+	DataFromValues func([]Value) []*termData
+	DataToConts    func([]*termData) ([]Continuation, error)
+	DataFromConts  func([]Continuation) []*termData
 )
 
 func dataFromRoot(r root) (*rootData, error) {
+	if r == nil {
+		return nil, nil
+	}
 	switch root := r.(type) {
-	case Process:
+	case ProcRoot:
 		pl, err := json.Marshal(dataFromTerm(root.Term))
 		if err != nil {
 			return nil, err
 		}
 		return &rootData{
-			K:       procK,
-			ID:      root.ID.String(),
-			PreID:   root.PreID.String(),
-			Payload: string(pl),
+			K:     proc,
+			ID:    root.ID.String(),
+			PreID: root.PreID.String(),
+			Term:  string(pl),
 		}, nil
-	case Message:
+	case MsgRoot:
 		pl, err := json.Marshal(dataFromValue(root.Val))
 		if err != nil {
 			return nil, err
 		}
 		return &rootData{
-			K:       msgK,
-			ID:      root.ID.String(),
-			PreID:   root.PreID.String(),
-			ViaID:   root.ViaID.String(),
-			Payload: string(pl),
+			K:     msg,
+			ID:    root.ID.String(),
+			PreID: root.PreID.String(),
+			ViaID: root.ViaID.String(),
+			Term:  string(pl),
 		}, nil
-	case Service:
+	case SrvRoot:
 		pl, err := json.Marshal(dataFromCont(root.Cont))
 		if err != nil {
 			return nil, err
 		}
 		return &rootData{
-			K:       srvK,
-			ID:      root.ID.String(),
-			PreID:   root.PreID.String(),
-			ViaID:   root.ViaID.String(),
-			Payload: string(pl),
+			K:     srv,
+			ID:    root.ID.String(),
+			PreID: root.PreID.String(),
+			ViaID: root.ViaID.String(),
+			Term:  string(pl),
 		}, nil
 	default:
 		panic(ErrUnexpectedStep(root))
@@ -116,6 +154,9 @@ func dataFromRoot(r root) (*rootData, error) {
 }
 
 func dataToRoot(dto *rootData) (root, error) {
+	if dto == nil {
+		return nil, nil
+	}
 	rootID, err := id.String[ID](dto.ID)
 	if err != nil {
 		return nil, err
@@ -128,167 +169,214 @@ func dataToRoot(dto *rootData) (root, error) {
 	if err != nil {
 		return nil, err
 	}
-	var pl payload
-	err = json.Unmarshal([]byte(dto.Payload), &pl)
-	if err != nil {
-		return nil, err
-	}
-	var ref chnl.RefData
-	err = json.Unmarshal([]byte(dto.ViaID), &ref)
+	var pl termData
+	err = json.Unmarshal([]byte(dto.Term), &pl)
 	if err != nil {
 		return nil, err
 	}
 	switch dto.K {
-	case procK:
+	case proc:
 		term, err := dataToTerm(&pl)
 		if err != nil {
 			return nil, err
 		}
-		return Process{ID: rootID, PreID: preID, Term: term}, nil
-	case msgK:
+		return ProcRoot{ID: rootID, PreID: preID, Term: term}, nil
+	case msg:
 		val, err := dataToValue(&pl)
 		if err != nil {
 			return nil, err
 		}
-		return Message{ID: rootID, PreID: preID, ViaID: viaID, Val: val}, nil
-	case srvK:
+		return MsgRoot{ID: rootID, PreID: preID, ViaID: viaID, Val: val}, nil
+	case srv:
 		cont, err := dataToCont(&pl)
 		if err != nil {
 			return nil, err
 		}
-		return Service{ID: rootID, PreID: preID, ViaID: viaID, Cont: cont}, nil
+		return SrvRoot{ID: rootID, PreID: preID, ViaID: viaID, Cont: cont}, nil
 	default:
 		panic(errUnexpectedStepKind(dto.K))
 	}
 }
 
-func dataFromTerm(t Term) *payload {
+func dataFromTerm(t Term) *termData {
 	if t == nil {
 		return nil
 	}
 	switch term := t.(type) {
-	case Close:
-		return &payload{
-			K:  closeK,
-			Xa: chnl.DataFromRef(term.A),
+	case CloseSpec:
+		return &termData{
+			K:     close,
+			Close: &closeData{chnl.DataFromRef(term.A)},
 		}
-	case Wait:
-		return &payload{
-			K:    waitK,
-			Xa:   chnl.DataFromRef(term.X),
-			Cont: dataFromTerm(term.Cont),
+	case WaitSpec:
+		return &termData{
+			K:    wait,
+			Wait: &waitData{chnl.DataFromRef(term.X), dataFromTerm(term.Cont)},
 		}
-	case Send:
-		return &payload{
-			K:  sendK,
-			Xa: chnl.DataFromRef(term.A),
-			Yb: chnl.DataFromRef(term.B),
+	case SendSpec:
+		return &termData{
+			K:    send,
+			Send: &sendData{chnl.DataFromRef(term.A), chnl.DataFromRef(term.B)},
 		}
-	case Recv:
-		return &payload{
-			K:  recvK,
-			Xa: chnl.DataFromRef(term.X),
-			Yb: chnl.DataFromRef(term.Y),
+	case RecvSpec:
+		return &termData{
+			K: recv,
+			Recv: &recvData{
+				chnl.DataFromRef(term.X),
+				chnl.DataFromRef(term.Y),
+				dataFromTerm(term.Cont),
+			},
 		}
 	default:
 		panic(ErrUnexpectedTerm(term))
 	}
 }
 
-func dataToTerm(dto *payload) (Term, error) {
-	xa, err := chnl.DataToRef(*dto.Xa)
-	if err != nil {
-		return nil, err
-	}
-	yb, err := chnl.DataToRef(*dto.Yb)
-	if err != nil {
-		return nil, err
-	}
-	cont, err := dataToTerm(dto.Cont)
-	if err != nil {
-		return nil, err
+func dataToTerm(dto *termData) (Term, error) {
+	if dto == nil {
+		return nil, nil
 	}
 	switch dto.K {
-	case closeK:
-		return Close{A: xa}, nil
-	case waitK:
-		return Wait{X: xa, Cont: cont}, nil
-	case sendK:
-		return Send{A: xa, B: yb}, nil
-	case recvK:
-		return Recv{X: xa, Y: yb, Cont: cont}, nil
+	case close:
+		a, err := chnl.DataToRef(dto.Close.A)
+		if err != nil {
+			return nil, err
+		}
+		return CloseSpec{A: a}, nil
+	case wait:
+		x, err := chnl.DataToRef(dto.Wait.X)
+		if err != nil {
+			return nil, err
+		}
+		cont, err := dataToTerm(dto.Wait.Cont)
+		if err != nil {
+			return nil, err
+		}
+		return WaitSpec{X: x, Cont: cont}, nil
+	case send:
+		a, err := chnl.DataToRef(dto.Send.A)
+		if err != nil {
+			return nil, err
+		}
+		b, err := chnl.DataToRef(dto.Send.B)
+		if err != nil {
+			return nil, err
+		}
+		return SendSpec{A: a, B: b}, nil
+	case recv:
+		x, err := chnl.DataToRef(dto.Recv.X)
+		if err != nil {
+			return nil, err
+		}
+		y, err := chnl.DataToRef(dto.Recv.Y)
+		if err != nil {
+			return nil, err
+		}
+		cont, err := dataToTerm(dto.Recv.Cont)
+		if err != nil {
+			return nil, err
+		}
+		return RecvSpec{X: x, Y: y, Cont: cont}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
 }
 
-func dataFromValue(v Value) *payload {
+func dataFromValue(v Value) *termData {
+	if v == nil {
+		return nil
+	}
 	switch val := v.(type) {
-	case Close:
-		return &payload{K: closeK, Xa: chnl.DataFromRef(val.A)}
-	case Send:
-		return &payload{K: sendK, Xa: chnl.DataFromRef(val.A), Yb: chnl.DataFromRef(val.B)}
+	case CloseSpec:
+		return &termData{
+			K:     close,
+			Close: &closeData{chnl.DataFromRef(val.A)},
+		}
+	case SendSpec:
+		return &termData{
+			K:    send,
+			Send: &sendData{chnl.DataFromRef(val.A), chnl.DataFromRef(val.B)},
+		}
 	default:
 		panic(ErrUnexpectedValue(val))
 	}
 }
 
-func dataToValue(dto *payload) (Value, error) {
-	xa, err := chnl.DataToRef(*dto.Xa)
-	if err != nil {
-		return nil, err
-	}
-	yb, err := chnl.DataToRef(*dto.Yb)
-	if err != nil {
-		return nil, err
+func dataToValue(dto *termData) (Value, error) {
+	if dto == nil {
+		return nil, nil
 	}
 	switch dto.K {
-	case closeK:
-		return Close{A: xa}, nil
-	case sendK:
-		return Send{A: xa, B: yb}, nil
+	case close:
+		a, err := chnl.DataToRef(dto.Close.A)
+		if err != nil {
+			return nil, err
+		}
+		return CloseSpec{A: a}, nil
+	case send:
+		a, err := chnl.DataToRef(dto.Send.A)
+		if err != nil {
+			return nil, err
+		}
+		b, err := chnl.DataToRef(dto.Send.B)
+		if err != nil {
+			return nil, err
+		}
+		return SendSpec{A: a, B: b}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
 }
 
-func dataFromCont(c Continuation) *payload {
+func dataFromCont(c Continuation) *termData {
+	if c == nil {
+		return nil
+	}
 	switch cont := c.(type) {
-	case Wait:
-		return &payload{
-			K:    waitK,
-			Xa:   chnl.DataFromRef(cont.X),
-			Cont: dataFromTerm(cont.Cont),
+	case WaitSpec:
+		return &termData{
+			K:    wait,
+			Wait: &waitData{chnl.DataFromRef(cont.X), dataFromTerm(cont.Cont)},
 		}
-	case Recv:
-		return &payload{
-			K:  recvK,
-			Xa: chnl.DataFromRef(cont.X),
-			Yb: chnl.DataFromRef(cont.Y),
+	case RecvSpec:
+		return &termData{
+			K:    recv,
+			Recv: &recvData{chnl.DataFromRef(cont.X), chnl.DataFromRef(cont.Y), dataFromTerm(cont.Cont)},
 		}
 	default:
 		panic(ErrUnexpectedCont(cont))
 	}
 }
 
-func dataToCont(dto *payload) (Continuation, error) {
-	xa, err := chnl.DataToRef(*dto.Xa)
-	if err != nil {
-		return nil, err
-	}
-	yb, err := chnl.DataToRef(*dto.Yb)
-	if err != nil {
-		return nil, err
-	}
-	cont, err := dataToTerm(dto.Cont)
-	if err != nil {
-		return nil, err
+func dataToCont(dto *termData) (Continuation, error) {
+	if dto == nil {
+		return nil, nil
 	}
 	switch dto.K {
-	case waitK:
-		return Wait{X: xa, Cont: cont}, nil
-	case recvK:
-		return Recv{X: xa, Y: yb, Cont: cont}, nil
+	case wait:
+		x, err := chnl.DataToRef(dto.Wait.X)
+		if err != nil {
+			return nil, err
+		}
+		cont, err := dataToTerm(dto.Wait.Cont)
+		if err != nil {
+			return nil, err
+		}
+		return WaitSpec{X: x, Cont: cont}, nil
+	case recv:
+		x, err := chnl.DataToRef(dto.Recv.X)
+		if err != nil {
+			return nil, err
+		}
+		y, err := chnl.DataToRef(dto.Recv.Y)
+		if err != nil {
+			return nil, err
+		}
+		cont, err := dataToTerm(dto.Recv.Cont)
+		if err != nil {
+			return nil, err
+		}
+		return RecvSpec{X: x, Y: y, Cont: cont}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}

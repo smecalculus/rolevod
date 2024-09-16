@@ -1,6 +1,7 @@
 package seat
 
 import (
+	"database/sql"
 	"encoding/json"
 
 	"smecalculus/rolevod/internal/state"
@@ -12,11 +13,11 @@ type SeatRefData struct {
 }
 
 type seatRootData struct {
-	ID       string        `db:"id"`
-	Name     string        `db:"name"`
-	Via      string        `db:"via"` // chanTpData
-	Ctx      string        `db:"ctx"` // []chanTpData
-	Children []SeatRefData `db:"-"`
+	ID       string         `db:"id"`
+	Name     string         `db:"name"`
+	Via      string         `db:"via"` // chanTpData
+	Ctx      sql.NullString `db:"ctx"` // []chanTpData
+	Children []SeatRefData  `db:"-"`
 }
 
 type chanTpData struct {
@@ -64,21 +65,28 @@ func jsonToChanTp(data string) (ChanTp, error) {
 	return DataToChanTp(dto)
 }
 
-func jsonFromChanTps(rels []ChanTp) (string, error) {
+func jsonFromChanTps(rels []ChanTp) (sql.NullString, error) {
+	null := sql.NullString{}
+	if len(rels) == 0 {
+		return null, nil
+	}
 	dtos, err := DataFromChanTps(rels)
 	if err != nil {
-		return "", err
+		return null, err
 	}
-	data, err := json.Marshal(dtos)
+	jsn, err := json.Marshal(dtos)
 	if err != nil {
-		return "", err
+		return null, err
 	}
-	return string(data), nil
+	return sql.NullString{String: string(jsn), Valid: true}, nil
 }
 
-func jsonToChanTps(data string) ([]ChanTp, error) {
+func jsonToChanTps(jsn sql.NullString) ([]ChanTp, error) {
+	if !jsn.Valid {
+		return []ChanTp{}, nil
+	}
 	var dtos []chanTpData
-	err := json.Unmarshal([]byte(data), &dtos)
+	err := json.Unmarshal([]byte(jsn.String), &dtos)
 	if err != nil {
 		return nil, err
 	}

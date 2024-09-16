@@ -24,12 +24,10 @@ type RootMsg struct {
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToSpec   func(SpecMsg) (Spec, error)
-	MsgFromSpec func(Spec) SpecMsg
-	MsgToRef    func(RefMsg) (Ref, error)
-	MsgFromRef  func(Ref) *RefMsg
-	// goverter:ignore PreID
-	MsgToRoot    func(RootMsg) (Root, error)
+	MsgToSpec    func(SpecMsg) (Spec, error)
+	MsgFromSpec  func(Spec) SpecMsg
+	MsgToRef     func(RefMsg) (Ref, error)
+	MsgFromRef   func(Ref) RefMsg
 	MsgFromRoot  func(Root) RootMsg
 	MsgFromRoots func([]Root) []RootMsg
 )

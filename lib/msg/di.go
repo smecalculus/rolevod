@@ -35,13 +35,14 @@ func newEcho(p *props, l *slog.Logger, lc fx.Lifecycle) *echo.Echo {
 	e := echo.New()
 	log := l.With(slog.String("name", "echo.Echo"))
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:   true,
-		LogURI:      true,
-		LogError:    true,
+		LogMethod: true,
+		LogURI:    true,
+		LogStatus: true,
+		LogError:  true,
 		HandleError: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			if v.Error != nil {
-				log.Error("request failed",
+				log.Error("request processing failed",
 					slog.String("method", v.Method),
 					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),

@@ -7,6 +7,10 @@ import (
 	"go.uber.org/fx"
 )
 
+const (
+	LevelTrace = slog.Level(-8)
+)
+
 var Module = fx.Module("lib/core",
 	fx.Provide(
 		newLogger,

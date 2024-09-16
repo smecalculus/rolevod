@@ -71,14 +71,26 @@ func TestTakeTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	seatSpec := seat.SeatSpec{
+	seatSpec1 := seat.SeatSpec{
 		Name: "seat-1",
 		Via: seat.ChanTp{
-			Z:     "z-1",
+			Z:     "chnl-1",
 			State: roleRoot.State,
 		},
 	}
-	seatRoot, err := seatApi.Create(seatSpec)
+	seatRoot1, err := seatApi.Create(seatSpec1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	seatSpec2 := seat.SeatSpec{
+		Name: "seat-2",
+		Via: seat.ChanTp{
+			Z:     "chnl-2",
+			State: roleRoot.State,
+		},
+	}
+	seatRoot2, err := seatApi.Create(seatSpec2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,24 +103,45 @@ func TestTakeTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	partSpec := deal.PartSpec{
+	partSpec1 := deal.PartSpec{
 		DealID: dealRoot.ID,
-		SeatID: seatRoot.ID,
+		SeatID: seatRoot1.ID,
 	}
-	chnlRef, err := dealApi.Involve(partSpec)
+	chnlRef1, err := dealApi.Involve(partSpec1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	tranSpec := deal.TranSpec{
+	partSpec2 := deal.PartSpec{
 		DealID: dealRoot.ID,
-		Term: step.Wait{
-			X:    chnlRef,
-			Cont: nil,
+		SeatID: seatRoot2.ID,
+	}
+	chnlRef2, err := dealApi.Involve(partSpec2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	waitSpec := deal.TranSpec{
+		DealID: dealRoot.ID,
+		Term: step.WaitSpec{
+			X:    chnlRef1,
+			Cont: step.CloseSpec{A: chnlRef2},
 		},
 	}
 	// when
-	err = dealApi.Take(tranSpec)
+	err = dealApi.Take(waitSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	closeSpec := deal.TranSpec{
+		DealID: dealRoot.ID,
+		Term: step.CloseSpec{
+			A: chnlRef1,
+		},
+	}
+	// and
+	err = dealApi.Take(closeSpec)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,7 +3,7 @@ package step
 import (
 	"fmt"
 
-	valid "github.com/go-ozzo/ozzo-validation"
+	valid "github.com/go-ozzo/ozzo-validation/v4"
 
 	"smecalculus/rolevod/internal/chnl"
 )
@@ -15,9 +15,9 @@ type RefMsg struct {
 type StepKind string
 
 const (
-	ProcK = StepKind("proc")
-	MsgK  = StepKind("msg")
-	SrvK  = StepKind("srv")
+	Proc = StepKind("proc")
+	Msg  = StepKind("msg")
+	Srv  = StepKind("srv")
 )
 
 type RootMsg struct {
@@ -28,15 +28,15 @@ type RootMsg struct {
 type TermKind string
 
 const (
-	FwdK   = TermKind("fwd")
-	SpawnK = TermKind("spawn")
-	CloseK = TermKind("close")
-	WaitK  = TermKind("wait")
-	RefK   = TermKind("ref")
-	SendK  = TermKind("send")
-	RecvK  = TermKind("recv")
-	LabK   = TermKind("lab")
-	CaseK  = TermKind("case")
+	Fwd   = TermKind("fwd")
+	Spawn = TermKind("spawn")
+	Close = TermKind("close")
+	Wait  = TermKind("wait")
+	Rec   = TermKind("ref")
+	Send  = TermKind("send")
+	Recv  = TermKind("recv")
+	Lab   = TermKind("lab")
+	Case  = TermKind("case")
 )
 
 type TermMsg struct {
@@ -53,13 +53,24 @@ func (mto *TermMsg) Validate() error {
 	return valid.ValidateStruct(mto,
 		valid.Field(&mto.K,
 			valid.Required,
-			valid.In(FwdK, SpawnK, CloseK, WaitK, RefK, SendK, RecvK, LabK, CaseK),
+			valid.In(
+				Fwd, Spawn, Rec,
+				Close, Wait,
+				Send, Recv,
+				Lab, Case,
+			),
 		),
+		valid.Field(&mto.Close, valid.Required.When(mto.K == Close)),
+		valid.Field(&mto.Wait, valid.Required.When(mto.K == Wait)),
+		valid.Field(&mto.Send, valid.Required.When(mto.K == Send)),
+		valid.Field(&mto.Recv, valid.Required.When(mto.K == Recv)),
+		valid.Field(&mto.Lab, valid.Required.When(mto.K == Lab)),
+		valid.Field(&mto.Case, valid.Required.When(mto.K == Case)),
 	)
 }
 
 type CloseMsg struct {
-	A *chnl.RefMsg `json:"a"`
+	A chnl.RefMsg `json:"a"`
 }
 
 func (mto *CloseMsg) Validate() error {
@@ -69,8 +80,8 @@ func (mto *CloseMsg) Validate() error {
 }
 
 type WaitMsg struct {
-	X    *chnl.RefMsg `json:"x"`
-	Cont *TermMsg     `json:"cont"`
+	X    chnl.RefMsg `json:"x"`
+	Cont *TermMsg    `json:"cont"`
 }
 
 func (mto *WaitMsg) Validate() error {
@@ -81,8 +92,8 @@ func (mto *WaitMsg) Validate() error {
 }
 
 type SendMsg struct {
-	A *chnl.RefMsg `json:"a"`
-	B *chnl.RefMsg `json:"b"`
+	A chnl.RefMsg `json:"a"`
+	B chnl.RefMsg `json:"b"`
 }
 
 func (mto *SendMsg) Validate() error {
@@ -93,9 +104,9 @@ func (mto *SendMsg) Validate() error {
 }
 
 type RecvMsg struct {
-	X    *chnl.RefMsg `json:"x"`
-	Y    *chnl.RefMsg `json:"y"`
-	Cont *TermMsg     `json:"cont"`
+	X    chnl.RefMsg `json:"x"`
+	Y    chnl.RefMsg `json:"y"`
+	Cont *TermMsg    `json:"cont"`
 }
 
 func (mto *RecvMsg) Validate() error {
@@ -107,8 +118,8 @@ func (mto *RecvMsg) Validate() error {
 }
 
 type LabMsg struct {
-	C     *chnl.RefMsg `json:"c"`
-	Label string       `json:"label"`
+	C     chnl.RefMsg `json:"c"`
+	Label string      `json:"label"`
 }
 
 func (mto *LabMsg) Validate() error {
@@ -119,7 +130,7 @@ func (mto *LabMsg) Validate() error {
 }
 
 type CaseMsg struct {
-	Z     *chnl.RefMsg        `json:"z"`
+	Z     chnl.RefMsg         `json:"z"`
 	Conts map[string]*TermMsg `json:"conts"`
 }
 
@@ -133,45 +144,45 @@ func (mto *CaseMsg) Validate() error {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
-var (
-	MsgToRef    func(RefMsg) (Ref, error)
-	MsgFromRef  func(Ref) RefMsg
-	MsgToRefs   func([]RefMsg) ([]Ref, error)
-	MsgFromRefs func([]Ref) []RefMsg
-)
+// var (
+// MsgToRef    func(RefMsg) (Ref, error)
+// MsgFromRef  func(Ref) RefMsg
+// MsgToRefs   func([]RefMsg) ([]Ref, error)
+// MsgFromRefs func([]Ref) []RefMsg
+// )
 
 func MsgFromTerm(t Term) *TermMsg {
 	if t == nil {
 		return nil
 	}
 	switch term := t.(type) {
-	case Close:
+	case CloseSpec:
 		return &TermMsg{
-			K: CloseK,
+			K: Close,
 			Close: &CloseMsg{
 				A: chnl.MsgFromRef(term.A),
 			},
 		}
-	case Wait:
+	case WaitSpec:
 		x := chnl.MsgFromRef(term.X)
 		return &TermMsg{
-			K: WaitK,
+			K: Wait,
 			Wait: &WaitMsg{
 				X:    x,
 				Cont: MsgFromTerm(term.Cont),
 			},
 		}
-	case Send:
+	case SendSpec:
 		return &TermMsg{
-			K: SendK,
+			K: Send,
 			Send: &SendMsg{
 				A: chnl.MsgFromRef(term.A),
 				B: chnl.MsgFromRef(term.B),
 			},
 		}
-	case Recv:
+	case RecvSpec:
 		return &TermMsg{
-			K: RecvK,
+			K: Recv,
 			Recv: &RecvMsg{
 				X:    chnl.MsgFromRef(term.X),
 				Y:    chnl.MsgFromRef(term.Y),
@@ -188,14 +199,14 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		return nil, nil
 	}
 	switch mto.K {
-	case CloseK:
-		a, err := chnl.MsgToRef(*mto.Close.A)
+	case Close:
+		a, err := chnl.MsgToRef(mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
-		return Close{A: a}, nil
-	case WaitK:
-		x, err := chnl.MsgToRef(*mto.Wait.X)
+		return CloseSpec{A: a}, nil
+	case Wait:
+		x, err := chnl.MsgToRef(mto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -203,23 +214,23 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Wait{X: x, Cont: cont}, nil
-	case SendK:
-		a, err := chnl.MsgToRef(*mto.Send.A)
+		return WaitSpec{X: x, Cont: cont}, nil
+	case Send:
+		a, err := chnl.MsgToRef(mto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := chnl.MsgToRef(*mto.Send.B)
+		b, err := chnl.MsgToRef(mto.Send.B)
 		if err != nil {
 			return nil, err
 		}
-		return Send{A: a, B: b}, nil
-	case RecvK:
-		x, err := chnl.MsgToRef(*mto.Recv.X)
+		return SendSpec{A: a, B: b}, nil
+	case Recv:
+		x, err := chnl.MsgToRef(mto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := chnl.MsgToRef(*mto.Recv.Y)
+		y, err := chnl.MsgToRef(mto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -227,7 +238,7 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Recv{X: x, Y: y, Cont: cont}, nil
+		return RecvSpec{X: x, Y: y, Cont: cont}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}

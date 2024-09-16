@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -70,7 +71,7 @@ func (r *seatRepoPgx) SelectByID(rid id.ADT[ID]) (SeatRoot, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return SeatRoot{}, err
 	}
-	r.log.Debug("seat selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "seat selection succeeded", slog.Any("dto", dto))
 	return DataToSeatRoot(dto)
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -50,7 +51,7 @@ func (r *repoPgx[T]) Insert(root root) error {
 		"kind":    dto.K,
 		"pre_id":  dto.PreID,
 		"via_id":  dto.ViaID,
-		"payload": dto.Payload,
+		"payload": dto.Term,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
@@ -61,23 +62,24 @@ func (r *repoPgx[T]) Insert(root root) error {
 }
 
 func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
-	query := `
-		SELECT
-			id
-		FROM steps`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query)
-	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return nil, err
-	}
-	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
-	if err != nil {
-		r.log.Error("rows collection failed", slog.Any("reason", err))
-		return nil, err
-	}
-	return DataToRefs(dtos)
+	return nil, nil
+	// query := `
+	// 	SELECT
+	// 		id
+	// 	FROM steps`
+	// ctx := context.Background()
+	// rows, err := r.pool.Query(ctx, query)
+	// if err != nil {
+	// 	r.log.Error("query execution failed", slog.Any("reason", err))
+	// 	return nil, err
+	// }
+	// defer rows.Close()
+	// dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
+	// if err != nil {
+	// 	r.log.Error("rows collection failed", slog.Any("reason", err))
+	// 	return nil, err
+	// }
+	// return DataToRefs(dtos)
 }
 
 func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
@@ -98,7 +100,7 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	r.log.Debug("step selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err
@@ -110,14 +112,14 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 	return &concrete, nil
 }
 
-func (r *repoPgx[T]) SelectByChID(vid id.ADT[chnl.ID]) (*T, error) {
+func (r *repoPgx[T]) SelectByCh(chid id.ADT[chnl.ID]) (*T, error) {
 	query := `
 		SELECT
 			id, kind, pre_id, via_id, payload
 		FROM steps
 		WHERE via_id=$1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, vid.String())
+	rows, err := r.pool.Query(ctx, query, chid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return nil, err
@@ -131,7 +133,7 @@ func (r *repoPgx[T]) SelectByChID(vid id.ADT[chnl.ID]) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	r.log.Debug("step selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
 		return nil, err

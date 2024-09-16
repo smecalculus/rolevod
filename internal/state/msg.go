@@ -9,17 +9,17 @@ import (
 )
 
 type SpecMsg struct {
-	K      Kind      `json:"kind"`
-	TpRef  *TpRefMsg `json:"tpref,omitempty"`
-	Tensor *ProdMsg  `json:"tensor,omitempty"`
-	Lolli  *ProdMsg  `json:"lolli,omitempty"`
-	With   *SumMsg   `json:"with,omitempty"`
-	Plus   *SumMsg   `json:"plus,omitempty"`
+	K      Kind     `json:"kind"`
+	TpRef  *RecMsg  `json:"tpref,omitempty"`
+	Tensor *ProdMsg `json:"tensor,omitempty"`
+	Lolli  *ProdMsg `json:"lolli,omitempty"`
+	With   *SumMsg  `json:"with,omitempty"`
+	Plus   *SumMsg  `json:"plus,omitempty"`
 }
 
-type TpRefMsg struct {
-	ID   string `json:"id"`
+type RecMsg struct {
 	Name string `json:"name"`
+	ToID string `json:"to_id"`
 }
 
 type ProdMsg struct {
@@ -68,10 +68,10 @@ func MsgFromSpec(s Spec) *SpecMsg {
 	switch spec := s.(type) {
 	case OneSpec:
 		return &SpecMsg{K: One}
-	case TpRefSpec:
+	case RecSpec:
 		return &SpecMsg{
 			K:     TpRef,
-			TpRef: &TpRefMsg{ID: spec.ID.String(), Name: spec.Name}}
+			TpRef: &RecMsg{ToID: spec.ToID.String(), Name: spec.Name}}
 	case TensorSpec:
 		return &SpecMsg{
 			K: Tensor,
@@ -113,11 +113,11 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	case One:
 		return OneSpec{}, nil
 	case TpRef:
-		id, err := id.String[ID](mto.TpRef.ID)
+		id, err := id.String[ID](mto.TpRef.ToID)
 		if err != nil {
 			return nil, err
 		}
-		return TpRefSpec{ID: id, Name: mto.TpRef.Name}, nil
+		return RecSpec{ToID: id, Name: mto.TpRef.Name}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {
@@ -171,7 +171,7 @@ func MsgFromRef(ref Ref) *RefMsg {
 	switch ref.(type) {
 	case OneRef:
 		return &RefMsg{K: One, ID: id}
-	case TpRefRef:
+	case RecRef:
 		return &RefMsg{K: TpRef, ID: id}
 	case TensorRef:
 		return &RefMsg{K: Tensor, ID: id}
@@ -198,7 +198,7 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	case One:
 		return OneRef(id), nil
 	case TpRef:
-		return TpRefRef(id), nil
+		return RecRef(id), nil
 	case Tensor:
 		return TensorRef(id), nil
 	case Lolli:

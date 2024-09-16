@@ -65,11 +65,11 @@ func (r *dealRepoPgx) SelectByID(id id.ADT[ID]) (DealRoot, error) {
 func (r *dealRepoPgx) SelectChildren(id id.ADT[ID]) ([]DealRef, error) {
 	query := `
 		SELECT
-			w.id,
-			w.name
-		FROM deals w
+			d.id,
+			d.name
+		FROM deals d
 		LEFT JOIN kinships k
-			ON w.id = k.child_id
+			ON d.id = k.child_id
 		WHERE k.parent_id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, id.String())
@@ -159,11 +159,9 @@ func newPartRepoPgx(p *pgxpool.Pool, l *slog.Logger) *partRepoPgx {
 func (r *partRepoPgx) Insert(root PartRoot) error {
 	query := `
 		INSERT INTO participations (
-			deal_id,
-			seat_id
+			deal_id, seat_id
 		) values (
-			@deal_id,
-			@seat_id
+			@deal_id, @seat_id
 		)`
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)

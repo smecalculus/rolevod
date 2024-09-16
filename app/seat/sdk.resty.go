@@ -1,6 +1,7 @@
 package seat
 
 import (
+	"fmt"
 	"smecalculus/rolevod/lib/id"
 
 	"github.com/go-resty/resty/v2"
@@ -23,24 +24,30 @@ func NewSeatApi() SeatApi {
 func (cl *seatClient) Create(spec SeatSpec) (SeatRoot, error) {
 	req := MsgFromSeatSpec(spec)
 	var res SeatRootMsg
-	_, err := cl.resty.R().
+	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		Post("/seats")
 	if err != nil {
 		return SeatRoot{}, err
 	}
+	if resp.IsError() {
+		return SeatRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+	}
 	return MsgToSeatRoot(res)
 }
 
 func (c *seatClient) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
 	var res SeatRootMsg
-	_, err := c.resty.R().
+	resp, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
 		Get("/seats/{id}")
 	if err != nil {
 		return SeatRoot{}, err
+	}
+	if resp.IsError() {
+		return SeatRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
 	return MsgToSeatRoot(res)
 }
@@ -52,9 +59,15 @@ func (c *seatClient) RetreiveAll() ([]SeatRef, error) {
 
 func (c *seatClient) Establish(spec KinshipSpec) error {
 	req := MsgFromKinshipSpec(spec)
-	_, err := c.resty.R().
+	resp, err := c.resty.R().
 		SetBody(&req).
 		SetPathParam("id", req.ParentID).
 		Post("/seats/{id}/kinships")
-	return err
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return fmt.Errorf("received: %v", string(resp.Body()))
+	}
+	return nil
 }

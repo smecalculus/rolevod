@@ -1,7 +1,7 @@
 package deal
 
 import (
-	valid "github.com/go-ozzo/ozzo-validation"
+	valid "github.com/go-ozzo/ozzo-validation/v4"
 
 	"smecalculus/rolevod/internal/step"
 

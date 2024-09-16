@@ -1,21 +1,24 @@
 package role
 
 import (
-	"smecalculus/rolevod/internal/state"
+	"database/sql"
+
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/state"
 )
 
 type RoleRefData struct {
-	ID    string `db:"id"`
-	Name  string `db:"name"`
-	State string `db:"state"`
+	ID    string         `db:"id"`
+	Name  string         `db:"name"`
+	State sql.NullString `db:"state"`
 }
 
 type roleRootData struct {
-	ID       string        `db:"id"`
-	Name     string        `db:"name"`
-	State    string        `db:"state"`
-	Children []RoleRefData `db:"-"`
+	ID       string         `db:"id"`
+	Name     string         `db:"name"`
+	State    sql.NullString `db:"state"`
+	Children []RoleRefData  `db:"-"`
 }
 
 // goverter:variables

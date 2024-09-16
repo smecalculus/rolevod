@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
@@ -18,73 +17,58 @@ type WithSpec struct {
 	Choices map[Label]Spec
 }
 
-func (r WithSpec) spec() {}
+func (WithSpec) spec() {}
 
 // aka Internal Choice
 type PlusSpec struct {
 	Choices map[Label]Spec
 }
 
-func (r PlusSpec) spec() {}
+func (PlusSpec) spec() {}
 
 type TensorSpec struct {
 	S Spec
 	T Spec
 }
 
-func (r TensorSpec) spec() {}
+func (TensorSpec) spec() {}
 
 type LolliSpec struct {
 	S Spec
 	T Spec
 }
 
-func (r LolliSpec) spec() {}
+func (LolliSpec) spec() {}
 
 type OneSpec struct{}
 
-func (r OneSpec) spec() {}
+func (OneSpec) spec() {}
 
 // aka TpName
-type TpRefSpec struct {
-	ID   id.ADT[ID]
+type RecSpec struct {
 	Name string
+	ToID id.ADT[ID]
 }
 
-func (r TpRefSpec) spec() {}
+func (RecSpec) spec() {}
 
 type UpSpec struct {
 	A Spec
 }
 
-func (r UpSpec) spec() {}
+func (UpSpec) spec() {}
 
 type DownSpec struct {
 	A Spec
 }
 
-func (r DownSpec) spec() {}
+func (DownSpec) spec() {}
 
 type ID interface{}
 
 type Ref interface {
 	RootID() id.ADT[ID]
 }
-
-// type ref struct {
-// 	id id.ADT[ID]
-// }
-
-// func (r ref) rootID() id.ADT[ID] { return r.id }
-
-// type WithRef struct{ ref }
-// type PlusRef struct{ ref }
-// type TensorRef struct{ ref }
-// type LolliRef struct{ ref }
-// type OneRef struct{ ref }
-// type TpRefRef struct{ ref }
-// type UpRef struct{ ref }
-// type DownRef struct{ ref }
 
 type WithRef id.ADT[ID]
 
@@ -106,9 +90,9 @@ type OneRef id.ADT[ID]
 
 func (r OneRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
 
-type TpRefRef id.ADT[ID]
+type RecRef id.ADT[ID]
 
-func (r TpRefRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r RecRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type UpRef id.ADT[ID]
 
@@ -161,15 +145,14 @@ type OneRoot struct {
 
 func (r OneRoot) rootID() id.ADT[ID] { return r.ID }
 
-// TODO тут ссылка на role?
 // aka TpName
-type TpRefRoot struct {
-	ID      id.ADT[ID]
-	Name    string
-	StateID id.ADT[ID]
+type RecRoot struct {
+	ID   id.ADT[ID]
+	Name string
+	ToID id.ADT[ID]
 }
 
-func (r TpRefRoot) rootID() id.ADT[ID] { return r.ID }
+func (r RecRoot) rootID() id.ADT[ID] { return r.ID }
 
 type UpRoot struct {
 	ID id.ADT[ID]
@@ -191,10 +174,6 @@ type Repo interface {
 	SelectByID(id.ADT[ID]) (Root, error)
 }
 
-var (
-	ErrUnexpectedState = errors.New("unexpected state type")
-)
-
 func ErrUnexpectedSpec(v Spec) error {
 	return fmt.Errorf("unexpected spec %#v", v)
 }
@@ -211,21 +190,22 @@ func ConvertSpecToRoot(s Spec) Root {
 	if s == nil {
 		return nil
 	}
+	newID := id.New[ID]()
 	switch spec := s.(type) {
 	case OneSpec:
 		// TODO генерировать zero id или не генерировать id вообще
-		return OneRoot{ID: id.New[ID]()}
-	case TpRefSpec:
-		return TpRefRoot{ID: spec.ID, Name: spec.Name}
+		return OneRoot{ID: newID}
+	case RecSpec:
+		return RecRoot{ID: newID, Name: spec.Name, ToID: spec.ToID}
 	case TensorSpec:
 		return TensorRoot{
-			ID: id.New[ID](),
+			ID: newID,
 			S:  ConvertSpecToRoot(spec.S),
 			T:  ConvertSpecToRoot(spec.T),
 		}
 	case LolliSpec:
 		return LolliRoot{
-			ID: id.New[ID](),
+			ID: newID,
 			S:  ConvertSpecToRoot(spec.S),
 			T:  ConvertSpecToRoot(spec.T),
 		}
@@ -244,22 +224,16 @@ func ConvertRootToRef(r Root) Ref {
 	}
 	switch root := r.(type) {
 	case OneRoot:
-		// return OneRef{ref{root.ID}}
 		return OneRef(root.ID)
-	case TpRefRoot:
-		// return TpRefRef{ref{root.ID}}
-		return TpRefRef(root.ID)
+	case RecRoot:
+		return RecRef(root.ID)
 	case TensorRoot:
-		// return TensorRef{ref{root.ID}}
 		return TensorRef(root.ID)
 	case LolliRoot:
-		// return LolliRef{ref{root.ID}}
 		return LolliRef(root.ID)
 	case WithRoot:
-		// return WithRef{ref{root.ID}}
 		return WithRef(root.ID)
 	case PlusRoot:
-		// return PlusRef{ref{root.ID}}
 		return PlusRef(root.ID)
 	default:
 		panic(ErrUnexpectedRoot(r))

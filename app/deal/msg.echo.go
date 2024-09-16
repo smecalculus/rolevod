@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 )
@@ -154,7 +155,8 @@ func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	h.log.Debug("transition posting started", slog.Any("mto", mto))
+	ctx := c.Request().Context()
+	h.log.Log(ctx, core.LevelTrace, "transition posting started", slog.Any("mto", mto))
 	err = mto.Validate()
 	if err != nil {
 		return err

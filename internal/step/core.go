@@ -8,56 +8,62 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-var (
-	// TODO подобрать другой юнит
-	Unit = Ref{}
-)
-
 type ID interface{}
 
-type Ref struct {
-	ID id.ADT[ID]
+type Ref interface {
+	rootID() id.ADT[ID]
 }
 
-func (Ref) val() {}
+type ProcRef id.ADT[ID]
+
+func (r ProcRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+
+type MsgRef id.ADT[ID]
+
+func (r MsgRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+
+type SrvRef id.ADT[ID]
+
+func (r SrvRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type root interface {
 	step()
 }
 
 // aka exec.Proc
-type Process struct {
+type ProcRoot struct {
 	ID    id.ADT[ID]
 	PreID id.ADT[ID]
 	Term  Term
 }
 
-func (Process) step() {}
+func (ProcRoot) step() {}
 
 // aka exec.Msg
-type Message struct {
+type MsgRoot struct {
 	ID    id.ADT[ID]
 	PreID id.ADT[ID]
 	ViaID id.ADT[chnl.ID]
 	Val   Value
 }
 
-func (Message) step() {}
+func (MsgRoot) step() {}
 
-type Service struct {
+type SrvRoot struct {
 	ID    id.ADT[ID]
 	PreID id.ADT[ID]
 	ViaID id.ADT[chnl.ID]
 	Cont  Continuation
 }
 
-func (Service) step() {}
+func (SrvRoot) step() {}
 
 type Label string
 
 // aka Expression
 type Term interface {
 	term()
+	// subst(variable chnl.Ref, value chnl.Ref)
 }
 
 // aka ast.Msg
@@ -69,102 +75,139 @@ type Continuation interface {
 	cont()
 }
 
-type Fwd struct {
+type FwdSpec struct {
 	A chnl.Ref // from
 	C chnl.Ref // to
 }
 
-func (Fwd) term() {}
+func (FwdSpec) term() {}
 
-type Spawn struct {
+// func (s *FwdSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type SpawnSpec struct {
 	Name string
 	C    chnl.Var
 	Ctx  []chnl.Ref
 	Cont Term
 }
 
-func (Spawn) term() {}
+func (SpawnSpec) term() {}
 
-type Lab struct {
+// func (s *SpawnSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type LabSpec struct {
 	C chnl.Ref
 	L Label
 	// Cont Term
 }
 
-func (Lab) term() {}
-func (Lab) val()  {}
+func (LabSpec) term() {}
+func (LabSpec) val()  {}
 
-type Case struct {
+// func (s *LabSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type CaseSpec struct {
 	X     chnl.Ref
 	Conts map[Label]Term
 }
 
-func (Case) term() {}
-func (Case) cont() {}
+func (CaseSpec) term() {}
+func (CaseSpec) cont() {}
 
-type Send struct {
+// func (s *CaseSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type SendSpec struct {
 	A chnl.Ref // channel
 	B chnl.Ref // value
 	// Cont  Term
 }
 
-func (Send) term() {}
-func (Send) val()  {}
+func (SendSpec) term() {}
+func (SendSpec) val()  {}
 
-type Recv struct {
+// func (s *SendSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type RecvSpec struct {
 	X    chnl.Ref // channel
 	Y    chnl.Ref // value
 	Cont Term
 }
 
-func (Recv) term() {}
-func (Recv) cont() {}
+func (RecvSpec) term() {}
+func (RecvSpec) cont() {}
 
-type Close struct {
+// func (s *RecvSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type CloseSpec struct {
 	A chnl.Ref
 }
 
-func (Close) term() {}
-func (Close) val()  {}
+func (CloseSpec) term() {}
+func (CloseSpec) val()  {}
 
-type Wait struct {
+// func (s *CloseSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
+
+type WaitSpec struct {
 	X    chnl.Ref
 	Cont Term
 }
 
-func (Wait) term() {}
-func (Wait) cont() {}
+func (WaitSpec) term() {}
+func (WaitSpec) cont() {}
+
+// func (s *WaitSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// 	if s.X == variable {
+// 		s.X = value
+// 	}
+// }
 
 // aka ExpName
-type ExpRef struct {
+type RecSpec struct {
 	Name string
 	C    chnl.Var
 	Ctx  []chnl.Var
 }
 
-func (ExpRef) term() {}
+func (RecSpec) term() {}
+
+// func (s *RecSpec) subst(variable chnl.Ref, value chnl.Ref) {
+// }
 
 type Repo[T root] interface {
 	Insert(root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(id.ADT[ID]) (*T, error)
-	SelectByChID(id.ADT[chnl.ID]) (*T, error)
+	SelectByCh(id.ADT[chnl.ID]) (*T, error)
 }
 
-func Subst(t Term, from chnl.Ref, to chnl.Ref) {
+func Subst(t Term, varbl chnl.Ref, value chnl.Ref) {
+	if t == nil {
+		return
+	}
 	switch term := t.(type) {
-	case Close:
-		if term.A != from {
-			return
+	case CloseSpec:
+		if term.A == varbl {
+			term.A = value
 		}
-		term.A = to
+	case WaitSpec:
+		if term.X == varbl {
+			term.X = value
+		}
+		Subst(term.Cont, varbl, value)
 	default:
-		panic(ErrUnexpectedTerm(term))
+		panic(ErrUnexpectedTerm(t))
 	}
 }
 
 func ErrUnexpectedStep(s root) error {
-	return fmt.Errorf("unexpected steo %#v", s)
+	return fmt.Errorf("unexpected step %#v", s)
 }
 
 func ErrUnexpectedTerm(t Term) error {
