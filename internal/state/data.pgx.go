@@ -128,16 +128,16 @@ func (r *repoPgx) SelectByID(sid id.ADT[ID]) (Root, error) {
 		Choices: map[Label]Root{
 			"enq": &TensorRoot{
 				ID: id.New[ID](),
-				S:  &RecRoot{ID: fooId, Name: "Foo"},
-				T:  &RecRoot{ID: sid, Name: "Queue"},
+				A:  &RecurRoot{ID: fooId, Name: "Foo"},
+				C:  &RecurRoot{ID: sid, Name: "Queue"},
 			},
 			"deq": &PlusRoot{
 				ID: id.New[ID](),
 				Choices: map[Label]Root{
 					"some": &LolliRoot{
 						ID: id.New[ID](),
-						S:  &RecRoot{ID: fooId, Name: "Foo"},
-						T:  &RecRoot{ID: sid, Name: "Queue"},
+						X:  &RecurRoot{ID: fooId, Name: "Foo"},
+						Z:  &RecurRoot{ID: sid, Name: "Queue"},
 					},
 					"none": &OneRoot{ID: id.New[ID]()},
 				},

@@ -60,7 +60,8 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	root := RoleRoot{
 		ID:    id.New[ID](),
 		Name:  spec.Name,
-		State: state.ConvertRootToRef(st),
+		// State: state.ConvertRootToRef(st),
+		State: st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {

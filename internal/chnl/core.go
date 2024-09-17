@@ -8,10 +8,13 @@ import (
 
 type ID interface{}
 
+// aka ChanTp
 type Spec struct {
 	Name string
+	St   state.Ref
 }
 
+// aka Z
 type Ref struct {
 	ID   id.ADT[ID]
 	Name string
@@ -19,12 +22,12 @@ type Ref struct {
 
 type Var string
 
-// Aggregate Root
+// aka ChanTp with ID
 type Root struct {
 	ID    id.ADT[ID]
-	PreID id.ADT[ID]
 	Name  string
-	State state.Ref
+	PreID id.ADT[ID]
+	St    state.Ref
 }
 
 type Repo interface {

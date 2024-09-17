@@ -97,6 +97,10 @@ func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	err = mto.Validate()
+	if err != nil {
+		return err
+	}
 	spec, err := MsgToKinshipSpec(mto)
 	if err != nil {
 		return err
@@ -123,6 +127,10 @@ func newPartHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *partHandlerE
 func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 	var mto PartSpecMsg
 	err := c.Bind(&mto)
+	if err != nil {
+		return err
+	}
+	err = mto.Validate()
 	if err != nil {
 		return err
 	}

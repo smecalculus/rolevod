@@ -5,19 +5,32 @@ import (
 
 	"golang.org/x/exp/maps"
 
+	valid "github.com/go-ozzo/ozzo-validation/v4"
+
 	"smecalculus/rolevod/lib/id"
 )
 
 type SpecMsg struct {
-	K      Kind     `json:"kind"`
-	TpRef  *RecMsg  `json:"tpref,omitempty"`
-	Tensor *ProdMsg `json:"tensor,omitempty"`
-	Lolli  *ProdMsg `json:"lolli,omitempty"`
-	With   *SumMsg  `json:"with,omitempty"`
-	Plus   *SumMsg  `json:"plus,omitempty"`
+	K      Kind      `json:"kind"`
+	Recur  *RecurMsg `json:"recur,omitempty"`
+	Tensor *ProdMsg  `json:"tensor,omitempty"`
+	Lolli  *ProdMsg  `json:"lolli,omitempty"`
+	With   *SumMsg   `json:"with,omitempty"`
+	Plus   *SumMsg   `json:"plus,omitempty"`
 }
 
-type RecMsg struct {
+func (mto *SpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
+		valid.Field(&mto.Recur, valid.Required.When(mto.K == Recur)),
+		valid.Field(&mto.Tensor, valid.Required.When(mto.K == Tensor)),
+		valid.Field(&mto.Lolli, valid.Required.When(mto.K == Lolli)),
+		valid.Field(&mto.With, valid.Required.When(mto.K == With)),
+		valid.Field(&mto.Plus, valid.Required.When(mto.K == Plus)),
+	)
+}
+
+type RecurMsg struct {
 	Name string `json:"name"`
 	ToID string `json:"to_id"`
 }
@@ -41,11 +54,18 @@ type RefMsg struct {
 	K  Kind   `json:"kind"`
 }
 
+func (mto *RefMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
+	)
+}
+
 type Kind string
 
 const (
 	One    = Kind("one")
-	TpRef  = Kind("ref")
+	Recur  = Kind("recur")
 	Tensor = Kind("tensor")
 	Lolli  = Kind("lolli")
 	With   = Kind("with")
@@ -68,24 +88,24 @@ func MsgFromSpec(s Spec) *SpecMsg {
 	switch spec := s.(type) {
 	case OneSpec:
 		return &SpecMsg{K: One}
-	case RecSpec:
+	case RecurSpec:
 		return &SpecMsg{
-			K:     TpRef,
-			TpRef: &RecMsg{ToID: spec.ToID.String(), Name: spec.Name}}
+			K:     Recur,
+			Recur: &RecurMsg{ToID: spec.ToID.String(), Name: spec.Name}}
 	case TensorSpec:
 		return &SpecMsg{
 			K: Tensor,
 			Tensor: &ProdMsg{
-				Value: MsgFromSpec(spec.S),
-				State: MsgFromSpec(spec.T),
+				Value: MsgFromSpec(spec.A),
+				State: MsgFromSpec(spec.C),
 			},
 		}
 	case LolliSpec:
 		return &SpecMsg{
 			K: Lolli,
 			Tensor: &ProdMsg{
-				Value: MsgFromSpec(spec.S),
-				State: MsgFromSpec(spec.T),
+				Value: MsgFromSpec(spec.X),
+				State: MsgFromSpec(spec.Z),
 			},
 		}
 	case WithSpec:
@@ -112,12 +132,12 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	switch mto.K {
 	case One:
 		return OneSpec{}, nil
-	case TpRef:
-		id, err := id.String[ID](mto.TpRef.ToID)
+	case Recur:
+		id, err := id.String[ID](mto.Recur.ToID)
 		if err != nil {
 			return nil, err
 		}
-		return RecSpec{ToID: id, Name: mto.TpRef.Name}, nil
+		return RecurSpec{ToID: id, Name: mto.Recur.Name}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {
@@ -127,7 +147,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		return TensorSpec{S: v, T: s}, nil
+		return TensorSpec{A: v, C: s}, nil
 	case Lolli:
 		v, err := MsgToSpec(mto.Lolli.Value)
 		if err != nil {
@@ -137,7 +157,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		return LolliSpec{S: v, T: s}, nil
+		return LolliSpec{X: v, Z: s}, nil
 	case With:
 		choices := make(map[Label]Spec, len(mto.With.Choices))
 		for _, ch := range mto.With.Choices {
@@ -167,19 +187,19 @@ func MsgFromRef(ref Ref) *RefMsg {
 	if ref == nil {
 		return nil
 	}
-	id := ref.RootID().String()
+	id := ref.RID().String()
 	switch ref.(type) {
-	case OneRef:
+	case OneRef, OneRoot:
 		return &RefMsg{K: One, ID: id}
-	case RecRef:
-		return &RefMsg{K: TpRef, ID: id}
-	case TensorRef:
+	case RecurRef, RecurRoot:
+		return &RefMsg{K: Recur, ID: id}
+	case TensorRef, TensorRoot:
 		return &RefMsg{K: Tensor, ID: id}
-	case LolliRef:
+	case LolliRef, LolliRoot:
 		return &RefMsg{K: Lolli, ID: id}
-	case WithRef:
+	case WithRef, WithRoot:
 		return &RefMsg{K: With, ID: id}
-	case PlusRef:
+	case PlusRef, PlusRoot:
 		return &RefMsg{K: Plus, ID: id}
 	default:
 		panic(ErrUnexpectedRef(ref))
@@ -197,8 +217,8 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	switch mto.K {
 	case One:
 		return OneRef(id), nil
-	case TpRef:
-		return RecRef(id), nil
+	case Recur:
+		return RecurRef(id), nil
 	case Tensor:
 		return TensorRef(id), nil
 	case Lolli:

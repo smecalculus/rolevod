@@ -1,11 +1,21 @@
 package chnl
 
 import (
+	valid "github.com/go-ozzo/ozzo-validation/v4"
+
 	"smecalculus/rolevod/internal/state"
 )
 
 type SpecMsg struct {
-	Name string `json:"name"`
+	Name string        `json:"name"`
+	St   *state.RefMsg `json:"state"`
+}
+
+func (mto *SpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+		valid.Field(&mto.St, valid.Required),
+	)
 }
 
 type RefMsg struct {
@@ -13,10 +23,17 @@ type RefMsg struct {
 	Name string `json:"name"`
 }
 
+func (mto *RefMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+	)
+}
+
 type RootMsg struct {
-	ID    string        `json:"id"`
-	Name  string        `json:"name"`
-	State *state.RefMsg `json:"state"`
+	ID   string        `json:"id"`
+	Name string        `json:"name"`
+	St   *state.RefMsg `json:"state"`
 }
 
 // goverter:variables

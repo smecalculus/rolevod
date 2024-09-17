@@ -27,15 +27,15 @@ type PlusSpec struct {
 func (PlusSpec) spec() {}
 
 type TensorSpec struct {
-	S Spec
-	T Spec
+	A Spec
+	C Spec
 }
 
 func (TensorSpec) spec() {}
 
 type LolliSpec struct {
-	S Spec
-	T Spec
+	X Spec
+	Z Spec
 }
 
 func (LolliSpec) spec() {}
@@ -45,12 +45,12 @@ type OneSpec struct{}
 func (OneSpec) spec() {}
 
 // aka TpName
-type RecSpec struct {
+type RecurSpec struct {
 	Name string
 	ToID id.ADT[ID]
 }
 
-func (RecSpec) spec() {}
+func (RecurSpec) spec() {}
 
 type UpSpec struct {
 	A Spec
@@ -67,44 +67,45 @@ func (DownSpec) spec() {}
 type ID interface{}
 
 type Ref interface {
-	RootID() id.ADT[ID]
+	RID() id.ADT[ID]
 }
 
 type WithRef id.ADT[ID]
 
-func (r WithRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r WithRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type PlusRef id.ADT[ID]
 
-func (r PlusRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r PlusRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type TensorRef id.ADT[ID]
 
-func (r TensorRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r TensorRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type LolliRef id.ADT[ID]
 
-func (r LolliRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r LolliRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type OneRef id.ADT[ID]
 
-func (r OneRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r OneRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
-type RecRef id.ADT[ID]
+type RecurRef id.ADT[ID]
 
-func (r RecRef) RootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r RecurRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type UpRef id.ADT[ID]
 
-func (r UpRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r UpRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 type DownRef id.ADT[ID]
 
-func (r DownRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r DownRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 // aka Stype
 type Root interface {
-	rootID() id.ADT[ID]
+	Spec
+	Ref
 }
 
 // aka External Choice
@@ -113,7 +114,9 @@ type WithRoot struct {
 	Choices map[Label]Root
 }
 
-func (r WithRoot) rootID() id.ADT[ID] { return r.ID }
+func (WithRoot) spec() {}
+
+func (r WithRoot) RID() id.ADT[ID] { return r.ID }
 
 // aka Internal Choice
 type PlusRoot struct {
@@ -121,52 +124,66 @@ type PlusRoot struct {
 	Choices map[Label]Root
 }
 
-func (r PlusRoot) rootID() id.ADT[ID] { return r.ID }
+func (PlusRoot) spec() {}
+
+func (r PlusRoot) RID() id.ADT[ID] { return r.ID }
 
 type TensorRoot struct {
 	ID id.ADT[ID]
-	S  Root
-	T  Root
+	A  Root // value
+	C  Root // cont
 }
 
-func (r TensorRoot) rootID() id.ADT[ID] { return r.ID }
+func (TensorRoot) spec() {}
+
+func (r TensorRoot) RID() id.ADT[ID] { return r.ID }
 
 type LolliRoot struct {
 	ID id.ADT[ID]
-	S  Root
-	T  Root
+	X  Root // value
+	Z  Root // cont
 }
 
-func (r LolliRoot) rootID() id.ADT[ID] { return r.ID }
+func (LolliRoot) spec() {}
+
+func (r LolliRoot) RID() id.ADT[ID] { return r.ID }
 
 type OneRoot struct {
 	ID id.ADT[ID]
 }
 
-func (r OneRoot) rootID() id.ADT[ID] { return r.ID }
+func (OneRoot) spec() {}
+
+func (r OneRoot) RID() id.ADT[ID] { return r.ID }
 
 // aka TpName
-type RecRoot struct {
+type RecurRoot struct {
 	ID   id.ADT[ID]
 	Name string
 	ToID id.ADT[ID]
 }
 
-func (r RecRoot) rootID() id.ADT[ID] { return r.ID }
+func (RecurRoot) spec() {}
+
+func (r RecurRoot) RID() id.ADT[ID] { return r.ID }
 
 type UpRoot struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r UpRoot) rootID() id.ADT[ID] { return r.ID }
+func (UpRoot) spec() {}
+
+func (r UpRoot) RID() id.ADT[ID] { return r.ID }
 
 type DownRoot struct {
 	ID id.ADT[ID]
 	A  Root
 }
 
-func (r DownRoot) rootID() id.ADT[ID] { return r.ID }
+func (DownRoot) spec() {}
+
+func (r DownRoot) RID() id.ADT[ID] { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
@@ -195,19 +212,19 @@ func ConvertSpecToRoot(s Spec) Root {
 	case OneSpec:
 		// TODO генерировать zero id или не генерировать id вообще
 		return OneRoot{ID: newID}
-	case RecSpec:
-		return RecRoot{ID: newID, Name: spec.Name, ToID: spec.ToID}
+	case RecurSpec:
+		return RecurRoot{ID: newID, Name: spec.Name, ToID: spec.ToID}
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,
-			S:  ConvertSpecToRoot(spec.S),
-			T:  ConvertSpecToRoot(spec.T),
+			A:  ConvertSpecToRoot(spec.A),
+			C:  ConvertSpecToRoot(spec.C),
 		}
 	case LolliSpec:
 		return LolliRoot{
 			ID: newID,
-			S:  ConvertSpecToRoot(spec.S),
-			T:  ConvertSpecToRoot(spec.T),
+			X:  ConvertSpecToRoot(spec.X),
+			Z:  ConvertSpecToRoot(spec.Z),
 		}
 	default:
 		panic(ErrUnexpectedSpec(spec))
@@ -225,8 +242,8 @@ func ConvertRootToRef(r Root) Ref {
 	switch root := r.(type) {
 	case OneRoot:
 		return OneRef(root.ID)
-	case RecRoot:
-		return RecRef(root.ID)
+	case RecurRoot:
+		return RecurRef(root.ID)
 	case TensorRoot:
 		return TensorRef(root.ID)
 	case LolliRoot:

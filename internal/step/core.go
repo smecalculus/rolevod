@@ -169,13 +169,13 @@ func (WaitSpec) cont() {}
 // }
 
 // aka ExpName
-type RecSpec struct {
+type RecurSpec struct {
 	Name string
 	C    chnl.Var
 	Ctx  []chnl.Var
 }
 
-func (RecSpec) term() {}
+func (RecurSpec) term() {}
 
 // func (s *RecSpec) subst(variable chnl.Ref, value chnl.Ref) {
 // }

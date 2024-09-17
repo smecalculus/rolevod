@@ -12,6 +12,12 @@ type DealSpecMsg struct {
 	Name string `json:"name"`
 }
 
+func (mto *DealSpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+	)
+}
+
 type RefMsg struct {
 	ID string `json:"id" param:"id"`
 }
@@ -21,10 +27,10 @@ type DealRefMsg struct {
 	Name string `json:"name"`
 }
 
-func (v DealRefMsg) Validate() error {
-	return valid.ValidateStruct(&v,
-		valid.Field(&v.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&v.Name, valid.Required, valid.Length(1, 64)),
+func (mto *DealRefMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
 	)
 }
 
@@ -54,6 +60,15 @@ type KinshipSpecMsg struct {
 	ChildrenIDs []string `json:"children_ids"`
 }
 
+func (mto *KinshipSpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.ParentID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.ChildrenIDs,
+			valid.Required, valid.Max(10),
+			valid.Each(valid.Required, valid.Length(20, 20))),
+	)
+}
+
 type KinshipRootMsg struct {
 	Parent   DealRefMsg   `json:"parent"`
 	Children []DealRefMsg `json:"children"`
@@ -72,6 +87,13 @@ var (
 type PartSpecMsg struct {
 	DealID string `json:"deal_id" param:"id"`
 	SeatID string `json:"seat_id"`
+}
+
+func (mto *PartSpecMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.SeatID, valid.Required, valid.Length(20, 20)),
+	)
 }
 
 type PartRootMsg struct {
@@ -97,7 +119,7 @@ type TranSpecMsg struct {
 
 func (mto *TranSpecMsg) Validate() error {
 	return valid.ValidateStruct(mto,
-		valid.Field(&mto.DealID, valid.Required),
+		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.Term, valid.Required),
 	)
 }

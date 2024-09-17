@@ -7,22 +7,20 @@ import (
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
-
-	"smecalculus/rolevod/app/role"
 )
 
 type ID interface{}
 
 type SeatSpec struct {
 	Name string
-	Via  ChanTp
-	Ctx  []ChanTp
+	Via  chnl.Spec
+	Ctx  []chnl.Spec
 }
 
-type ChanTpSpec struct {
-	Z    chnl.Var
-	Role role.RoleRef
-}
+// type ChanTpSpec struct {
+// 	Z    chnl.Var
+// 	Role role.RoleRef
+// }
 
 type SeatRef struct {
 	ID   id.ADT[ID]
@@ -33,16 +31,16 @@ type SeatRef struct {
 type SeatRoot struct {
 	ID       id.ADT[ID]
 	Name     string
-	Via      ChanTp
-	Ctx      []ChanTp
+	Via      chnl.Spec
+	Ctx      []chnl.Spec
 	Children []SeatRef
 }
 
 // TODO подобрать семантику для отношения
-type ChanTp struct {
-	Z     chnl.Var
-	State state.Ref
-}
+// type ChanTp struct {
+// 	Z chnl.Var
+// 	C state.Ref
+// }
 
 // Port
 type SeatApi interface {

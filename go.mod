@@ -12,8 +12,6 @@ require (
 	go.uber.org/fx v1.22.1
 )
 
-require github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
-
 require (
 	github.com/dave/jennifer v1.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

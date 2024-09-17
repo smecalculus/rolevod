@@ -26,10 +26,17 @@ func (h *seatHandlerEcho) ApiPostOne(c echo.Context) error {
 	var mto SeatSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
+		h.log.Error("mto binding failed")
+		return err
+	}
+	err = mto.Validate()
+	if err != nil {
+		h.log.Error("mto validation failed")
 		return err
 	}
 	spec, err := MsgToSeatSpec(mto)
 	if err != nil {
+		h.log.Error("mto conversion failed")
 		return err
 	}
 	root, err := h.api.Create(spec)

@@ -15,10 +15,11 @@ type RoleRefData struct {
 }
 
 type roleRootData struct {
-	ID       string         `db:"id"`
-	Name     string         `db:"name"`
-	State    sql.NullString `db:"state"`
-	Children []RoleRefData  `db:"-"`
+	ID    string         `db:"id"`
+	Name  string         `db:"name"`
+	State sql.NullString `db:"state"`
+	// State    *state.RootData `db:"-"`
+	Children []RoleRefData `db:"-"`
 }
 
 // goverter:variables
@@ -63,7 +64,7 @@ func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
 	if err != nil {
 		return roleRootData{}, err
 	}
-	dtos, err := DataFromRoleRefs(root.Children)
+	childrenDTOs, err := DataFromRoleRefs(root.Children)
 	if err != nil {
 		return roleRootData{}, err
 	}
@@ -71,7 +72,7 @@ func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
 		ID:       root.ID.String(),
 		Name:     root.Name,
 		State:    stateJson,
-		Children: dtos,
+		Children: childrenDTOs,
 	}, nil
 }
 

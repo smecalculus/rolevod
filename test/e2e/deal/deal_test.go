@@ -7,6 +7,7 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
@@ -73,9 +74,9 @@ func TestTakeTransition(t *testing.T) {
 	// and
 	seatSpec1 := seat.SeatSpec{
 		Name: "seat-1",
-		Via: seat.ChanTp{
-			Z:     "chnl-1",
-			State: roleRoot.State,
+		Via: chnl.Spec{
+			Name: "chnl-1",
+			St:   roleRoot.State,
 		},
 	}
 	seatRoot1, err := seatApi.Create(seatSpec1)
@@ -85,9 +86,9 @@ func TestTakeTransition(t *testing.T) {
 	// and
 	seatSpec2 := seat.SeatSpec{
 		Name: "seat-2",
-		Via: seat.ChanTp{
-			Z:     "chnl-2",
-			State: roleRoot.State,
+		Via: chnl.Spec{
+			Name: "chnl-2",
+			St:   roleRoot.State,
 		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)
@@ -146,4 +147,5 @@ func TestTakeTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	// then
+	// TODO добавить проверку
 }

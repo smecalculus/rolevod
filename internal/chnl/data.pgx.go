@@ -44,7 +44,7 @@ func (r *repoPgx) Insert(root Root) error {
 		"id":     dto.ID,
 		"pre_id": dto.PreID,
 		"name":   dto.Name,
-		"state":  dto.State,
+		"state":  dto.St,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
