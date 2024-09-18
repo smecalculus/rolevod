@@ -41,7 +41,7 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	ra := pgx.NamedArgs{
 		"id":    dto.ID,
 		"name":  dto.Name,
-		"state": dto.State,
+		"state": dto.St,
 	}
 	_, err = tx.Exec(ctx, rq, ra)
 	if err != nil {

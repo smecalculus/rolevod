@@ -6,6 +6,7 @@ import (
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/internal/state"
 )
 
 type ID interface{}
@@ -58,12 +59,9 @@ type SrvRoot struct {
 
 func (SrvRoot) step() {}
 
-type Label string
-
 // aka Expression
 type Term interface {
 	term()
-	// subst(variable chnl.Ref, value chnl.Ref)
 }
 
 // aka ast.Msg
@@ -82,9 +80,6 @@ type FwdSpec struct {
 
 func (FwdSpec) term() {}
 
-// func (s *FwdSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
-
 type SpawnSpec struct {
 	Name string
 	C    chnl.Var
@@ -94,31 +89,22 @@ type SpawnSpec struct {
 
 func (SpawnSpec) term() {}
 
-// func (s *SpawnSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
-
 type LabSpec struct {
 	C chnl.Ref
-	L Label
+	L state.Label
 	// Cont Term
 }
 
 func (LabSpec) term() {}
 func (LabSpec) val()  {}
 
-// func (s *LabSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
-
 type CaseSpec struct {
-	X     chnl.Ref
-	Conts map[Label]Term
+	X        chnl.Ref
+	Branches map[state.Label]Term
 }
 
 func (CaseSpec) term() {}
 func (CaseSpec) cont() {}
-
-// func (s *CaseSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
 
 type SendSpec struct {
 	A chnl.Ref // channel
@@ -129,9 +115,6 @@ type SendSpec struct {
 func (SendSpec) term() {}
 func (SendSpec) val()  {}
 
-// func (s *SendSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
-
 type RecvSpec struct {
 	X    chnl.Ref // channel
 	Y    chnl.Ref // value
@@ -141,18 +124,12 @@ type RecvSpec struct {
 func (RecvSpec) term() {}
 func (RecvSpec) cont() {}
 
-// func (s *RecvSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
-
 type CloseSpec struct {
 	A chnl.Ref
 }
 
 func (CloseSpec) term() {}
 func (CloseSpec) val()  {}
-
-// func (s *CloseSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
 
 type WaitSpec struct {
 	X    chnl.Ref
@@ -162,12 +139,6 @@ type WaitSpec struct {
 func (WaitSpec) term() {}
 func (WaitSpec) cont() {}
 
-// func (s *WaitSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// 	if s.X == variable {
-// 		s.X = value
-// 	}
-// }
-
 // aka ExpName
 type RecurSpec struct {
 	Name string
@@ -176,9 +147,6 @@ type RecurSpec struct {
 }
 
 func (RecurSpec) term() {}
-
-// func (s *RecSpec) subst(variable chnl.Ref, value chnl.Ref) {
-// }
 
 type Repo[T root] interface {
 	Insert(root) error

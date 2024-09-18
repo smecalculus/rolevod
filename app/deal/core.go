@@ -148,7 +148,7 @@ func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
 	if err != nil {
 		s.log.Error("channel insertion failed",
 			slog.Any("reason", err),
-			slog.Any("channel", newChnl),
+			slog.Any("chnl", newChnl),
 		)
 		return chnl.Ref{}, err
 	}
@@ -167,19 +167,32 @@ func (s *dealService) Take(spec TranSpec) error {
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", term.A),
+				slog.Any("chnl", term.A),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			return fmt.Errorf("channel already finalized %+v", curChnl)
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
 		}
 		curSt, err := s.states.SelectByID(curChnl.St.RID())
 		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
 			return err
 		}
 		err = s.checkTerm(term, curSt)
 		if err != nil {
+			s.log.Error("term checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
 			return err
 		}
 		// TODO выборка с проверкой потребления
@@ -187,7 +200,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if err != nil {
 			s.log.Error("service selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", curChnl),
+				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
@@ -201,16 +214,21 @@ func (s *dealService) Take(spec TranSpec) error {
 			if err != nil {
 				s.log.Error("message insertion failed",
 					slog.Any("reason", err),
-					slog.Any("message", newMsg),
+					slog.Any("msg", newMsg),
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("message", newMsg))
+			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
 			return nil
 		}
 		wait, ok := srv.Cont.(step.WaitSpec)
 		if !ok {
-			return fmt.Errorf("unexpected cont type; want %T; got %#v", step.WaitSpec{}, wait)
+			err = fmt.Errorf("unexpected cont type: want %T, got %T", step.WaitSpec{}, srv.Cont)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("cont", srv.Cont),
+			)
+			return err
 		}
 		// consume channel
 		finChnl := chnl.Root{
@@ -223,7 +241,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if err != nil {
 			s.log.Error("channel insertion failed",
 				slog.Any("reason", err),
-				slog.Any("channel", finChnl),
+				slog.Any("chnl", finChnl),
 			)
 			return err
 		}
@@ -235,26 +253,39 @@ func (s *dealService) Take(spec TranSpec) error {
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", term.X),
+				slog.Any("chnl", term.X),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			return fmt.Errorf("channel already finalized %+v", curChnl)
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
 		}
 		curSt, err := s.states.SelectByID(curChnl.St.RID())
 		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
 			return err
 		}
 		err = s.checkTerm(term, curSt)
 		if err != nil {
+			s.log.Error("type checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
 			return err
 		}
 		msg, err := s.msgs.SelectByCh(curChnl.ID)
 		if err != nil {
 			s.log.Error("message selection failed",
 				slog.Any("reason", err),
-				slog.Any("channel", curChnl),
+				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
@@ -268,16 +299,21 @@ func (s *dealService) Take(spec TranSpec) error {
 			if err != nil {
 				s.log.Error("service insertion failed",
 					slog.Any("reason", err),
-					slog.Any("service", newSrv),
+					slog.Any("srv", newSrv),
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("service", newSrv))
+			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
 			return nil
 		}
-		close, ok := msg.Val.(step.CloseSpec)
+		_, ok := msg.Val.(step.CloseSpec)
 		if !ok {
-			return fmt.Errorf("unexpected val type; want %T; got %#v", step.CloseSpec{}, close)
+			err = fmt.Errorf("unexpected val type: want %T, got %T", step.CloseSpec{}, msg.Val)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("val", msg.Val),
+			)
+			return err
 		}
 		// consume channel
 		finChnl := chnl.Root{
@@ -290,7 +326,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if err != nil {
 			s.log.Error("channel insertion failed",
 				slog.Any("reason", err),
-				slog.Any("channel", finChnl),
+				slog.Any("chnl", finChnl),
 			)
 			return err
 		}
@@ -300,21 +336,42 @@ func (s *dealService) Take(spec TranSpec) error {
 	case step.SendSpec:
 		curChnl, err := s.chnls.SelectByID(term.A.ID)
 		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", term.A),
+			)
 			return err
 		}
 		if curChnl.St == nil {
-			return fmt.Errorf("channel already finalized %+v", curChnl)
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
 		}
 		curSt, err := s.states.SelectByID(curChnl.St.RID())
 		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
 			return err
 		}
 		err = s.checkTerm(term, curSt)
 		if err != nil {
+			s.log.Error("type checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
 			return err
 		}
 		srv, err := s.srvs.SelectByCh(curChnl.ID)
 		if err != nil {
+			s.log.Error("service selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
 			return err
 		}
 		if srv == nil {
@@ -323,40 +380,83 @@ func (s *dealService) Take(spec TranSpec) error {
 				ViaID: term.A.ID,
 				Val:   term,
 			}
-			return s.msgs.Insert(newMsg)
+			err = s.msgs.Insert(newMsg)
+			if err != nil {
+				s.log.Error("message insertion failed",
+					slog.Any("reason", err),
+					slog.Any("msg", newMsg),
+				)
+				return err
+			}
+			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
+			return nil
 		}
 		recv, ok := srv.Cont.(step.RecvSpec)
 		if !ok {
-			return fmt.Errorf("unexpected cont type; want %T; got %#v", step.RecvSpec{}, recv)
+			err = fmt.Errorf("unexpected cont type: want %T, got %T", step.RecvSpec{}, srv.Cont)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("cont", srv.Cont),
+			)
+			return err
 		}
-		// TODO смена состояния канала
-		step.Subst(recv.Cont, recv.X, term.A)
+		newChnl := chnl.Root{
+			ID:    id.New[chnl.ID](),
+			Name:  recv.X.Name,
+			PreID: curChnl.ID,
+			St:    curSt.(state.TensorRoot).Next(),
+		}
+		err = s.chnls.Insert(newChnl)
+		if err != nil {
+			s.log.Error("channel insertion failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", newChnl),
+			)
+			return err
+		}
+		termA := chnl.ConvertRootToRef(newChnl)
+		step.Subst(recv.Cont, recv.X, termA)
 		step.Subst(recv.Cont, recv.Y, term.B)
-		newProc := step.ProcRoot{
-			ID:    id.New[step.ID](),
-			PreID: srv.ID,
-			Term:  recv.Cont,
-		}
-		// TODO рекурсивный вызов
-		return s.procs.Insert(newProc)
+		return s.Take(TranSpec{DealID: spec.DealID, Term: recv.Cont})
 	case step.RecvSpec:
 		curChnl, err := s.chnls.SelectByID(term.X.ID)
 		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", term.X),
+			)
 			return err
 		}
 		if curChnl.St == nil {
-			return fmt.Errorf("channel already finalized %+v", curChnl)
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
 		}
 		curSt, err := s.states.SelectByID(curChnl.St.RID())
 		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
 			return err
 		}
 		err = s.checkTerm(term, curSt)
 		if err != nil {
+			s.log.Error("type checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
 			return err
 		}
 		msg, err := s.msgs.SelectByCh(curChnl.ID)
 		if err != nil {
+			s.log.Error("message selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
 			return err
 		}
 		if msg == nil {
@@ -365,20 +465,211 @@ func (s *dealService) Take(spec TranSpec) error {
 				ViaID: term.X.ID,
 				Cont:  term,
 			}
-			return s.srvs.Insert(newSrv)
+			err = s.srvs.Insert(newSrv)
+			if err != nil {
+				s.log.Error("service insertion failed",
+					slog.Any("reason", err),
+					slog.Any("srv", newSrv),
+				)
+				return err
+			}
+			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
+			return nil
 		}
-		send, ok := msg.Val.(step.SendSpec)
+		val, ok := msg.Val.(step.SendSpec)
 		if !ok {
-			return fmt.Errorf("unexpected val type; want %T; got %#v", step.SendSpec{}, send)
+			err = fmt.Errorf("unexpected val type: want %T, got %T", step.SendSpec{}, msg.Val)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("val", msg.Val),
+			)
+			return err
 		}
-		step.Subst(term.Cont, term.X, send.A)
-		step.Subst(term.Cont, term.Y, send.B)
-		newProc := step.ProcRoot{
-			ID:    id.New[step.ID](),
-			PreID: msg.ID,
-			Term:  term.Cont,
+		newChnl := chnl.Root{
+			ID:    id.New[chnl.ID](),
+			Name:  val.A.Name,
+			PreID: curChnl.ID,
+			St:    curSt.(state.LolliRoot).Next(),
 		}
-		return s.procs.Insert(newProc)
+		err = s.chnls.Insert(newChnl)
+		if err != nil {
+			s.log.Error("channel insertion failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", newChnl),
+			)
+			return err
+		}
+		step.Subst(term.Cont, term.X, chnl.ConvertRootToRef(newChnl))
+		step.Subst(term.Cont, term.Y, val.B)
+		return s.Take(TranSpec{DealID: spec.DealID, Term: term.Cont})
+	case step.LabSpec:
+		curChnl, err := s.chnls.SelectByID(term.C.ID)
+		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", term.C),
+			)
+			return err
+		}
+		if curChnl.St == nil {
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
+		}
+		curSt, err := s.states.SelectByID(curChnl.St.RID())
+		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
+			return err
+		}
+		err = s.checkTerm(term, curSt)
+		if err != nil {
+			s.log.Error("type checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
+			return err
+		}
+		srv, err := s.srvs.SelectByCh(curChnl.ID)
+		if err != nil {
+			s.log.Error("service selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
+		}
+		if srv == nil {
+			newMsg := step.MsgRoot{
+				ID:    id.New[step.ID](),
+				ViaID: term.C.ID,
+				Val:   term,
+			}
+			err = s.msgs.Insert(newMsg)
+			if err != nil {
+				s.log.Error("message insertion failed",
+					slog.Any("reason", err),
+					slog.Any("msg", newMsg),
+				)
+				return err
+			}
+			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
+			return nil
+		}
+		cont, ok := srv.Cont.(step.CaseSpec)
+		if !ok {
+			err = fmt.Errorf("unexpected cont type: want %T, got %T", step.CaseSpec{}, srv.Cont)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("cont", srv.Cont),
+			)
+			return err
+		}
+		newChnl := chnl.Root{
+			ID:    id.New[chnl.ID](),
+			Name:  cont.X.Name,
+			PreID: curChnl.ID,
+			St:    curSt.(state.PlusRoot).Next(term.L),
+		}
+		err = s.chnls.Insert(newChnl)
+		if err != nil {
+			s.log.Error("channel insertion failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", newChnl),
+			)
+			return err
+		}
+		branch := cont.Branches[term.L]
+		step.Subst(branch, cont.X, chnl.ConvertRootToRef(newChnl))
+		return s.Take(TranSpec{DealID: spec.DealID, Term: branch})
+	case step.CaseSpec:
+		curChnl, err := s.chnls.SelectByID(term.X.ID)
+		if err != nil {
+			s.log.Error("channel selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", term.X),
+			)
+			return err
+		}
+		if curChnl.St == nil {
+			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
+		}
+		curSt, err := s.states.SelectByID(curChnl.St.RID())
+		if err != nil {
+			s.log.Error("state selection failed",
+				slog.Any("reason", err),
+				slog.Any("st", curChnl.St),
+			)
+			return err
+		}
+		err = s.checkTerm(term, curSt)
+		if err != nil {
+			s.log.Error("type checking failed",
+				slog.Any("reason", err),
+				slog.Any("term", term),
+			)
+			return err
+		}
+		msg, err := s.msgs.SelectByCh(curChnl.ID)
+		if err != nil {
+			s.log.Error("message selection failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", curChnl),
+			)
+			return err
+		}
+		if msg == nil {
+			newSrv := step.SrvRoot{
+				ID:    id.New[step.ID](),
+				ViaID: term.X.ID,
+				Cont:  term,
+			}
+			err = s.srvs.Insert(newSrv)
+			if err != nil {
+				s.log.Error("service insertion failed",
+					slog.Any("reason", err),
+					slog.Any("srv", newSrv),
+				)
+				return err
+			}
+			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
+			return nil
+		}
+		val, ok := msg.Val.(step.LabSpec)
+		if !ok {
+			err = fmt.Errorf("unexpected val type: want %T, got %T", step.LabSpec{}, msg.Val)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+				slog.Any("val", msg.Val),
+			)
+			return err
+		}
+		newChnl := chnl.Root{
+			ID:    id.New[chnl.ID](),
+			Name:  val.C.Name,
+			PreID: curChnl.ID,
+			St:    curSt.(state.WithRoot).Next(val.L),
+		}
+		err = s.chnls.Insert(newChnl)
+		if err != nil {
+			s.log.Error("channel insertion failed",
+				slog.Any("reason", err),
+				slog.Any("chnl", newChnl),
+			)
+			return err
+		}
+		branch := term.Branches[val.L]
+		step.Subst(branch, term.X, chnl.ConvertRootToRef(newChnl))
+		return s.Take(TranSpec{DealID: spec.DealID, Term: branch})
 	default:
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
@@ -446,19 +737,19 @@ func toEdge(id id.ADT[ID]) string {
 }
 
 // aka checkExp
-func (s *dealService) checkTerm(t step.Term, c state.Spec) error {
-	switch term := t.(type) {
+func (s *dealService) checkTerm(g step.Term, w state.Root) error {
+	switch got := g.(type) {
 	case step.CloseSpec:
-		return checkState(c, state.OneSpec{})
+		return checkState(w, state.OneRoot{})
 	case step.WaitSpec:
-		return checkState(c, state.OneSpec{})
+		return checkState(w, state.OneRoot{})
 	case step.SendSpec:
 		// check value
-		st, ok := c.(state.TensorSpec)
+		want, ok := w.(state.TensorRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.TensorSpec{}, st)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.TensorRoot{}, w)
 		}
-		val, err := s.chnls.SelectByID(term.B.ID)
+		val, err := s.chnls.SelectByID(got.B.ID)
 		if err != nil {
 			return err
 		}
@@ -466,19 +757,19 @@ func (s *dealService) checkTerm(t step.Term, c state.Spec) error {
 		if err != nil {
 			return err
 		}
-		err = checkState(valSt, st.A)
+		err = checkState(valSt, want.A)
 		if err != nil {
 			return err
 		}
 		// no cont to check
 		return nil
 	case step.RecvSpec:
-		// check value
-		st, ok := c.(state.LolliSpec)
+		want, ok := w.(state.LolliRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliSpec{}, st)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliRoot{}, w)
 		}
-		val, err := s.chnls.SelectByID(term.Y.ID)
+		// check value
+		val, err := s.chnls.SelectByID(got.Y.ID)
 		if err != nil {
 			return err
 		}
@@ -486,47 +777,119 @@ func (s *dealService) checkTerm(t step.Term, c state.Spec) error {
 		if err != nil {
 			return err
 		}
-		err = checkState(valSt, st.X)
+		err = checkState(valSt, want.X)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkTerm(term.Cont, st.Z)
+		return s.checkTerm(got.Cont, want.Z)
+	case step.LabSpec:
+		want, ok := w.(state.PlusRoot)
+		if !ok {
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.PlusRoot{}, w)
+		}
+		_, ok = want.Choices[got.L]
+		if !ok {
+			return fmt.Errorf("state mismatch: want label %q, got nothing", got.L)
+		}
+		// no cont to check
+		return nil
+	case step.CaseSpec:
+		want, ok := w.(state.WithRoot)
+		if !ok {
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.WithRoot{}, w)
+		}
+		if len(got.Branches) != len(want.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(got.Branches))
+		}
+		for wantL, wantCh := range want.Choices {
+			gotBr, ok := got.Branches[wantL]
+			if !ok {
+				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+			}
+			err := s.checkTerm(gotBr, wantCh)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	default:
-		panic(step.ErrUnexpectedTerm(t))
+		panic(step.ErrUnexpectedTerm(g))
 	}
 }
 
 // aka eqtp
-func checkState(g state.Spec, w state.Spec) error {
-	switch want := w.(type) {
-	case state.OneSpec:
-		got, ok := g.(state.OneSpec)
+func checkState(got, want state.Root) error {
+	switch wantSt := want.(type) {
+	case state.OneRoot:
+		_, ok := got.(state.OneRoot)
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
 		}
 		return nil
-	case state.TensorSpec:
-		got, ok := g.(state.TensorSpec)
+	case state.TensorRoot:
+		gotSt, ok := got.(state.TensorRoot)
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
 		}
-		err := checkState(got.A, want.A)
+		err := checkState(gotSt.A, wantSt.A)
 		if err != nil {
 			return err
 		}
-		return checkState(got.C, want.C)
-	case state.LolliSpec:
-		got, ok := g.(state.LolliSpec)
+		return checkState(gotSt.C, wantSt.C)
+	case state.LolliRoot:
+		gotSt, ok := got.(state.LolliRoot)
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
 		}
-		err := checkState(got.X, want.X)
+		err := checkState(gotSt.X, wantSt.X)
 		if err != nil {
 			return err
 		}
-		return checkState(got.Z, want.Z)
+		return checkState(gotSt.Z, wantSt.Z)
+	case state.PlusRoot:
+		gotSt, ok := got.(state.PlusRoot)
+		if !ok {
+			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantL, wantCh := range wantSt.Choices {
+			gotCh, ok := gotSt.Choices[wantL]
+			if !ok {
+				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+			}
+			err := checkState(gotCh, wantCh)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case state.WithRoot:
+		gotSt, ok := got.(state.WithRoot)
+		if !ok {
+			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantL, wantCh := range wantSt.Choices {
+			gotCh, ok := gotSt.Choices[wantL]
+			if !ok {
+				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+			}
+			err := checkState(gotCh, wantCh)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	default:
-		panic(state.ErrUnexpectedSpec(g))
+		panic(state.ErrUnexpectedRoot(got))
 	}
+}
+
+func errAlreadyClosedChannel(ref chnl.Ref) error {
+	return fmt.Errorf("channel already finalized %+v", ref)
 }

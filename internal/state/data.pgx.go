@@ -3,11 +3,13 @@ package state
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -74,8 +76,8 @@ func (r *repoPgx) Insert(root Root) (err error) {
 			ta := pgx.NamedArgs{
 				"from_id": tr.FromID,
 				"to_id":   tr.ToID,
-				"msg_id":  tr.MsgID,
-				"msg_key": tr.MsgKey,
+				"msg_id":  tr.OnID,
+				"msg_key": tr.OnKey,
 			}
 			tb.Queue(tq, ta)
 		}
@@ -114,35 +116,67 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[*RefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[*refData])
 	if err != nil {
 		return nil, err
 	}
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(sid id.ADT[ID]) (Root, error) {
-	fooId := id.New[ID]()
-	queue := &WithRoot{
-		ID: id.New[ID](),
-		Choices: map[Label]Root{
-			"enq": &TensorRoot{
-				ID: id.New[ID](),
-				A:  &RecurRoot{ID: fooId, Name: "Foo"},
-				C:  &RecurRoot{ID: sid, Name: "Queue"},
-			},
-			"deq": &PlusRoot{
-				ID: id.New[ID](),
-				Choices: map[Label]Root{
-					"some": &LolliRoot{
-						ID: id.New[ID](),
-						X:  &RecurRoot{ID: fooId, Name: "Foo"},
-						Z:  &RecurRoot{ID: sid, Name: "Queue"},
-					},
-					"none": &OneRoot{ID: id.New[ID]()},
-				},
-			},
-		},
+func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
+	query := `
+		SELECT
+			s1.id as from_id,
+			s1.kind as from_kind,
+			tr.msg_id,
+			tr.msg_key,
+			s2.id as to_id,
+			s2.kind as to_kind
+		FROM states s1
+			LEFT JOIN transitions tr
+			ON s1.id = tr.from_id
+			LEFT JOIN states s2
+			ON tr.to_id = s2.id
+		WHERE s1.id = $1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return nil, err
 	}
-	return queue, nil
+	defer rows.Close()
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[transition2])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return nil, err
+	}
+	if len(dtos) == 0 {
+		return nil, fmt.Errorf("no rows selected")
+	}
+	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
+	return dataToRoot2(dtos, rid.String()), nil
+
+	// fooId := id.New[ID]()
+	// queue := &WithRoot{
+	// 	ID: id.New[ID](),
+	// 	Choices: map[Label]Root{
+	// 		"enq": &TensorRoot{
+	// 			ID: id.New[ID](),
+	// 			A:  &RecurRoot{ID: fooId, Name: "Foo"},
+	// 			C:  &RecurRoot{ID: sid, Name: "Queue"},
+	// 		},
+	// 		"deq": &PlusRoot{
+	// 			ID: id.New[ID](),
+	// 			Choices: map[Label]Root{
+	// 				"some": &LolliRoot{
+	// 					ID: id.New[ID](),
+	// 					X:  &RecurRoot{ID: fooId, Name: "Foo"},
+	// 					Z:  &RecurRoot{ID: sid, Name: "Queue"},
+	// 				},
+	// 				"none": &OneRoot{ID: id.New[ID]()},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// return queue, nil
 }

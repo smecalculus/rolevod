@@ -64,8 +64,8 @@ func TestEstablishKinship(t *testing.T) {
 func TestTakeTransition(t *testing.T) {
 	// given
 	roleSpec := role.RoleSpec{
-		Name:  "role-1",
-		State: state.OneSpec{},
+		Name: "role-1",
+		St:   state.OneSpec{},
 	}
 	roleRoot, err := roleApi.Create(roleSpec)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestTakeTransition(t *testing.T) {
 		Name: "seat-1",
 		Via: chnl.Spec{
 			Name: "chnl-1",
-			St:   roleRoot.State,
+			St:   roleRoot.St,
 		},
 	}
 	seatRoot1, err := seatApi.Create(seatSpec1)
@@ -88,7 +88,7 @@ func TestTakeTransition(t *testing.T) {
 		Name: "seat-2",
 		Via: chnl.Spec{
 			Name: "chnl-2",
-			St:   roleRoot.State,
+			St:   roleRoot.St,
 		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)

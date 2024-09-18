@@ -11,21 +11,21 @@ import (
 type ID interface{}
 
 type RoleSpec struct {
-	Name  string
-	State state.Spec
+	Name string
+	St   state.Spec
 }
 
 type RoleRef struct {
-	ID    id.ADT[ID]
-	Name  string
-	State state.Ref
+	ID   id.ADT[ID]
+	Name string
+	St   state.Ref
 }
 
 // aka TpDef
 type RoleRoot struct {
 	ID       id.ADT[ID]
 	Name     string
-	State    state.Ref
+	St       state.Ref
 	Children []RoleRef
 }
 
@@ -56,12 +56,12 @@ func newRoleService(
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
-	st := state.ConvertSpecToRoot(spec.State)
+	st := state.ConvertSpecToRoot(spec.St)
 	root := RoleRoot{
-		ID:    id.New[ID](),
-		Name:  spec.Name,
+		ID:   id.New[ID](),
+		Name: spec.Name,
 		// State: state.ConvertRootToRef(st),
-		State: st,
+		St: st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 		)
 		return root, err
 	}
-	if spec.State != nil {
+	if spec.St != nil {
 		err := s.states.Insert(st)
 		if err != nil {
 			s.log.Error("state insertion failed",

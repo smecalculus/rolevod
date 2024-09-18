@@ -7,9 +7,9 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/role"
-
 	"smecalculus/rolevod/internal/state"
+
+	"smecalculus/rolevod/app/role"
 )
 
 var (
@@ -29,7 +29,7 @@ func TestKinshipEstablishment(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	childSpec := role.RoleSpec{Name: "child-role", State: state.OneSpec{}}
+	childSpec := role.RoleSpec{Name: "child-role", St: state.OneSpec{}}
 	childRoot, err := roleApi.Create(childSpec)
 	if err != nil {
 		t.Fatal(err)

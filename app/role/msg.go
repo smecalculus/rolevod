@@ -5,8 +5,8 @@ import (
 )
 
 type RoleSpecMsg struct {
-	Name  string         `json:"name"`
-	State *state.SpecMsg `json:"state"`
+	Name string         `json:"name"`
+	St   *state.SpecMsg `json:"state"`
 }
 
 type RefMsg struct {
@@ -14,15 +14,15 @@ type RefMsg struct {
 }
 
 type RoleRefMsg struct {
-	ID    string        `json:"id" param:"id"`
-	Name  string        `json:"name"`
-	State *state.RefMsg `json:"state"`
+	ID   string        `json:"id" param:"id"`
+	Name string        `json:"name"`
+	St   *state.RefMsg `json:"state"`
 }
 
 type RoleRootMsg struct {
 	ID       string        `json:"id" param:"id"`
 	Name     string        `json:"name"`
-	State    *state.RefMsg `json:"state"`
+	St       *state.RefMsg `json:"state"`
 	Children []RoleRefMsg  `json:"children"`
 }
 

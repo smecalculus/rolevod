@@ -104,19 +104,16 @@ func (r DownRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
 
 // aka Stype
 type Root interface {
-	Spec
 	Ref
 }
 
-// aka External Choice
-type WithRoot struct {
-	ID      id.ADT[ID]
-	Choices map[Label]Root
+type Product interface {
+	Next() Ref
 }
 
-func (WithRoot) spec() {}
-
-func (r WithRoot) RID() id.ADT[ID] { return r.ID }
+type Sum interface {
+	Next(Label) Ref
+}
 
 // aka Internal Choice
 type PlusRoot struct {
@@ -124,9 +121,19 @@ type PlusRoot struct {
 	Choices map[Label]Root
 }
 
-func (PlusRoot) spec() {}
-
 func (r PlusRoot) RID() id.ADT[ID] { return r.ID }
+
+func (r PlusRoot) Next(l Label) Ref { return r.Choices[l] }
+
+// aka External Choice
+type WithRoot struct {
+	ID      id.ADT[ID]
+	Choices map[Label]Root
+}
+
+func (r WithRoot) RID() id.ADT[ID] { return r.ID }
+
+func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
 
 type TensorRoot struct {
 	ID id.ADT[ID]
@@ -134,9 +141,9 @@ type TensorRoot struct {
 	C  Root // cont
 }
 
-func (TensorRoot) spec() {}
-
 func (r TensorRoot) RID() id.ADT[ID] { return r.ID }
+
+func (r TensorRoot) Next() Ref { return r.C }
 
 type LolliRoot struct {
 	ID id.ADT[ID]
@@ -144,9 +151,9 @@ type LolliRoot struct {
 	Z  Root // cont
 }
 
-func (LolliRoot) spec() {}
-
 func (r LolliRoot) RID() id.ADT[ID] { return r.ID }
+
+func (r LolliRoot) Next() Ref { return r.Z }
 
 type OneRoot struct {
 	ID id.ADT[ID]
