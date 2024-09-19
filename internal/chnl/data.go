@@ -3,15 +3,17 @@ package chnl
 import (
 	"database/sql"
 	"encoding/json"
+
+	"smecalculus/rolevod/internal/state"
 )
 
 type specData struct {
-	Name string         `db:"name"`
-	St   sql.NullString `db:"state"`
+	Name string         `json:"name"`
+	St   *state.RefData `json:"state"`
 }
 
 type RefData struct {
-	ID   string `db:"id" json:"id,omitempty" `
+	ID   string `db:"id" json:"id,omitempty"`
 	Name string `db:"name" json:"name,omitempty"`
 }
 
@@ -26,6 +28,7 @@ type rootData struct {
 // goverter:output:format assign-variable
 // goverter:extend to.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
+// goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToSpec    func(specData) (Spec, error)
 	DataFromSpec  func(Spec) (specData, error)

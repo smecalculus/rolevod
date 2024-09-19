@@ -116,7 +116,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[*refData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[*RefData])
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +153,9 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	if len(dtos) == 0 {
 		return nil, fmt.Errorf("no rows selected")
 	}
+	r.log.Debug("state selection succeeded", slog.Any("dtos", dtos))
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	return dataToRoot2(dtos, rid.String()), nil
+	return dataToRoot2(dtos, rid.String())
 
 	// fooId := id.New[ID]()
 	// queue := &WithRoot{

@@ -210,23 +210,23 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	if mto == nil {
 		return nil, nil
 	}
-	id, err := id.String[ID](mto.ID)
+	rid, err := id.String[ID](mto.ID)
 	if err != nil {
 		return nil, err
 	}
 	switch mto.K {
 	case One:
-		return OneRef(id), nil
+		return OneRef{rid}, nil
 	case Recur:
-		return RecurRef(id), nil
+		return RecurRef{rid}, nil
 	case Tensor:
-		return TensorRef(id), nil
+		return TensorRef{rid}, nil
 	case Lolli:
-		return LolliRef(id), nil
+		return LolliRef{rid}, nil
 	case With:
-		return WithRef(id), nil
+		return WithRef{rid}, nil
 	case Plus:
-		return PlusRef(id), nil
+		return PlusRef{rid}, nil
 	default:
 		panic(ErrUnexpectedKind(mto.K))
 	}

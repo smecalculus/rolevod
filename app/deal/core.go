@@ -137,7 +137,6 @@ func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
 		)
 		return chnl.Ref{}, err
 	}
-	// производим внешний spawn
 	// TODO переоформление контекста
 	newChnl := chnl.Root{
 		ID:   id.New[chnl.ID](),

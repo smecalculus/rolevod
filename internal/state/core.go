@@ -70,37 +70,53 @@ type Ref interface {
 	RID() id.ADT[ID]
 }
 
-type WithRef id.ADT[ID]
+type WithRef struct {
+	ID id.ADT[ID]
+}
 
-func (r WithRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r WithRef) RID() id.ADT[ID] { return r.ID }
 
-type PlusRef id.ADT[ID]
+type PlusRef struct {
+	ID id.ADT[ID]
+}
 
-func (r PlusRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r PlusRef) RID() id.ADT[ID] { return r.ID }
 
-type TensorRef id.ADT[ID]
+type TensorRef struct {
+	ID id.ADT[ID]
+}
 
-func (r TensorRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r TensorRef) RID() id.ADT[ID] { return r.ID }
 
-type LolliRef id.ADT[ID]
+type LolliRef struct {
+	ID id.ADT[ID]
+}
 
-func (r LolliRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r LolliRef) RID() id.ADT[ID] { return r.ID }
 
-type OneRef id.ADT[ID]
+type OneRef struct {
+	ID id.ADT[ID]
+}
 
-func (r OneRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r OneRef) RID() id.ADT[ID] { return r.ID }
 
-type RecurRef id.ADT[ID]
+type RecurRef struct {
+	ID id.ADT[ID]
+}
 
-func (r RecurRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r RecurRef) RID() id.ADT[ID] { return r.ID }
 
-type UpRef id.ADT[ID]
+type UpRef struct {
+	ID id.ADT[ID]
+}
 
-func (r UpRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r UpRef) RID() id.ADT[ID] { return r.ID }
 
-type DownRef id.ADT[ID]
+type DownRef struct {
+	ID id.ADT[ID]
+}
 
-func (r DownRef) RID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r DownRef) RID() id.ADT[ID] { return r.ID }
 
 // aka Stype
 type Root interface {
@@ -246,22 +262,7 @@ func ConvertRootToRef(r Root) Ref {
 	if r == nil {
 		return nil
 	}
-	switch root := r.(type) {
-	case OneRoot:
-		return OneRef(root.ID)
-	case RecurRoot:
-		return RecurRef(root.ID)
-	case TensorRoot:
-		return TensorRef(root.ID)
-	case LolliRoot:
-		return LolliRef(root.ID)
-	case WithRoot:
-		return WithRef(root.ID)
-	case PlusRoot:
-		return PlusRef(root.ID)
-	default:
-		panic(ErrUnexpectedRoot(r))
-	}
+	return r.(Ref)
 }
 
 func toCore(s string) (id.ADT[ID], error) {

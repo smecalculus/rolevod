@@ -17,11 +17,6 @@ type SeatSpec struct {
 	Ctx  []chnl.Spec
 }
 
-// type ChanTpSpec struct {
-// 	Z    chnl.Var
-// 	Role role.RoleRef
-// }
-
 type SeatRef struct {
 	ID   id.ADT[ID]
 	Name string
@@ -36,13 +31,6 @@ type SeatRoot struct {
 	Children []SeatRef
 }
 
-// TODO подобрать семантику для отношения
-// type ChanTp struct {
-// 	Z chnl.Var
-// 	C state.Ref
-// }
-
-// Port
 type SeatApi interface {
 	Create(SeatSpec) (SeatRoot, error)
 	Retrieve(id.ADT[ID]) (SeatRoot, error)
