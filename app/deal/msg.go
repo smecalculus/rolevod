@@ -117,6 +117,11 @@ type TranSpecMsg struct {
 	Term   *step.TermMsg `json:"term"`
 }
 
+
+type TranSpec2Msg struct {
+	DealID string        `json:"deal_id"`
+}
+
 func (mto *TranSpecMsg) Validate() error {
 	return valid.ValidateStruct(mto,
 		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),

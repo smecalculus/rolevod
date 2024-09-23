@@ -23,81 +23,45 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "stateRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
-
 func (r *repoPgx) Insert(root Root) (err error) {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoot(root)
-	// states
-	sq := `
-		INSERT INTO states (
-			id, kind
+	dto := dataFromRoot3(root)
+	query := `
+		INSERT INTO states2 (
+			id, kind, from_id, on_ref, to_id, to_ids
 		) VALUES (
-			@id, @kind
+			@id, @kind, @from_id, @on_ref, @to_id, @to_ids
 		)`
-	sb := pgx.Batch{}
+	batch := pgx.Batch{}
 	for _, s := range dto.States {
 		sa := pgx.NamedArgs{
-			"id":   s.ID,
-			"kind": s.K,
+			"id":      s.ID,
+			"kind":    s.K,
+			"from_id": s.FromID,
+			"on_ref":  s.OnRef,
+			"to_id":   s.ToID,
+			"to_ids":  s.ToIDs,
 		}
-		sb.Queue(sq, sa)
+		batch.Queue(query, sa)
 	}
-	sbr := tx.SendBatch(ctx, &sb)
+	br := tx.SendBatch(ctx, &batch)
 	defer func() {
-		err = errors.Join(err, sbr.Close())
+		err = errors.Join(err, br.Close())
 	}()
-	for _, s := range dto.States {
-		_, err = sbr.Exec()
+	for _, st := range dto.States {
+		_, err = br.Exec()
 		if err != nil {
-			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("state", s))
+			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("state", st))
 		}
 	}
 	if err != nil {
-		return errors.Join(err, sbr.Close(), tx.Rollback(ctx))
+		return errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
-	err = sbr.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	// transitions
-	tq := `
-		INSERT INTO transitions (
-			from_id, to_id, msg_id, msg_key
-		) VALUES (
-			@from_id, @to_id, @msg_id, @msg_key
-		)`
-	tb := pgx.Batch{}
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			ta := pgx.NamedArgs{
-				"from_id": tr.FromID,
-				"to_id":   tr.ToID,
-				"msg_id":  tr.OnID,
-				"msg_key": tr.OnKey,
-			}
-			tb.Queue(tq, ta)
-		}
-	}
-	tbr := tx.SendBatch(ctx, &tb)
-	defer func() {
-		err = errors.Join(err, tbr.Close())
-	}()
-	for _, trs := range dto.Trs {
-		for _, tr := range trs {
-			_, err = tbr.Exec()
-			if err != nil {
-				r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("tr", tr))
-			}
-		}
-	}
-	if err != nil {
-		return errors.Join(err, tbr.Close(), tx.Rollback(ctx))
-	}
-	err = tbr.Close()
+	err = br.Close()
 	if err != nil {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
@@ -125,19 +89,18 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 
 func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	query := `
-		SELECT
-			s1.id as from_id,
-			s1.kind as from_kind,
-			tr.msg_id,
-			tr.msg_key,
-			s2.id as to_id,
-			s2.kind as to_kind
-		FROM states s1
-			LEFT JOIN transitions tr
-			ON s1.id = tr.from_id
-			LEFT JOIN states s2
-			ON tr.to_id = s2.id
-		WHERE s1.id = $1`
+		WITH RECURSIVE sts AS (
+			SELECT
+				id, kind, from_id, on_ref, to_id, to_ids
+			FROM states2
+			WHERE id = $1
+			UNION ALL
+			SELECT
+				s1.id, s1.kind, s1.from_id, s1.on_ref, s1.to_id, s1.to_ids
+			FROM states2 s1, sts s2
+			WHERE s1.from_id = s2.id
+		)
+		SELECT * FROM sts`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
@@ -145,7 +108,7 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[transition2])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state2])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
@@ -155,7 +118,7 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	}
 	r.log.Debug("state selection succeeded", slog.Any("dtos", dtos))
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	return dataToRoot2(dtos, rid.String())
+	return dataToRoot3(dtos, rid.String())
 
 	// fooId := id.New[ID]()
 	// queue := &WithRoot{

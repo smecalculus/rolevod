@@ -2,6 +2,7 @@ package core
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
@@ -19,8 +20,13 @@ var Module = fx.Module("lib/core",
 )
 
 func newLogger() *slog.Logger {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-	return slog.Default()
+	opts := &slog.HandlerOptions{
+		Level:     slog.LevelDebug,
+		AddSource: true,
+	}
+	return slog.New(slog.NewTextHandler(os.Stdout, opts))
+	// slog.SetLogLoggerLevel(slog.LevelDebug)
+	// return slog.Default()
 }
 
 func newKeeper(l *slog.Logger) *keeperViper {

@@ -164,6 +164,7 @@ func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
 		return err
 	}
 	ctx := c.Request().Context()
+	h.log.Debug("transition posting started", slog.Any("mto", mto))
 	h.log.Log(ctx, core.LevelTrace, "transition posting started", slog.Any("mto", mto))
 	err = mto.Validate()
 	if err != nil {

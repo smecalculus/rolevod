@@ -72,18 +72,18 @@ services:
     labels:
       image.key: rolevod/postgres
 
-  app:
-    image: rolevod/app:latest
-    networks:
-      - product
-    depends_on:
-      schema:
-        condition: service_completed_successfully
-    ports:
-      - "8080:8080"
-    configs:
-      - source: product
-        target: /app/application.yaml
-    labels:
-      image.key: rolevod/app
+  # app:
+  #   image: rolevod/app:latest
+  #   networks:
+  #     - product
+  #   depends_on:
+  #     schema:
+  #       condition: service_completed_successfully
+  #   ports:
+  #     - "8080:8080"
+  #   configs:
+  #     - source: product
+  #       target: /app/application.yaml
+  #   labels:
+  #     image.key: rolevod/app
  

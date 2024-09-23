@@ -154,9 +154,9 @@ func TestTakeRecvSend(t *testing.T) {
 	// given
 	roleSpec1 := role.RoleSpec{
 		Name: "role-1",
-		St: state.TensorSpec{
-			A: state.OneSpec{},
-			C: state.OneSpec{},
+		St: state.LolliSpec{
+			X: state.OneSpec{},
+			Z: state.OneSpec{},
 		},
 	}
 	roleRoot1, err := roleApi.Create(roleSpec1)
@@ -189,7 +189,7 @@ func TestTakeRecvSend(t *testing.T) {
 		Name: "seat-2",
 		Via: chnl.Spec{
 			Name: "chnl-2",
-			St:   roleRoot1.St,
+			St:   roleRoot2.St,
 		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)

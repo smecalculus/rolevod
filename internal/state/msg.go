@@ -40,13 +40,33 @@ type ProdMsg struct {
 	State *SpecMsg `json:"state"`
 }
 
+func (mto *ProdMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Value, valid.Required),
+		valid.Field(&mto.State, valid.Required),
+	)
+}
+
 type SumMsg struct {
 	Choices []ChoiceMsg `json:"choices"`
+}
+
+func (mto *SumMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Choices, valid.Required, valid.Length(1, 20)),
+	)
 }
 
 type ChoiceMsg struct {
 	Label string   `json:"label"`
 	State *SpecMsg `json:"state"`
+}
+
+func (mto *ChoiceMsg) Validate() error {
+	return valid.ValidateStruct(mto,
+		valid.Field(&mto.Label, valid.Required, valid.Length(1, 36)),
+		valid.Field(&mto.State, valid.Required),
+	)
 }
 
 type RefMsg struct {
@@ -103,7 +123,7 @@ func MsgFromSpec(s Spec) *SpecMsg {
 	case LolliSpec:
 		return &SpecMsg{
 			K: Lolli,
-			Tensor: &ProdMsg{
+			Lolli: &ProdMsg{
 				Value: MsgFromSpec(spec.X),
 				State: MsgFromSpec(spec.Z),
 			},

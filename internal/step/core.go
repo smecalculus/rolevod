@@ -34,7 +34,7 @@ type root interface {
 // aka exec.Proc
 type ProcRoot struct {
 	ID    id.ADT[ID]
-	PreID id.ADT[ID]
+	// positive or negative
 	Term  Term
 }
 

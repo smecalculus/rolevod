@@ -121,7 +121,6 @@ func dataFromRoot(r root) (*rootData, error) {
 		return &rootData{
 			K:     proc,
 			ID:    root.ID.String(),
-			PreID: root.PreID.String(),
 			Term:  string(pl),
 		}, nil
 	case MsgRoot:
@@ -180,7 +179,7 @@ func dataToRoot(dto *rootData) (root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: rootID, PreID: preID, Term: term}, nil
+		return ProcRoot{ID: rootID, Term: term}, nil
 	case msg:
 		val, err := dataToValue(&pl)
 		if err != nil {

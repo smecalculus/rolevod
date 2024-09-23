@@ -28,6 +28,7 @@ func (h *roleHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	h.log.Debug("role posting started", slog.Any("mto", mto))
 	spec, err := MsgToRoleSpec(mto)
 	if err != nil {
 		return err

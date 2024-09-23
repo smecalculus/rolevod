@@ -24,7 +24,7 @@ tasks:
     aliases: [cps]
     cmds:
       - task: db:images
-      - task: app:image
+      # - task: app:image
 
   solution:packages:
     aliases: [sps]

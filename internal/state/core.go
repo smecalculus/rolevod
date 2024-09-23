@@ -153,7 +153,7 @@ func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
 
 type TensorRoot struct {
 	ID id.ADT[ID]
-	A  Root // value
+	B  Ref  // value
 	C  Root // cont
 }
 
@@ -163,7 +163,7 @@ func (r TensorRoot) Next() Ref { return r.C }
 
 type LolliRoot struct {
 	ID id.ADT[ID]
-	X  Root // value
+	Y  Ref  // value
 	Z  Root // cont
 }
 
@@ -240,13 +240,13 @@ func ConvertSpecToRoot(s Spec) Root {
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,
-			A:  ConvertSpecToRoot(spec.A),
+			B:  ConvertSpecToRoot(spec.A),
 			C:  ConvertSpecToRoot(spec.C),
 		}
 	case LolliSpec:
 		return LolliRoot{
 			ID: newID,
-			X:  ConvertSpecToRoot(spec.X),
+			Y:  ConvertSpecToRoot(spec.X),
 			Z:  ConvertSpecToRoot(spec.Z),
 		}
 	default:

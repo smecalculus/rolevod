@@ -736,73 +736,65 @@ func toEdge(id id.ADT[ID]) string {
 }
 
 // aka checkExp
-func (s *dealService) checkTerm(g step.Term, w state.Root) error {
-	switch got := g.(type) {
+func (s *dealService) checkTerm(t step.Term, st state.Root) error {
+	switch term := t.(type) {
 	case step.CloseSpec:
-		return checkState(w, state.OneRoot{})
+		return checkState(st, state.OneRoot{})
 	case step.WaitSpec:
-		return checkState(w, state.OneRoot{})
+		return checkState(st, state.OneRoot{})
 	case step.SendSpec:
 		// check value
-		want, ok := w.(state.TensorRoot)
+		want, ok := st.(state.TensorRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.TensorRoot{}, w)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.TensorRoot{}, st)
 		}
-		val, err := s.chnls.SelectByID(got.B.ID)
+		got, err := s.chnls.SelectByID(term.B.ID)
 		if err != nil {
 			return err
 		}
-		valSt, err := s.states.SelectByID(val.St.RID())
-		if err != nil {
-			return err
-		}
-		err = checkState(valSt, want.A)
+		err = checkState(got.St, want.B)
 		if err != nil {
 			return err
 		}
 		// no cont to check
 		return nil
 	case step.RecvSpec:
-		want, ok := w.(state.LolliRoot)
+		want, ok := st.(state.LolliRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliRoot{}, w)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliRoot{}, st)
 		}
 		// check value
-		val, err := s.chnls.SelectByID(got.Y.ID)
+		got, err := s.chnls.SelectByID(term.Y.ID)
 		if err != nil {
 			return err
 		}
-		valSt, err := s.states.SelectByID(val.St.RID())
-		if err != nil {
-			return err
-		}
-		err = checkState(valSt, want.X)
+		err = checkState(got.St, want.Y)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkTerm(got.Cont, want.Z)
+		return s.checkTerm(term.Cont, want.Z)
 	case step.LabSpec:
-		want, ok := w.(state.PlusRoot)
+		want, ok := st.(state.PlusRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.PlusRoot{}, w)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.PlusRoot{}, st)
 		}
-		_, ok = want.Choices[got.L]
+		_, ok = want.Choices[term.L]
 		if !ok {
-			return fmt.Errorf("state mismatch: want label %q, got nothing", got.L)
+			return fmt.Errorf("state mismatch: want label %q, got nothing", term.L)
 		}
 		// no cont to check
 		return nil
 	case step.CaseSpec:
-		want, ok := w.(state.WithRoot)
+		want, ok := st.(state.WithRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", state.WithRoot{}, w)
+			return fmt.Errorf("state mismatch: want %T, got %#v", state.WithRoot{}, st)
 		}
-		if len(got.Branches) != len(want.Choices) {
-			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(got.Branches))
+		if len(term.Branches) != len(want.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Branches))
 		}
 		for wantL, wantCh := range want.Choices {
-			gotBr, ok := got.Branches[wantL]
+			gotBr, ok := term.Branches[wantL]
 			if !ok {
 				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
 			}
@@ -813,17 +805,32 @@ func (s *dealService) checkTerm(g step.Term, w state.Root) error {
 		}
 		return nil
 	default:
-		panic(step.ErrUnexpectedTerm(g))
+		panic(step.ErrUnexpectedTerm(t))
 	}
 }
 
 // aka eqtp
 func checkState(got, want state.Root) error {
 	switch wantSt := want.(type) {
+	case state.OneRef:
+		_, ok := got.(state.OneRef)
+		if !ok {
+			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
+		}
+		return nil
 	case state.OneRoot:
 		_, ok := got.(state.OneRoot)
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+		}
+		return nil
+	case state.TensorRef:
+		gotSt, ok := got.(state.TensorRef)
+		if !ok {
+			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
+		}
+		if gotSt != wantSt {
+			return fmt.Errorf("state ref mismatch: want %#v, got %#v", want, got)
 		}
 		return nil
 	case state.TensorRoot:
@@ -831,7 +838,7 @@ func checkState(got, want state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
 		}
-		err := checkState(gotSt.A, wantSt.A)
+		err := checkState(gotSt.B, wantSt.B)
 		if err != nil {
 			return err
 		}
@@ -841,7 +848,7 @@ func checkState(got, want state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
 		}
-		err := checkState(gotSt.X, wantSt.X)
+		err := checkState(gotSt.Y, wantSt.Y)
 		if err != nil {
 			return err
 		}
@@ -885,7 +892,7 @@ func checkState(got, want state.Root) error {
 		}
 		return nil
 	default:
-		panic(state.ErrUnexpectedRoot(got))
+		panic(state.ErrUnexpectedRoot(want))
 	}
 }
 

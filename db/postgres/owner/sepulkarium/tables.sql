@@ -32,6 +32,16 @@ CREATE TABLE states (
 	name varchar(20)
 );
 
+CREATE TABLE states2 (
+	id varchar(20) UNIQUE,
+	kind smallint,
+	from_id varchar(20),
+	on_ref text,
+	on_key varchar(20),
+	to_id varchar(20),
+	to_ids varchar(20)[][]
+);
+
 CREATE TABLE transitions (
 	from_id varchar(20),
 	to_id varchar(20),
