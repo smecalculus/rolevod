@@ -33,9 +33,8 @@ type root interface {
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID    id.ADT[ID]
-	// positive or negative
-	Term  Term
+	ID   id.ADT[ID]
+	Term Term
 }
 
 func (ProcRoot) step() {}
@@ -71,6 +70,10 @@ type Value interface {
 
 type Continuation interface {
 	cont()
+}
+
+type Substitutable interface {
+	Subst(chnl.Ref, chnl.Ref)
 }
 
 type FwdSpec struct {
@@ -131,6 +134,12 @@ type CloseSpec struct {
 func (CloseSpec) term() {}
 func (CloseSpec) val()  {}
 
+func (t *CloseSpec) Subst(varRef chnl.Ref, valRef chnl.Ref) {
+	if varRef == t.A {
+		t.A = valRef
+	}
+}
+
 type WaitSpec struct {
 	X    chnl.Ref
 	Cont Term
@@ -155,20 +164,22 @@ type Repo[T root] interface {
 	SelectByCh(id.ADT[chnl.ID]) (*T, error)
 }
 
-func Subst(t Term, varbl chnl.Ref, value chnl.Ref) {
+func Subst(t Term, varRef chnl.Ref, valRef chnl.Ref) Term {
 	if t == nil {
-		return
+		return nil
 	}
 	switch term := t.(type) {
 	case CloseSpec:
-		if term.A == varbl {
-			term.A = value
+		if varRef == term.A {
+			term.A = valRef
 		}
+		return term
 	case WaitSpec:
-		if term.X == varbl {
-			term.X = value
+		if varRef == term.X {
+			term.X = valRef
 		}
-		Subst(term.Cont, varbl, value)
+		term.Cont = Subst(term.Cont, varRef, valRef)
+		return term
 	default:
 		panic(ErrUnexpectedTerm(t))
 	}

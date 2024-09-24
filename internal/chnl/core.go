@@ -1,6 +1,7 @@
 package chnl
 
 import (
+	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/state"
@@ -18,16 +19,22 @@ type Spec struct {
 type Ref struct {
 	ID   id.ADT[ID]
 	Name string
+	PAK  ak.ADT
+	CAK  ak.ADT
 }
 
 type Var string
 
-// aka ChanTp with ID
 type Root struct {
-	ID    id.ADT[ID]
-	Name  string
+	ID   id.ADT[ID]
+	Name string
+	// Preceding Channel ID
 	PreID id.ADT[ID]
-	St    state.Ref
+	// Producer Access Key
+	PAK ak.ADT
+	// Consumer Access Key
+	CAK ak.ADT
+	St  state.Ref
 }
 
 type Repo interface {
@@ -39,6 +46,7 @@ type Repo interface {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/ak:Ident.*
 var (
 	ConvertRootToRef func(Root) Ref
 )

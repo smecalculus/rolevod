@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
@@ -36,14 +37,16 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		INSERT INTO channels (
-			id, pre_id, name, state
+			id, name, pre_id, pak, cak, state
 		) VALUES (
-			@id, @pre_id, @name, @state
+			@id, @name, @pre_id, @pak, @cak, @state
 		)`
 	args := pgx.NamedArgs{
 		"id":     dto.ID,
-		"pre_id": dto.PreID,
 		"name":   dto.Name,
+		"pre_id": dto.PreID,
+		"pak":    dto.PAK,
+		"cak":    dto.CAK,
 		"state":  dto.St,
 	}
 	_, err = tx.Exec(ctx, query, args)
@@ -56,7 +59,11 @@ func (r *repoPgx) Insert(root Root) error {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	roots := make([]Ref, 5)
 	for i := range 5 {
-		roots[i] = Ref{ID: id.New[ID](), Name: fmt.Sprintf("Root%v", i)}
+		roots[i] = Ref{
+			Name: fmt.Sprintf("Root%v", i),
+			PAK:  ak.New(),
+			CAK:  ak.New(),
+		}
 	}
 	return roots, nil
 }
@@ -64,7 +71,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	query := `
 		SELECT
-			id, pre_id, name, state
+			id, name, pre_id, pak, cak, state
 		FROM channels
 		WHERE id=$1`
 	ctx := context.Background()

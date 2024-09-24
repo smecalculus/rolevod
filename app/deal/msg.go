@@ -114,33 +114,24 @@ var (
 
 type TranSpecMsg struct {
 	DealID string        `json:"deal_id"`
+	AK     string        `json:"access_key"`
 	Term   *step.TermMsg `json:"term"`
-}
-
-
-type TranSpec2Msg struct {
-	DealID string        `json:"deal_id"`
 }
 
 func (mto *TranSpecMsg) Validate() error {
 	return valid.ValidateStruct(mto,
 		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.AK, valid.Required, valid.Length(1, 36)),
 		valid.Field(&mto.Term, valid.Required),
 	)
-}
-
-type TranRootMsg struct {
-	Deal DealRefMsg    `json:"deal"`
-	Term *step.TermMsg `json:"term"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/step:Msg.*
 var (
 	MsgFromTranSpec func(TranSpec) TranSpecMsg
 	MsgToTranSpec   func(TranSpecMsg) (TranSpec, error)
-	MsgFromTranRoot func(TranRoot) TranRootMsg
-	MsgToTranRoot   func(TranRootMsg) (TranRoot, error)
 )

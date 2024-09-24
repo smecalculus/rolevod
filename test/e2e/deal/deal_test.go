@@ -155,7 +155,7 @@ func TestTakeRecvSend(t *testing.T) {
 	roleSpec1 := role.RoleSpec{
 		Name: "role-1",
 		St: state.LolliSpec{
-			X: state.OneSpec{},
+			Y: state.OneSpec{},
 			Z: state.OneSpec{},
 		},
 	}
@@ -197,18 +197,6 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	seatSpec3 := seat.SeatSpec{
-		Name: "seat-3",
-		Via: chnl.Spec{
-			Name: "chnl-3",
-			St:   roleRoot2.St,
-		},
-	}
-	seatRoot3, err := seatApi.Create(seatSpec3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// and
 	dealSpec := deal.DealSpec{
 		Name: "deal-1",
 	}
@@ -235,21 +223,13 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	partSpec3 := deal.PartSpec{
-		DealID: dealRoot.ID,
-		SeatID: seatRoot3.ID,
-	}
-	chnlRef3, err := dealApi.Involve(partSpec3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// and
 	recvSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
+		AK:     chnlRef1.PAK,
 		Term: step.RecvSpec{
 			X:    chnlRef1,
 			Y:    chnlRef2,
-			Cont: step.CloseSpec{A: chnlRef3},
+			Cont: step.CloseSpec{A: chnlRef1},
 		},
 	}
 	// when
@@ -260,6 +240,7 @@ func TestTakeRecvSend(t *testing.T) {
 	// and
 	sendSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
+		AK:     chnlRef1.CAK,
 		Term: step.SendSpec{
 			A: chnlRef1,
 			B: chnlRef2,

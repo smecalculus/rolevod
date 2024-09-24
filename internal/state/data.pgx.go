@@ -116,7 +116,6 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	if len(dtos) == 0 {
 		return nil, fmt.Errorf("no rows selected")
 	}
-	r.log.Debug("state selection succeeded", slog.Any("dtos", dtos))
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
 	return dataToRoot3(dtos, rid.String())
 

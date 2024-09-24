@@ -21,6 +21,8 @@ func (mto *SpecMsg) Validate() error {
 type RefMsg struct {
 	ID   string `json:"id" param:"id"`
 	Name string `json:"name"`
+	PAK  string `json:"pak"`
+	CAK  string `json:"cak"`
 }
 
 func (mto *RefMsg) Validate() error {
@@ -39,6 +41,7 @@ type RootMsg struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgToSpec    func(SpecMsg) (Spec, error)

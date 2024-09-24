@@ -27,14 +27,14 @@ type PlusSpec struct {
 func (PlusSpec) spec() {}
 
 type TensorSpec struct {
-	A Spec
+	B Spec
 	C Spec
 }
 
 func (TensorSpec) spec() {}
 
 type LolliSpec struct {
-	X Spec
+	Y Spec
 	Z Spec
 }
 
@@ -240,13 +240,13 @@ func ConvertSpecToRoot(s Spec) Root {
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,
-			B:  ConvertSpecToRoot(spec.A),
+			B:  ConvertSpecToRoot(spec.B),
 			C:  ConvertSpecToRoot(spec.C),
 		}
 	case LolliSpec:
 		return LolliRoot{
 			ID: newID,
-			Y:  ConvertSpecToRoot(spec.X),
+			Y:  ConvertSpecToRoot(spec.Y),
 			Z:  ConvertSpecToRoot(spec.Z),
 		}
 	default:

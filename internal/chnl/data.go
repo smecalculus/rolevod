@@ -15,18 +15,23 @@ type specData struct {
 type RefData struct {
 	ID   string `db:"id" json:"id,omitempty"`
 	Name string `db:"name" json:"name,omitempty"`
+	PAK  string `db:"pak" json:"pak,omitempty"`
+	CAK  string `db:"cak" json:"cak,omitempty"`
 }
 
 type rootData struct {
 	ID    string         `db:"id"`
-	PreID string         `db:"pre_id"`
 	Name  string         `db:"name"`
+	PreID string         `db:"pre_id"`
+	PAK   string         `db:"pak"`
+	CAK   string         `db:"cak"`
 	St    sql.NullString `db:"state"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (

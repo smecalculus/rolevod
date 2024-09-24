@@ -116,7 +116,7 @@ func MsgFromSpec(s Spec) *SpecMsg {
 		return &SpecMsg{
 			K: Tensor,
 			Tensor: &ProdMsg{
-				Value: MsgFromSpec(spec.A),
+				Value: MsgFromSpec(spec.B),
 				State: MsgFromSpec(spec.C),
 			},
 		}
@@ -124,7 +124,7 @@ func MsgFromSpec(s Spec) *SpecMsg {
 		return &SpecMsg{
 			K: Lolli,
 			Lolli: &ProdMsg{
-				Value: MsgFromSpec(spec.X),
+				Value: MsgFromSpec(spec.Y),
 				State: MsgFromSpec(spec.Z),
 			},
 		}
@@ -167,7 +167,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		return TensorSpec{A: v, C: s}, nil
+		return TensorSpec{B: v, C: s}, nil
 	case Lolli:
 		v, err := MsgToSpec(mto.Lolli.Value)
 		if err != nil {
@@ -177,7 +177,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		return LolliSpec{X: v, Z: s}, nil
+		return LolliSpec{Y: v, Z: s}, nil
 	case With:
 		choices := make(map[Label]Spec, len(mto.With.Choices))
 		for _, ch := range mto.With.Choices {

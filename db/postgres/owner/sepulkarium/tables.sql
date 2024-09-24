@@ -51,8 +51,10 @@ CREATE TABLE transitions (
 
 CREATE TABLE channels (
 	id varchar(20),
-	pre_id varchar(20),
 	name varchar(20),
+	pre_id varchar(20),
+	pak varchar(36),
+	cak varchar(36),
 	state text
 );
 
