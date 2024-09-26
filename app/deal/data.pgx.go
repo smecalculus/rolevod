@@ -53,16 +53,16 @@ func (r *dealRepoPgx) Insert(root DealRoot) error {
 func (r *dealRepoPgx) SelectAll() ([]DealRef, error) {
 	roots := make([]DealRef, 5)
 	for i := range 5 {
-		roots[i] = DealRef{ID: id.New[ID](), Name: fmt.Sprintf("DealRoot%v", i)}
+		roots[i] = DealRef{ID: id.New(), Name: fmt.Sprintf("DealRoot%v", i)}
 	}
 	return roots, nil
 }
 
-func (r *dealRepoPgx) SelectByID(id id.ADT[ID]) (DealRoot, error) {
+func (r *dealRepoPgx) SelectByID(id id.ADT) (DealRoot, error) {
 	return DealRoot{ID: id, Name: "DealRoot"}, nil
 }
 
-func (r *dealRepoPgx) SelectChildren(id id.ADT[ID]) ([]DealRef, error) {
+func (r *dealRepoPgx) SelectChildren(id id.ADT) ([]DealRef, error) {
 	query := `
 		SELECT
 			d.id,
@@ -84,7 +84,7 @@ func (r *dealRepoPgx) SelectChildren(id id.ADT[ID]) ([]DealRef, error) {
 	return DataToDealRefs(dtos)
 }
 
-func (r *dealRepoPgx) SelectSeats(id id.ADT[ID]) ([]seat.SeatRef, error) {
+func (r *dealRepoPgx) SelectSeats(id id.ADT) ([]seat.SeatRef, error) {
 	return []seat.SeatRef{}, nil
 }
 

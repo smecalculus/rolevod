@@ -37,7 +37,7 @@ func (cl *seatClient) Create(spec SeatSpec) (SeatRoot, error) {
 	return MsgToSeatRoot(res)
 }
 
-func (c *seatClient) Retrieve(id id.ADT[ID]) (SeatRoot, error) {
+func (c *seatClient) Retrieve(id id.ADT) (SeatRoot, error) {
 	var res SeatRootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).

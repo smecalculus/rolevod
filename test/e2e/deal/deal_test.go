@@ -43,7 +43,7 @@ func TestEstablishKinship(t *testing.T) {
 	// when
 	ks := deal.KinshipSpec{
 		ParentID:    pr.ID,
-		ChildrenIDs: []id.ADT[deal.ID]{cr.ID},
+		ChildrenIDs: []id.ADT{cr.ID},
 	}
 	err = dealApi.Establish(ks)
 	if err != nil {
@@ -217,6 +217,7 @@ func TestTakeRecvSend(t *testing.T) {
 	partSpec2 := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
+		Ctx:    map[chnl.Sym]id.ADT{"chnl-1": chnlRef1.ID},
 	}
 	chnlRef2, err := dealApi.Involve(partSpec2)
 	if err != nil {

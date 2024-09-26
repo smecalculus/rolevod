@@ -38,7 +38,7 @@ func (cl *roleClient) Create(spec RoleSpec) (RoleRoot, error) {
 	return MsgToRoleRoot(res)
 }
 
-func (c *roleClient) Retrieve(id id.ADT[ID]) (RoleRoot, error) {
+func (c *roleClient) Retrieve(id id.ADT) (RoleRoot, error) {
 	var res RoleRootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
@@ -68,11 +68,11 @@ func (c *roleClient) Establish(ks KinshipSpec) error {
 		SetBody(&req).
 		SetPathParam("id", req.ParentID).
 		Post("/roles/{id}/kinships")
-		if err != nil {
-			return err
-		}
-		if resp.IsError() {
-			return fmt.Errorf("received: %v", string(resp.Body()))
-		}
-		return nil
+	if err != nil {
+		return err
+	}
+	if resp.IsError() {
+		return fmt.Errorf("received: %v", string(resp.Body()))
+	}
+	return nil
 }

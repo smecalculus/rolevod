@@ -10,16 +10,16 @@ func New() ADT {
 	return ADT(xid.New())
 }
 
-func Ident(id ADT) ADT {
-	return id
+func Ident(ak ADT) ADT {
+	return ak
 }
 
-func (id ADT) String() string {
-	return xid.ID(id).String()
+func (ak ADT) String() string {
+	return xid.ID(ak).String()
 }
 
-func StringFrom(id ADT) string {
-	return xid.ID(id).String()
+func StringFrom(ak ADT) string {
+	return xid.ID(ak).String()
 }
 
 func StringTo(s string) (ADT, error) {

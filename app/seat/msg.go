@@ -21,18 +21,6 @@ func (mto *SeatSpecMsg) Validate() error {
 	)
 }
 
-// type ChanTpMsg struct {
-// 	Z     string        `json:"z"`
-// 	State *state.RefMsg `json:"state"`
-// }
-
-// func (mto *ChanTpMsg) Validate() error {
-// 	return valid.ValidateStruct(mto,
-// 		valid.Field(&mto.Z, valid.Required, valid.Max(64)),
-// 		valid.Field(&mto.State, valid.Required),
-// 	)
-// }
-
 type RefMsg struct {
 	ID string `param:"id" query:"id" json:"id"`
 }
@@ -52,21 +40,23 @@ type SeatRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToID          func(string) (id.ADT[ID], error)
-	MsgFromID        func(id.ADT[ID]) string
-	MsgToSeatSpec    func(SeatSpecMsg) (SeatSpec, error)
-	MsgFromSeatSpec  func(SeatSpec) SeatSpecMsg
-	MsgToSeatRef     func(SeatRefMsg) (SeatRef, error)
-	MsgFromSeatRef   func(SeatRef) SeatRefMsg
-	MsgToSeatRoot    func(SeatRootMsg) (SeatRoot, error)
+	MsgToID         func(string) (id.ADT, error)
+	MsgFromID       func(id.ADT) string
+	// goverter:ignore Ctx
+	MsgToSeatSpec   func(SeatSpecMsg) (SeatSpec, error)
+	// goverter:ignore Ctx
+	MsgFromSeatSpec func(SeatSpec) SeatSpecMsg
+	MsgToSeatRef    func(SeatRefMsg) (SeatRef, error)
+	MsgFromSeatRef  func(SeatRef) SeatRefMsg
+	// goverter:ignore Ctx
+	MsgToSeatRoot func(SeatRootMsg) (SeatRoot, error)
+	// goverter:ignore Ctx
 	MsgFromSeatRoot  func(SeatRoot) SeatRootMsg
 	MsgFromSeatRoots func([]SeatRoot) []SeatRootMsg
-	// MsgToChanTp      func(ChanTpMsg) (ChanTp, error)
-	// MsgFromChanTp    func(ChanTp) ChanTpMsg
 )
 
 type KinshipSpecMsg struct {
@@ -81,7 +71,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)

@@ -33,7 +33,7 @@ func (cl *agentClient) Create(spec AgentSpec) (AgentRoot, error) {
 	return MsgToAgentRoot(res)
 }
 
-func (c *agentClient) Retrieve(id id.ADT[ID]) (AgentRoot, error) {
+func (c *agentClient) Retrieve(id id.ADT) (AgentRoot, error) {
 	var res AgentRootMsg
 	_, err := c.resty.R().
 		SetResult(&res).

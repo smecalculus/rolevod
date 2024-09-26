@@ -28,7 +28,7 @@ type RoleRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgFromRoleSpec  func(RoleSpec) RoleSpecMsg
@@ -55,7 +55,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg

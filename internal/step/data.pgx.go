@@ -10,8 +10,6 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
-
-	"smecalculus/rolevod/internal/chnl"
 )
 
 // Adapter
@@ -82,7 +80,7 @@ func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
 	// return DataToRefs(dtos)
 }
 
-func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
+func (r *repoPgx[T]) SelectByID(rid id.ADT) (*T, error) {
 	query := `
 		SELECT
 			id, kind, pre_id, via_id, payload
@@ -112,7 +110,7 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT[ID]) (*T, error) {
 	return &concrete, nil
 }
 
-func (r *repoPgx[T]) SelectByCh(chid id.ADT[chnl.ID]) (*T, error) {
+func (r *repoPgx[T]) SelectByCh(chid id.ADT) (*T, error) {
 	query := `
 		SELECT
 			id, kind, pre_id, via_id, payload

@@ -13,13 +13,13 @@ type AgentSpec struct {
 }
 
 type AgentRef struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 }
 
 // Aggregate Root
 type AgentRoot struct {
-	ID       id.ADT[ID]
+	ID       id.ADT
 	Name     string
 	Children []AgentRef
 }
@@ -27,7 +27,7 @@ type AgentRoot struct {
 // Port
 type AgentApi interface {
 	Create(AgentSpec) (AgentRoot, error)
-	Retrieve(id.ADT[ID]) (AgentRoot, error)
+	Retrieve(id.ADT) (AgentRoot, error)
 	Establish(KinshipSpec) error
 	RetreiveAll() ([]AgentRef, error)
 }
@@ -45,7 +45,7 @@ func newAgentService(agents agentRepo, kinships kinshipRepo, l *slog.Logger) *ag
 
 func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
 	root := AgentRoot{
-		ID:   id.New[ID](),
+		ID:   id.New(),
 		Name: spec.Name,
 	}
 	err := s.agents.Insert(root)
@@ -55,7 +55,7 @@ func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
 	return root, nil
 }
 
-func (s *agentService) Retrieve(id id.ADT[ID]) (AgentRoot, error) {
+func (s *agentService) Retrieve(id id.ADT) (AgentRoot, error) {
 	root, err := s.agents.SelectByID(id)
 	if err != nil {
 		return AgentRoot{}, err
@@ -91,14 +91,14 @@ func (s *agentService) RetreiveAll() ([]AgentRef, error) {
 // Port
 type agentRepo interface {
 	Insert(AgentRoot) error
-	SelectByID(id.ADT[ID]) (AgentRoot, error)
-	SelectChildren(id.ADT[ID]) ([]AgentRef, error)
+	SelectByID(id.ADT) (AgentRoot, error)
+	SelectChildren(id.ADT) ([]AgentRef, error)
 	SelectAll() ([]AgentRef, error)
 }
 
 type KinshipSpec struct {
-	ParentID    id.ADT[ID]
-	ChildrenIDs []id.ADT[ID]
+	ParentID    id.ADT
+	ChildrenIDs []id.ADT
 }
 
 type KinshipRoot struct {
@@ -112,19 +112,7 @@ type kinshipRepo interface {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:Ident
 var (
 	ToAgentRef func(AgentRoot) AgentRef
 )
-
-func toSame(id id.ADT[ID]) id.ADT[ID] {
-	return id
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
-}

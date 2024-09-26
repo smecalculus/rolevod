@@ -40,7 +40,7 @@ func (cl *dealClient) Create(spec DealSpec) (DealRoot, error) {
 	return MsgToDealRoot(res)
 }
 
-func (c *dealClient) Retrieve(id id.ADT[ID]) (DealRoot, error) {
+func (c *dealClient) Retrieve(id id.ADT) (DealRoot, error) {
 	var res DealRootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).

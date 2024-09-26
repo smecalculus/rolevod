@@ -93,7 +93,6 @@ const (
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
 // goverter:extend data.*
 var (
 	// DataToRef func(refData) (Ref, error)
@@ -119,9 +118,9 @@ func dataFromRoot(r root) (*rootData, error) {
 			return nil, err
 		}
 		return &rootData{
-			K:     proc,
-			ID:    root.ID.String(),
-			Term:  string(pl),
+			K:    proc,
+			ID:   root.ID.String(),
+			Term: string(pl),
 		}, nil
 	case MsgRoot:
 		pl, err := json.Marshal(dataFromValue(root.Val))
@@ -156,15 +155,15 @@ func dataToRoot(dto *rootData) (root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rootID, err := id.String[ID](dto.ID)
+	rootID, err := id.StringFrom(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	preID, err := id.String[ID](dto.PreID)
+	preID, err := id.StringFrom(dto.PreID)
 	if err != nil {
 		return nil, err
 	}
-	viaID, err := id.String[chnl.ID](dto.ViaID)
+	viaID, err := id.StringFrom(dto.ViaID)
 	if err != nil {
 		return nil, err
 	}

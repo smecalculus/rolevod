@@ -87,7 +87,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
+func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
 		WITH RECURSIVE sts AS (
 			SELECT
@@ -119,24 +119,24 @@ func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
 	return dataToRoot3(dtos, rid.String())
 
-	// fooId := id.New[ID]()
+	// fooId := id.New()
 	// queue := &WithRoot{
-	// 	ID: id.New[ID](),
+	// 	ID: id.New(),
 	// 	Choices: map[Label]Root{
 	// 		"enq": &TensorRoot{
-	// 			ID: id.New[ID](),
+	// 			ID: id.New(),
 	// 			A:  &RecurRoot{ID: fooId, Name: "Foo"},
 	// 			C:  &RecurRoot{ID: sid, Name: "Queue"},
 	// 		},
 	// 		"deq": &PlusRoot{
-	// 			ID: id.New[ID](),
+	// 			ID: id.New(),
 	// 			Choices: map[Label]Root{
 	// 				"some": &LolliRoot{
-	// 					ID: id.New[ID](),
+	// 					ID: id.New(),
 	// 					X:  &RecurRoot{ID: fooId, Name: "Foo"},
 	// 					Z:  &RecurRoot{ID: sid, Name: "Queue"},
 	// 				},
-	// 				"none": &OneRoot{ID: id.New[ID]()},
+	// 				"none": &OneRoot{ID: id.New()},
 	// 			},
 	// 		},
 	// 	},

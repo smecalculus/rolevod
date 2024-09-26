@@ -48,11 +48,11 @@ func (r *agentRepoPgx) Insert(root AgentRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *agentRepoPgx) SelectByID(id id.ADT[ID]) (AgentRoot, error) {
+func (r *agentRepoPgx) SelectByID(id id.ADT) (AgentRoot, error) {
 	return AgentRoot{ID: id, Name: "AgentRoot"}, nil
 }
 
-func (r *agentRepoPgx) SelectChildren(id id.ADT[ID]) ([]AgentRef, error) {
+func (r *agentRepoPgx) SelectChildren(id id.ADT) ([]AgentRef, error) {
 	query := `
 		SELECT
 			f.id,
@@ -77,7 +77,7 @@ func (r *agentRepoPgx) SelectChildren(id id.ADT[ID]) ([]AgentRef, error) {
 func (r *agentRepoPgx) SelectAll() ([]AgentRef, error) {
 	roots := make([]AgentRef, 5)
 	for i := range 5 {
-		roots[i] = AgentRef{ID: id.New[ID](), Name: fmt.Sprintf("AgentRoot%v", i)}
+		roots[i] = AgentRef{ID: id.New(), Name: fmt.Sprintf("AgentRoot%v", i)}
 	}
 	return roots, nil
 }

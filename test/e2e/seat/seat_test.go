@@ -35,7 +35,7 @@ func TestEstablish(t *testing.T) {
 	// when
 	ks := seat.KinshipSpec{
 		ParentID:    pr.ID,
-		ChildrenIDs: []id.ADT[seat.ID]{cr.ID},
+		ChildrenIDs: []id.ADT{cr.ID},
 	}
 	err = seatApi.Establish(ks)
 	if err != nil {

@@ -16,14 +16,14 @@ type RoleSpec struct {
 }
 
 type RoleRef struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 	St   state.Ref
 }
 
 // aka TpDef
 type RoleRoot struct {
-	ID       id.ADT[ID]
+	ID       id.ADT
 	Name     string
 	St       state.Ref
 	Children []RoleRef
@@ -31,7 +31,7 @@ type RoleRoot struct {
 
 type RoleApi interface {
 	Create(RoleSpec) (RoleRoot, error)
-	Retrieve(id.ADT[ID]) (RoleRoot, error)
+	Retrieve(id.ADT) (RoleRoot, error)
 	RetreiveAll() ([]RoleRef, error)
 	Update(RoleRoot) error
 	Establish(KinshipSpec) error
@@ -58,7 +58,7 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
 	st := state.ConvertSpecToRoot(spec.St)
 	root := RoleRoot{
-		ID:   id.New[ID](),
+		ID:   id.New(),
 		Name: spec.Name,
 		// State: state.ConvertRootToRef(st),
 		St: st,
@@ -89,7 +89,7 @@ func (s *roleService) Update(root RoleRoot) error {
 	return s.roles.Insert(root)
 }
 
-func (s *roleService) Retrieve(rid id.ADT[ID]) (RoleRoot, error) {
+func (s *roleService) Retrieve(rid id.ADT) (RoleRoot, error) {
 	root, err := s.roles.SelectByID(rid)
 	if err != nil {
 		return RoleRoot{}, err
@@ -125,13 +125,13 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 type roleRepo interface {
 	Insert(RoleRoot) error
 	SelectAll() ([]RoleRef, error)
-	SelectByID(id.ADT[ID]) (RoleRoot, error)
-	SelectChildren(id.ADT[ID]) ([]RoleRef, error)
+	SelectByID(id.ADT) (RoleRoot, error)
+	SelectChildren(id.ADT) ([]RoleRef, error)
 }
 
 type KinshipSpec struct {
-	ParentID    id.ADT[ID]
-	ChildrenIDs []id.ADT[ID]
+	ParentID    id.ADT
+	ChildrenIDs []id.ADT
 }
 
 type KinshipRoot struct {
@@ -145,20 +145,8 @@ type kinshipRepo interface {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:Ident
 // goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
 	ConverRootToRef func(RoleRoot) RoleRef
 )
-
-func toSame(id id.ADT[ID]) id.ADT[ID] {
-	return id
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
-}

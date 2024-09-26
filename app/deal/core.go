@@ -21,13 +21,13 @@ type DealSpec struct {
 }
 
 type DealRef struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 }
 
 // aka Configuration or Eta
 type DealRoot struct {
-	ID       id.ADT[ID]
+	ID       id.ADT
 	Name     string
 	Children []DealRef
 	Seats    []seat.SeatRef
@@ -35,14 +35,14 @@ type DealRoot struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:Ident
 var (
 	ConvertRootToRef func(DealRoot) DealRef
 )
 
 type DealApi interface {
 	Create(DealSpec) (DealRoot, error)
-	Retrieve(id.ADT[ID]) (DealRoot, error)
+	Retrieve(id.ADT) (DealRoot, error)
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
 	Involve(PartSpec) (chnl.Ref, error)
@@ -79,7 +79,7 @@ func newDealService(
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 	s.log.Debug("deal creation started", slog.Any("spec", spec))
 	root := DealRoot{
-		ID:   id.New[ID](),
+		ID:   id.New(),
 		Name: spec.Name,
 	}
 	err := s.deals.Insert(root)
@@ -94,7 +94,7 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 	return root, nil
 }
 
-func (s *dealService) Retrieve(id id.ADT[ID]) (DealRoot, error) {
+func (s *dealService) Retrieve(id id.ADT) (DealRoot, error) {
 	root, err := s.deals.SelectByID(id)
 	if err != nil {
 		return DealRoot{}, err
@@ -140,7 +140,7 @@ func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
 	}
 	// TODO переоформление контекста
 	newChnl := chnl.Root{
-		ID:   id.New[chnl.ID](),
+		ID:   id.New(),
 		Name: seat.Via.Name,
 		PAK:  ak.New(),
 		CAK:  ak.New(),
@@ -198,7 +198,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			err = fmt.Errorf("unexpected access key: %s", spec.AK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("ak", spec.AK),
 			)
 			return err
 		}
@@ -220,7 +219,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.A.ID,
 				Val:   term,
 			}
@@ -246,7 +245,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		// consume channel
 		finChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			St:    nil,
@@ -296,7 +295,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			err = fmt.Errorf("unexpected access key: %s", spec.AK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("ak", spec.AK),
 			)
 			return err
 		}
@@ -317,7 +315,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.X.ID,
 				Cont:  term,
 			}
@@ -343,7 +341,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		// consume channel
 		finChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			St:    nil,
@@ -396,7 +394,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			err = fmt.Errorf("unexpected access key: %s", spec.AK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("ak", spec.AK),
 			)
 			return err
 		}
@@ -417,7 +414,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.A.ID,
 				Val:   term,
 			}
@@ -442,7 +439,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		newChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  recv.X.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
@@ -495,7 +492,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			err = fmt.Errorf("unexpected access key: %s", spec.AK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("ak", spec.AK),
 			)
 			return err
 		}
@@ -516,7 +512,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.X.ID,
 				Cont:  term,
 			}
@@ -541,7 +537,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		newChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  val.A.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
@@ -602,7 +598,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.C.ID,
 				Val:   term,
 			}
@@ -627,7 +623,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		newChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  cont.X.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
@@ -688,7 +684,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New[step.ID](),
+				ID:    id.New(),
 				ViaID: term.X.ID,
 				Cont:  term,
 			}
@@ -713,7 +709,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		newChnl := chnl.Root{
-			ID:    id.New[chnl.ID](),
+			ID:    id.New(),
 			Name:  val.C.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
@@ -739,15 +735,15 @@ func (s *dealService) Take(spec TranSpec) error {
 type dealRepo interface {
 	Insert(DealRoot) error
 	SelectAll() ([]DealRef, error)
-	SelectByID(id.ADT[ID]) (DealRoot, error)
-	SelectChildren(id.ADT[ID]) ([]DealRef, error)
-	SelectSeats(id.ADT[ID]) ([]seat.SeatRef, error)
+	SelectByID(id.ADT) (DealRoot, error)
+	SelectChildren(id.ADT) ([]DealRef, error)
+	SelectSeats(id.ADT) ([]seat.SeatRef, error)
 }
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID    id.ADT[ID]
-	ChildrenIDs []id.ADT[ID]
+	ParentID    id.ADT
+	ChildrenIDs []id.ADT
 }
 
 type KinshipRoot struct {
@@ -759,15 +755,18 @@ type kinshipRepo interface {
 	Insert(KinshipRoot) error
 }
 
-// Partitcipation Relation
+// Participation
 type PartSpec struct {
-	DealID id.ADT[ID]
-	SeatID id.ADT[seat.ID]
+	DealID id.ADT
+	SeatID id.ADT
+	Ctx    map[chnl.Sym]id.ADT
 }
 
 type PartRoot struct {
 	Deal DealRef
 	Seat seat.SeatRef
+	Via  chnl.EP
+	// Ctx  map[chnl.Sym]chnl.EP
 }
 
 type partRepo interface {
@@ -776,21 +775,9 @@ type partRepo interface {
 
 // Transition
 type TranSpec struct {
-	DealID id.ADT[ID]
+	DealID id.ADT
 	AK     ak.ADT
 	Term   step.Term
-}
-
-func toSame(id id.ADT[ID]) id.ADT[ID] {
-	return id
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
 }
 
 // aka checkExp

@@ -47,7 +47,7 @@ func (OneSpec) spec() {}
 // aka TpName
 type RecurSpec struct {
 	Name string
-	ToID id.ADT[ID]
+	ToID id.ADT
 }
 
 func (RecurSpec) spec() {}
@@ -67,56 +67,56 @@ func (DownSpec) spec() {}
 type ID interface{}
 
 type Ref interface {
-	RID() id.ADT[ID]
+	RID() id.ADT
 }
 
 type WithRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r WithRef) RID() id.ADT[ID] { return r.ID }
+func (r WithRef) RID() id.ADT { return r.ID }
 
 type PlusRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r PlusRef) RID() id.ADT[ID] { return r.ID }
+func (r PlusRef) RID() id.ADT { return r.ID }
 
 type TensorRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r TensorRef) RID() id.ADT[ID] { return r.ID }
+func (r TensorRef) RID() id.ADT { return r.ID }
 
 type LolliRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r LolliRef) RID() id.ADT[ID] { return r.ID }
+func (r LolliRef) RID() id.ADT { return r.ID }
 
 type OneRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r OneRef) RID() id.ADT[ID] { return r.ID }
+func (r OneRef) RID() id.ADT { return r.ID }
 
 type RecurRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r RecurRef) RID() id.ADT[ID] { return r.ID }
+func (r RecurRef) RID() id.ADT { return r.ID }
 
 type UpRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r UpRef) RID() id.ADT[ID] { return r.ID }
+func (r UpRef) RID() id.ADT { return r.ID }
 
 type DownRef struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
-func (r DownRef) RID() id.ADT[ID] { return r.ID }
+func (r DownRef) RID() id.ADT { return r.ID }
 
 // aka Stype
 type Root interface {
@@ -133,85 +133,85 @@ type Sum interface {
 
 // aka Internal Choice
 type PlusRoot struct {
-	ID      id.ADT[ID]
+	ID      id.ADT
 	Choices map[Label]Root
 }
 
-func (r PlusRoot) RID() id.ADT[ID] { return r.ID }
+func (r PlusRoot) RID() id.ADT { return r.ID }
 
 func (r PlusRoot) Next(l Label) Ref { return r.Choices[l] }
 
 // aka External Choice
 type WithRoot struct {
-	ID      id.ADT[ID]
+	ID      id.ADT
 	Choices map[Label]Root
 }
 
-func (r WithRoot) RID() id.ADT[ID] { return r.ID }
+func (r WithRoot) RID() id.ADT { return r.ID }
 
 func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
 
 type TensorRoot struct {
-	ID id.ADT[ID]
+	ID id.ADT
 	B  Ref  // value
 	C  Root // cont
 }
 
-func (r TensorRoot) RID() id.ADT[ID] { return r.ID }
+func (r TensorRoot) RID() id.ADT { return r.ID }
 
 func (r TensorRoot) Next() Ref { return r.C }
 
 type LolliRoot struct {
-	ID id.ADT[ID]
+	ID id.ADT
 	Y  Ref  // value
 	Z  Root // cont
 }
 
-func (r LolliRoot) RID() id.ADT[ID] { return r.ID }
+func (r LolliRoot) RID() id.ADT { return r.ID }
 
 func (r LolliRoot) Next() Ref { return r.Z }
 
 type OneRoot struct {
-	ID id.ADT[ID]
+	ID id.ADT
 }
 
 func (OneRoot) spec() {}
 
-func (r OneRoot) RID() id.ADT[ID] { return r.ID }
+func (r OneRoot) RID() id.ADT { return r.ID }
 
 // aka TpName
 type RecurRoot struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
-	ToID id.ADT[ID]
+	ToID id.ADT
 }
 
 func (RecurRoot) spec() {}
 
-func (r RecurRoot) RID() id.ADT[ID] { return r.ID }
+func (r RecurRoot) RID() id.ADT { return r.ID }
 
 type UpRoot struct {
-	ID id.ADT[ID]
+	ID id.ADT
 	A  Root
 }
 
 func (UpRoot) spec() {}
 
-func (r UpRoot) RID() id.ADT[ID] { return r.ID }
+func (r UpRoot) RID() id.ADT { return r.ID }
 
 type DownRoot struct {
-	ID id.ADT[ID]
+	ID id.ADT
 	A  Root
 }
 
 func (DownRoot) spec() {}
 
-func (r DownRoot) RID() id.ADT[ID] { return r.ID }
+func (r DownRoot) RID() id.ADT { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT[ID]) (Root, error)
+	SelectByID(id.ADT) (Root, error)
 }
 
 func ErrUnexpectedSpec(v Spec) error {
@@ -230,7 +230,7 @@ func ConvertSpecToRoot(s Spec) Root {
 	if s == nil {
 		return nil
 	}
-	newID := id.New[ID]()
+	newID := id.New()
 	switch spec := s.(type) {
 	case OneSpec:
 		// TODO генерировать zero id или не генерировать id вообще
@@ -263,12 +263,4 @@ func ConvertRootToRef(r Root) Ref {
 		return nil
 	}
 	return r.(Ref)
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
 }

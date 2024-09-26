@@ -30,7 +30,7 @@ type rootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*

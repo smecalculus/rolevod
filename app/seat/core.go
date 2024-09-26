@@ -14,26 +14,26 @@ type ID interface{}
 type SeatSpec struct {
 	Name string
 	Via  chnl.Spec
-	Ctx  []chnl.Spec
+	Ctx  map[chnl.Sym]chnl.Spec
 }
 
 type SeatRef struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 }
 
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
-	ID       id.ADT[ID]
+	ID       id.ADT
 	Name     string
 	Via      chnl.Spec
-	Ctx      []chnl.Spec
+	Ctx      map[chnl.Sym]chnl.Spec
 	Children []SeatRef
 }
 
 type SeatApi interface {
 	Create(SeatSpec) (SeatRoot, error)
-	Retrieve(id.ADT[ID]) (SeatRoot, error)
+	Retrieve(id.ADT) (SeatRoot, error)
 	Establish(KinshipSpec) error
 	RetreiveAll() ([]SeatRef, error)
 }
@@ -53,7 +53,7 @@ func newSeatService(seats SeatRepo, states state.Repo, kinships kinshipRepo, l *
 func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	s.log.Debug("seat creation started", slog.Any("spec", spec))
 	root := SeatRoot{
-		ID:   id.New[ID](),
+		ID:   id.New(),
 		Name: spec.Name,
 		Via:  spec.Via,
 		Ctx:  spec.Ctx,
@@ -70,7 +70,7 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	return root, nil
 }
 
-func (s *seatService) Retrieve(rid id.ADT[ID]) (SeatRoot, error) {
+func (s *seatService) Retrieve(rid id.ADT) (SeatRoot, error) {
 	root, err := s.seats.SelectByID(rid)
 	if err != nil {
 		return SeatRoot{}, err
@@ -106,14 +106,14 @@ func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 type SeatRepo interface {
 	Insert(SeatRoot) error
 	SelectAll() ([]SeatRef, error)
-	SelectByID(id.ADT[ID]) (SeatRoot, error)
-	SelectChildren(id.ADT[ID]) ([]SeatRef, error)
+	SelectByID(id.ADT) (SeatRoot, error)
+	SelectChildren(id.ADT) ([]SeatRef, error)
 }
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID    id.ADT[ID]
-	ChildrenIDs []id.ADT[ID]
+	ParentID    id.ADT
+	ChildrenIDs []id.ADT
 }
 
 type KinshipRoot struct {
@@ -127,19 +127,7 @@ type kinshipRepo interface {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:Ident
 var (
 	ConvertRootToRef func(SeatRoot) SeatRef
 )
-
-func toSame(id id.ADT[ID]) id.ADT[ID] {
-	return id
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
-}

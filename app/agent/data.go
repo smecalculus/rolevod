@@ -18,7 +18,7 @@ type kinshipRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	// agent
 	DataToAgentRef    func(agentRefData) (AgentRef, error)

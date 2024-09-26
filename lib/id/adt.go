@@ -4,20 +4,28 @@ import (
 	"github.com/rs/xid"
 )
 
-type ADT[T any] xid.ID
+type ADT xid.ID
 
-func New[T any]() ADT[T] {
-	return ADT[T](xid.New())
+func New() ADT {
+	return ADT(xid.New())
 }
 
-func (id ADT[T]) String() string {
+func Ident(id ADT) ADT {
+	return id
+}
+
+func (id ADT) String() string {
 	return xid.ID(id).String()
 }
 
-func String[T any](sid string) (ADT[T], error) {
-	xid, err := xid.FromString(sid)
+func StringTo(id ADT) string {
+	return xid.ID(id).String()
+}
+
+func StringFrom(s string) (ADT, error) {
+	xid, err := xid.FromString(s)
 	if err != nil {
-		return ADT[T]{}, err
+		return ADT{}, err
 	}
-	return ADT[T](xid), nil
+	return ADT(xid), nil
 }

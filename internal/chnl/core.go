@@ -17,19 +17,26 @@ type Spec struct {
 
 // aka Z
 type Ref struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 	PAK  ak.ADT
 	CAK  ak.ADT
 }
 
-type Var string
+// Communication Endpoint
+type EP struct {
+	ID id.ADT
+	AK ak.ADT
+}
+
+// Symbol
+type Sym string
 
 type Root struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Name string
 	// Preceding Channel ID
-	PreID id.ADT[ID]
+	PreID id.ADT
 	// Producer Access Key
 	PAK ak.ADT
 	// Consumer Access Key
@@ -40,25 +47,14 @@ type Root struct {
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT[ID]) (Root, error)
+	SelectByID(id.ADT) (Root, error)
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
-// goverter:extend smecalculus/rolevod/lib/ak:Ident.*
+// goverter:extend smecalculus/rolevod/lib/id:Ident
+// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/ak:Ident
 var (
 	ConvertRootToRef func(Root) Ref
 )
-
-func toSame(id id.ADT[ID]) id.ADT[ID] {
-	return id
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
-}

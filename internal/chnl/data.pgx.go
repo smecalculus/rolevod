@@ -68,7 +68,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return roots, nil
 }
 
-func (r *repoPgx) SelectByID(rid id.ADT[ID]) (Root, error) {
+func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
 		SELECT
 			id, name, pre_id, pak, cak, state

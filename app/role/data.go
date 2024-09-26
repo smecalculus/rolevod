@@ -23,7 +23,7 @@ type roleRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend data.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
@@ -38,7 +38,7 @@ var (
 )
 
 func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
-	id, err := id.String[ID](dto.ID)
+	id, err := id.StringFrom(dto.ID)
 	if err != nil {
 		return RoleRoot{}, nil
 	}
@@ -82,7 +82,7 @@ type kinshipRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 var (
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)

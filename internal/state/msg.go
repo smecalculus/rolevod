@@ -94,7 +94,7 @@ const (
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend Msg.*
 var (
 	MsgFromRefs func([]Ref) []RefMsg
@@ -153,7 +153,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	case One:
 		return OneSpec{}, nil
 	case Recur:
-		id, err := id.String[ID](mto.Recur.ToID)
+		id, err := id.StringFrom(mto.Recur.ToID)
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +230,7 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	if mto == nil {
 		return nil, nil
 	}
-	rid, err := id.String[ID](mto.ID)
+	rid, err := id.StringFrom(mto.ID)
 	if err != nil {
 		return nil, err
 	}

@@ -70,26 +70,26 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 	return DataToRoleRefs(dtos)
 }
 
-func (r *roleRepoPgx) SelectByID(rid id.ADT[ID]) (RoleRoot, error) {
-	// fooID := id.New[state.ID]()
+func (r *roleRepoPgx) SelectByID(rid id.ADT) (RoleRoot, error) {
+	// fooID := id.New()
 	// queueID, _ := id.String[state.ID](rid.String())
 	// queue := &state.WithRoot{
-	// 	ID: id.New[state.ID](),
+	// 	ID: id.New(),
 	// 	Choices: map[state.Label]state.Root{
 	// 		"enq": &state.TensorRoot{
-	// 			ID: id.New[state.ID](),
+	// 			ID: id.New(),
 	// 			S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
 	// 			T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
 	// 		},
 	// 		"deq": &state.PlusRoot{
-	// 			ID: id.New[state.ID](),
+	// 			ID: id.New(),
 	// 			Choices: map[state.Label]state.Root{
 	// 				"some": &state.LolliRoot{
-	// 					ID: id.New[state.ID](),
+	// 					ID: id.New(),
 	// 					S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
 	// 					T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
 	// 				},
-	// 				"none": &state.OneRoot{ID: id.New[state.ID]()},
+	// 				"none": &state.OneRoot{ID: id.New()},
 	// 			},
 	// 		},
 	// 	},
@@ -116,7 +116,7 @@ func (r *roleRepoPgx) SelectByID(rid id.ADT[ID]) (RoleRoot, error) {
 	return dataToRoleRoot(dto)
 }
 
-func (r *roleRepoPgx) SelectChildren(id id.ADT[ID]) ([]RoleRef, error) {
+func (r *roleRepoPgx) SelectChildren(id id.ADT) ([]RoleRef, error) {
 	query := `
 		SELECT
 			r.id,

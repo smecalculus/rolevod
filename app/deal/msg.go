@@ -43,7 +43,7 @@ type DealRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
@@ -76,7 +76,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
@@ -103,13 +103,15 @@ type PartRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
+	// goverter:ignore Ctx
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)
 	MsgFromPartRoot func(PartRoot) PartRootMsg
-	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
+	// goverter:ignore Via
+	MsgToPartRoot func(PartRootMsg) (PartRoot, error)
 )
 
 type TranSpecMsg struct {
@@ -128,7 +130,7 @@ func (mto *TranSpecMsg) Validate() error {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/step:Msg.*
 var (

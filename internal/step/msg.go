@@ -141,16 +141,6 @@ func (mto *CaseMsg) Validate() error {
 	)
 }
 
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend to.*
-// var (
-// MsgToRef    func(RefMsg) (Ref, error)
-// MsgFromRef  func(Ref) RefMsg
-// MsgToRefs   func([]RefMsg) ([]Ref, error)
-// MsgFromRefs func([]Ref) []RefMsg
-// )
-
 func MsgFromTerm(t Term) *TermMsg {
 	if t == nil {
 		return nil

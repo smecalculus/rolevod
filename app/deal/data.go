@@ -17,7 +17,7 @@ type dealRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	DataToDealRef    func(dealRefData) (DealRef, error)
 	DataFromDealRef  func(DealRef) dealRefData
@@ -35,7 +35,7 @@ type kinshipRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
 	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
@@ -48,9 +48,10 @@ type partRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/seat:Data.*
 var (
+	// goverter:ignore Via
 	DataToPartRoot   func(partRootData) (PartRoot, error)
 	DataFromPartRoot func(PartRoot) partRootData
 )

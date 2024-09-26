@@ -31,7 +31,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend to.*
+// goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	// agent
 	MsgToAgentSpec    func(AgentSpecMsg) (AgentSpec, error)

@@ -12,20 +12,20 @@ import (
 type ID interface{}
 
 type Ref interface {
-	rootID() id.ADT[ID]
+	rootID() id.ADT
 }
 
-type ProcRef id.ADT[ID]
+type ProcRef id.ADT
 
-func (r ProcRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r ProcRef) rootID() id.ADT { return id.ADT(r) }
 
-type MsgRef id.ADT[ID]
+type MsgRef id.ADT
 
-func (r MsgRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r MsgRef) rootID() id.ADT { return id.ADT(r) }
 
-type SrvRef id.ADT[ID]
+type SrvRef id.ADT
 
-func (r SrvRef) rootID() id.ADT[ID] { return id.ADT[ID](r) }
+func (r SrvRef) rootID() id.ADT { return id.ADT(r) }
 
 type root interface {
 	step()
@@ -33,7 +33,7 @@ type root interface {
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID   id.ADT[ID]
+	ID   id.ADT
 	Term Term
 }
 
@@ -41,18 +41,18 @@ func (ProcRoot) step() {}
 
 // aka exec.Msg
 type MsgRoot struct {
-	ID    id.ADT[ID]
-	PreID id.ADT[ID]
-	ViaID id.ADT[chnl.ID]
+	ID    id.ADT
+	PreID id.ADT
+	ViaID id.ADT
 	Val   Value
 }
 
 func (MsgRoot) step() {}
 
 type SrvRoot struct {
-	ID    id.ADT[ID]
-	PreID id.ADT[ID]
-	ViaID id.ADT[chnl.ID]
+	ID    id.ADT
+	PreID id.ADT
+	ViaID id.ADT
 	Cont  Continuation
 }
 
@@ -85,7 +85,7 @@ func (FwdSpec) term() {}
 
 type SpawnSpec struct {
 	Name string
-	C    chnl.Var
+	C    chnl.Sym
 	Ctx  []chnl.Ref
 	Cont Term
 }
@@ -151,8 +151,8 @@ func (WaitSpec) cont() {}
 // aka ExpName
 type RecurSpec struct {
 	Name string
-	C    chnl.Var
-	Ctx  []chnl.Var
+	C    chnl.Sym
+	Ctx  []chnl.Sym
 }
 
 func (RecurSpec) term() {}
@@ -160,8 +160,8 @@ func (RecurSpec) term() {}
 type Repo[T root] interface {
 	Insert(root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT[ID]) (*T, error)
-	SelectByCh(id.ADT[chnl.ID]) (*T, error)
+	SelectByID(id.ADT) (*T, error)
+	SelectByCh(id.ADT) (*T, error)
 }
 
 func Subst(t Term, varRef chnl.Ref, valRef chnl.Ref) Term {
@@ -199,12 +199,4 @@ func ErrUnexpectedValue(v Value) error {
 
 func ErrUnexpectedCont(c Continuation) error {
 	return fmt.Errorf("unexpected continuation %#v", c)
-}
-
-func toCore(s string) (id.ADT[ID], error) {
-	return id.String[ID](s)
-}
-
-func toEdge(id id.ADT[ID]) string {
-	return id.String()
 }

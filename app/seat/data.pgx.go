@@ -53,7 +53,7 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectByID(rid id.ADT[ID]) (SeatRoot, error) {
+func (r *seatRepoPgx) SelectByID(rid id.ADT) (SeatRoot, error) {
 	query := `
 		SELECT
 			id, name, via, ctx
@@ -75,7 +75,7 @@ func (r *seatRepoPgx) SelectByID(rid id.ADT[ID]) (SeatRoot, error) {
 	return DataToSeatRoot(dto)
 }
 
-func (r *seatRepoPgx) SelectChildren(id id.ADT[ID]) ([]SeatRef, error) {
+func (r *seatRepoPgx) SelectChildren(id id.ADT) ([]SeatRef, error) {
 	query := `
 		SELECT
 			s.id,
@@ -100,7 +100,7 @@ func (r *seatRepoPgx) SelectChildren(id id.ADT[ID]) ([]SeatRef, error) {
 func (r *seatRepoPgx) SelectAll() ([]SeatRef, error) {
 	roots := make([]SeatRef, 5)
 	for i := range 5 {
-		roots[i] = SeatRef{ID: id.New[ID](), Name: fmt.Sprintf("SeatRoot%v", i)}
+		roots[i] = SeatRef{ID: id.New(), Name: fmt.Sprintf("SeatRoot%v", i)}
 	}
 	return roots, nil
 }

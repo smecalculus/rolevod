@@ -35,7 +35,7 @@ func TestEstablish(t *testing.T) {
 	// when
 	ks := agent.KinshipSpec{
 		ParentID:    pr.ID,
-		ChildrenIDs: []id.ADT[agent.ID]{cr.ID},
+		ChildrenIDs: []id.ADT{cr.ID},
 	}
 	err = agentApi.Establish(ks)
 	if err != nil {
