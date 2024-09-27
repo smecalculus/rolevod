@@ -5,7 +5,7 @@ import (
 
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
-	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/lib/id"
 )
 
 type RefMsg struct {
@@ -70,7 +70,7 @@ func (mto *TermMsg) Validate() error {
 }
 
 type CloseMsg struct {
-	A chnl.RefMsg `json:"a"`
+	A string `json:"a"`
 }
 
 func (mto *CloseMsg) Validate() error {
@@ -80,8 +80,8 @@ func (mto *CloseMsg) Validate() error {
 }
 
 type WaitMsg struct {
-	X    chnl.RefMsg `json:"x"`
-	Cont *TermMsg    `json:"cont"`
+	X    string   `json:"x"`
+	Cont *TermMsg `json:"cont"`
 }
 
 func (mto *WaitMsg) Validate() error {
@@ -92,8 +92,8 @@ func (mto *WaitMsg) Validate() error {
 }
 
 type SendMsg struct {
-	A chnl.RefMsg `json:"a"`
-	B chnl.RefMsg `json:"b"`
+	A string `json:"a"`
+	B string `json:"b"`
 }
 
 func (mto *SendMsg) Validate() error {
@@ -104,9 +104,9 @@ func (mto *SendMsg) Validate() error {
 }
 
 type RecvMsg struct {
-	X    chnl.RefMsg `json:"x"`
-	Y    chnl.RefMsg `json:"y"`
-	Cont *TermMsg    `json:"cont"`
+	X    string   `json:"x"`
+	Y    string   `json:"y"`
+	Cont *TermMsg `json:"cont"`
 }
 
 func (mto *RecvMsg) Validate() error {
@@ -118,8 +118,8 @@ func (mto *RecvMsg) Validate() error {
 }
 
 type LabMsg struct {
-	C     chnl.RefMsg `json:"c"`
-	Label string      `json:"label"`
+	C     string `json:"c"`
+	Label string `json:"label"`
 }
 
 func (mto *LabMsg) Validate() error {
@@ -130,7 +130,7 @@ func (mto *LabMsg) Validate() error {
 }
 
 type CaseMsg struct {
-	Z     chnl.RefMsg         `json:"z"`
+	Z     string              `json:"z"`
 	Conts map[string]*TermMsg `json:"conts"`
 }
 
@@ -150,11 +150,11 @@ func MsgFromTerm(t Term) *TermMsg {
 		return &TermMsg{
 			K: Close,
 			Close: &CloseMsg{
-				A: chnl.MsgFromRef(term.A),
+				A: id.StringFrom(term.A),
 			},
 		}
 	case WaitSpec:
-		x := chnl.MsgFromRef(term.X)
+		x := id.StringFrom(term.X)
 		return &TermMsg{
 			K: Wait,
 			Wait: &WaitMsg{
@@ -166,16 +166,16 @@ func MsgFromTerm(t Term) *TermMsg {
 		return &TermMsg{
 			K: Send,
 			Send: &SendMsg{
-				A: chnl.MsgFromRef(term.A),
-				B: chnl.MsgFromRef(term.B),
+				A: id.StringFrom(term.A),
+				B: id.StringFrom(term.B),
 			},
 		}
 	case RecvSpec:
 		return &TermMsg{
 			K: Recv,
 			Recv: &RecvMsg{
-				X:    chnl.MsgFromRef(term.X),
-				Y:    chnl.MsgFromRef(term.Y),
+				X:    id.StringFrom(term.X),
+				Y:    id.StringFrom(term.Y),
 				Cont: MsgFromTerm(term.Cont),
 			},
 		}
@@ -190,13 +190,13 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 	}
 	switch mto.K {
 	case Close:
-		a, err := chnl.MsgToRef(mto.Close.A)
+		a, err := id.StringTo(mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case Wait:
-		x, err := chnl.MsgToRef(mto.Wait.X)
+		x, err := id.StringTo(mto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -206,21 +206,21 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case Send:
-		a, err := chnl.MsgToRef(mto.Send.A)
+		a, err := id.StringTo(mto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := chnl.MsgToRef(mto.Send.B)
+		b, err := id.StringTo(mto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case Recv:
-		x, err := chnl.MsgToRef(mto.Recv.X)
+		x, err := id.StringTo(mto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := chnl.MsgToRef(mto.Recv.Y)
+		y, err := id.StringTo(mto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}

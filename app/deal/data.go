@@ -51,7 +51,7 @@ type partRootData struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/seat:Data.*
 var (
-	// goverter:ignore Via
+	// goverter:ignore Ctx Via
 	DataToPartRoot   func(partRootData) (PartRoot, error)
 	DataFromPartRoot func(PartRoot) partRootData
 )

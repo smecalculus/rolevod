@@ -7,47 +7,47 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type ID interface{}
+type ID = id.ADT
+
+// Symbol
+type Sym string
 
 // aka ChanTp
 type Spec struct {
-	Name string
+	Name Sym
 	St   state.Ref
 }
 
 // aka Z
 type Ref struct {
-	ID   id.ADT
-	Name string
-	PAK  ak.ADT
-	CAK  ak.ADT
+	ID   ID
+	Name Sym
 }
 
-// Communication Endpoint
-type EP struct {
-	ID id.ADT
+// Communication Ep
+type Ep struct {
+	ID ID
 	AK ak.ADT
 }
 
-// Symbol
-type Sym string
-
 type Root struct {
-	ID   id.ADT
-	Name string
+	ID   ID
+	Name Sym
 	// Preceding Channel ID
-	PreID id.ADT
+	PreID ID
 	// Producer Access Key
 	PAK ak.ADT
 	// Consumer Access Key
 	CAK ak.ADT
-	St  state.Ref
+	// State
+	St state.Ref
 }
 
 type Repo interface {
 	Insert(Root) error
+	InsertCtx([]Root) ([]Root, error)
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
+	SelectByID(ID) (Root, error)
 }
 
 // goverter:variables

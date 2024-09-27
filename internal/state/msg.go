@@ -153,7 +153,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	case One:
 		return OneSpec{}, nil
 	case Recur:
-		id, err := id.StringFrom(mto.Recur.ToID)
+		id, err := id.StringTo(mto.Recur.ToID)
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +230,7 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 	if mto == nil {
 		return nil, nil
 	}
-	rid, err := id.StringFrom(mto.ID)
+	rid, err := id.StringTo(mto.ID)
 	if err != nil {
 		return nil, err
 	}

@@ -13,10 +13,8 @@ type specData struct {
 }
 
 type RefData struct {
-	ID   string `db:"id" json:"id,omitempty"`
-	Name string `db:"name" json:"name,omitempty"`
-	PAK  string `db:"pak" json:"pak,omitempty"`
-	CAK  string `db:"cak" json:"cak,omitempty"`
+	ID   string `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 type rootData struct {
@@ -45,6 +43,8 @@ var (
 	DataFromRefs  func([]Ref) []RefData
 	DataToRoot    func(rootData) (Root, error)
 	DataFromRoot  func(Root) (rootData, error)
+	DataToRoots   func([]rootData) ([]Root, error)
+	DataFromRoots func([]Root) ([]rootData, error)
 )
 
 func JsonFromSpec(spec Spec) (sql.NullString, error) {

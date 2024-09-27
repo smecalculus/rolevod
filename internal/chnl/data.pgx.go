@@ -3,13 +3,11 @@ package chnl
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
@@ -56,15 +54,78 @@ func (r *repoPgx) Insert(root Root) error {
 	return tx.Commit(ctx)
 }
 
+func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
+	query := `
+		INSERT INTO channels (
+			id, name, pre_id, pak, cak, state
+		)
+		SELECT
+			@new_id, name, @pre_id, pak, @cak, state
+		FROM channels
+		WHERE id = @id
+		RETURNING id, name, pre_id, pak, cak, state`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	dtos, err := DataFromRoots(roots)
+	if err != nil {
+		return nil, err
+	}
+	for _, dto := range dtos {
+		args := pgx.NamedArgs{
+			"new_id": dto.ID,
+			"pre_id": dto.PreID,
+			"cak":    dto.CAK,
+			"id":     dto.PreID,
+		}
+		batch.Queue(query, args)
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var foes []rootData
+	for _, dto := range dtos {
+		// var foo rootData
+		// _, err = br.Exec()
+		// err = br.QueryRow().Scan(&foo)
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("dto", dto),
+			)
+		}
+		foo, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("dto", dto),
+			)
+		}
+		foes = append(foes, foo)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Debug("context insertion succeeded", slog.Any("dtos", dtos))
+	r.log.Log(ctx, core.LevelTrace, "context insertion succeeded", slog.Any("dtos", dtos))
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	return DataToRoots(foes)
+}
+
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	roots := make([]Ref, 5)
-	for i := range 5 {
-		roots[i] = Ref{
-			Name: fmt.Sprintf("Root%v", i),
-			PAK:  ak.New(),
-			CAK:  ak.New(),
-		}
-	}
 	return roots, nil
 }
 
@@ -73,7 +134,7 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		SELECT
 			id, name, pre_id, pak, cak, state
 		FROM channels
-		WHERE id=$1`
+		WHERE id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {

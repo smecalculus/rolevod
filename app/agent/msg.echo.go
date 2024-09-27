@@ -45,7 +45,7 @@ func (h *agentHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringFrom(mto.ID)
+	id, err := id.StringTo(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (h *agentHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringFrom(mto.ID)
+	id, err := id.StringTo(mto.ID)
 	if err != nil {
 		return err
 	}

@@ -129,7 +129,7 @@ func DataToRef(dto *RefData) (Ref, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rid, err := id.StringFrom(dto.ID)
+	rid, err := id.StringTo(dto.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,7 @@ func dataFromState2(dto *rootData2, r Root, from string) (string, error) {
 }
 
 func dataToState(dto *rootData, st state) (Root, error) {
-	stID, err := id.StringFrom(st.ID)
+	stID, err := id.StringTo(st.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -364,7 +364,7 @@ func dataToState(dto *rootData, st state) (Root, error) {
 		return OneRoot{ID: stID}, nil
 	case recur:
 		tr := dto.Trs[st.ID][0]
-		toID, err := id.StringFrom(tr.ToID)
+		toID, err := id.StringTo(tr.ToID)
 		if err != nil {
 			panic(errInvalidID(tr.ToID))
 		}
@@ -419,7 +419,7 @@ func dataToState(dto *rootData, st state) (Root, error) {
 }
 
 func dataToState2(states map[string]state2, st state2) (Root, error) {
-	stID, err := id.StringFrom(st.ID)
+	stID, err := id.StringTo(st.ID)
 	if err != nil {
 		return nil, err
 	}

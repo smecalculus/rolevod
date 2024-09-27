@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -31,14 +30,6 @@ const (
 
 type termData struct {
 	K termKind `json:"kind"`
-	// Xa    *chnl.RefData `json:"xa,omitempty"`
-	// Yb    *chnl.RefData `json:"yb,omitempty"`
-	// Zc    *chnl.RefData `json:"zc,omitempty"`
-	// Cont  *termData     `json:"cont,omitempty"`
-	// Label string        `json:"label,omitempty"`
-	// Conts []termData    `json:"conts,omitempty"`
-	// Name  string        `json:"name,omitempty"`
-	// Ctx   []string      `json:"ctx,omitempty"`
 	Close *closeData `json:"close,omitempty"`
 	Wait  *waitData  `json:"wait,omitempty"`
 	Send  *sendData  `json:"send,omitempty"`
@@ -48,32 +39,32 @@ type termData struct {
 }
 
 type closeData struct {
-	A chnl.RefData `json:"a"`
+	A string `json:"a"`
 }
 
 type waitData struct {
-	X    chnl.RefData `json:"x"`
-	Cont *termData    `json:"cont"`
+	X    string    `json:"x"`
+	Cont *termData `json:"cont"`
 }
 
 type sendData struct {
-	A chnl.RefData `json:"a"`
-	B chnl.RefData `json:"b"`
+	A string `json:"a"`
+	B string `json:"b"`
 }
 
 type recvData struct {
-	X    chnl.RefData `json:"x"`
-	Y    chnl.RefData `json:"y"`
-	Cont *termData    `json:"cont"`
+	X    string    `json:"x"`
+	Y    string    `json:"y"`
+	Cont *termData `json:"cont"`
 }
 
 type labData struct {
-	C     chnl.RefData `json:"c"`
-	Label string       `json:"label"`
+	C     string `json:"c"`
+	Label string `json:"label"`
 }
 
 type caseData struct {
-	Z     chnl.RefData         `json:"z"`
+	Z     string               `json:"z"`
 	Conts map[string]*termData `json:"conts"`
 }
 
@@ -95,10 +86,6 @@ const (
 // goverter:output:format assign-variable
 // goverter:extend data.*
 var (
-	// DataToRef func(refData) (Ref, error)
-	// DataFromRef    func(Ref) refData
-	// DataToRefs     func([]refData) ([]Ref, error)
-	// DataFromRefs   func([]Ref) []refData
 	DataToTerms    func([]*termData) ([]Term, error)
 	DataFromTerms  func([]Term) []*termData
 	DataToValues   func([]*termData) ([]Value, error)
@@ -155,15 +142,15 @@ func dataToRoot(dto *rootData) (root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rootID, err := id.StringFrom(dto.ID)
+	rootID, err := id.StringTo(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	preID, err := id.StringFrom(dto.PreID)
+	preID, err := id.StringTo(dto.PreID)
 	if err != nil {
 		return nil, err
 	}
-	viaID, err := id.StringFrom(dto.ViaID)
+	viaID, err := id.StringTo(dto.ViaID)
 	if err != nil {
 		return nil, err
 	}
@@ -204,24 +191,24 @@ func dataFromTerm(t Term) *termData {
 	case CloseSpec:
 		return &termData{
 			K:     close,
-			Close: &closeData{chnl.DataFromRef(term.A)},
+			Close: &closeData{id.StringFrom(term.A)},
 		}
 	case WaitSpec:
 		return &termData{
 			K:    wait,
-			Wait: &waitData{chnl.DataFromRef(term.X), dataFromTerm(term.Cont)},
+			Wait: &waitData{id.StringFrom(term.X), dataFromTerm(term.Cont)},
 		}
 	case SendSpec:
 		return &termData{
 			K:    send,
-			Send: &sendData{chnl.DataFromRef(term.A), chnl.DataFromRef(term.B)},
+			Send: &sendData{id.StringFrom(term.A), id.StringFrom(term.B)},
 		}
 	case RecvSpec:
 		return &termData{
 			K: recv,
 			Recv: &recvData{
-				chnl.DataFromRef(term.X),
-				chnl.DataFromRef(term.Y),
+				id.StringFrom(term.X),
+				id.StringFrom(term.Y),
 				dataFromTerm(term.Cont),
 			},
 		}
@@ -236,13 +223,13 @@ func dataToTerm(dto *termData) (Term, error) {
 	}
 	switch dto.K {
 	case close:
-		a, err := chnl.DataToRef(dto.Close.A)
+		a, err := id.StringTo(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case wait:
-		x, err := chnl.DataToRef(dto.Wait.X)
+		x, err := id.StringTo(dto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -252,21 +239,21 @@ func dataToTerm(dto *termData) (Term, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case send:
-		a, err := chnl.DataToRef(dto.Send.A)
+		a, err := id.StringTo(dto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := chnl.DataToRef(dto.Send.B)
+		b, err := id.StringTo(dto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case recv:
-		x, err := chnl.DataToRef(dto.Recv.X)
+		x, err := id.StringTo(dto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := chnl.DataToRef(dto.Recv.Y)
+		y, err := id.StringTo(dto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -288,12 +275,12 @@ func dataFromValue(v Value) *termData {
 	case CloseSpec:
 		return &termData{
 			K:     close,
-			Close: &closeData{chnl.DataFromRef(val.A)},
+			Close: &closeData{id.StringFrom(val.A)},
 		}
 	case SendSpec:
 		return &termData{
 			K:    send,
-			Send: &sendData{chnl.DataFromRef(val.A), chnl.DataFromRef(val.B)},
+			Send: &sendData{id.StringFrom(val.A), id.StringFrom(val.B)},
 		}
 	default:
 		panic(ErrUnexpectedValue(val))
@@ -306,17 +293,17 @@ func dataToValue(dto *termData) (Value, error) {
 	}
 	switch dto.K {
 	case close:
-		a, err := chnl.DataToRef(dto.Close.A)
+		a, err := id.StringTo(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case send:
-		a, err := chnl.DataToRef(dto.Send.A)
+		a, err := id.StringTo(dto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := chnl.DataToRef(dto.Send.B)
+		b, err := id.StringTo(dto.Send.B)
 		if err != nil {
 			return nil, err
 		}
@@ -334,12 +321,12 @@ func dataFromCont(c Continuation) *termData {
 	case WaitSpec:
 		return &termData{
 			K:    wait,
-			Wait: &waitData{chnl.DataFromRef(cont.X), dataFromTerm(cont.Cont)},
+			Wait: &waitData{id.StringFrom(cont.X), dataFromTerm(cont.Cont)},
 		}
 	case RecvSpec:
 		return &termData{
 			K:    recv,
-			Recv: &recvData{chnl.DataFromRef(cont.X), chnl.DataFromRef(cont.Y), dataFromTerm(cont.Cont)},
+			Recv: &recvData{id.StringFrom(cont.X), id.StringFrom(cont.Y), dataFromTerm(cont.Cont)},
 		}
 	default:
 		panic(ErrUnexpectedCont(cont))
@@ -352,7 +339,7 @@ func dataToCont(dto *termData) (Continuation, error) {
 	}
 	switch dto.K {
 	case wait:
-		x, err := chnl.DataToRef(dto.Wait.X)
+		x, err := id.StringTo(dto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -362,11 +349,11 @@ func dataToCont(dto *termData) (Continuation, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case recv:
-		x, err := chnl.DataToRef(dto.Recv.X)
+		x, err := id.StringTo(dto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := chnl.DataToRef(dto.Recv.Y)
+		y, err := id.StringTo(dto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}

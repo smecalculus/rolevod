@@ -6,7 +6,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
@@ -47,7 +46,7 @@ func (h *dealHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringFrom(mto.ID)
+	id, err := id.StringTo(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -64,7 +63,7 @@ func (h *dealHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringFrom(mto.ID)
+	id, err := id.StringTo(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -138,11 +137,11 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	ch, err := h.api.Involve(spec)
+	root, err := h.api.Involve(spec)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, chnl.MsgFromRef(ch))
+	return c.JSON(http.StatusCreated, MsgFromPartRoot(root))
 }
 
 // Adapter

@@ -8,7 +8,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type ID interface{}
+type ID = id.ADT
 
 type RoleSpec struct {
 	Name string

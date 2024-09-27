@@ -38,7 +38,7 @@ var (
 )
 
 func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
-	id, err := id.StringFrom(dto.ID)
+	id, err := id.StringTo(dto.ID)
 	if err != nil {
 		return RoleRoot{}, nil
 	}

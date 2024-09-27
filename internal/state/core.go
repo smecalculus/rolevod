@@ -6,6 +6,8 @@ import (
 	"smecalculus/rolevod/lib/id"
 )
 
+type ID = id.ADT
+
 type Label string
 
 type Spec interface {
@@ -63,8 +65,6 @@ type DownSpec struct {
 }
 
 func (DownSpec) spec() {}
-
-type ID interface{}
 
 type Ref interface {
 	RID() id.ADT

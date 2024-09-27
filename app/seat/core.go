@@ -9,7 +9,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type ID interface{}
+type ID = id.ADT
 
 type SeatSpec struct {
 	Name string
@@ -18,13 +18,13 @@ type SeatSpec struct {
 }
 
 type SeatRef struct {
-	ID   id.ADT
+	ID   ID
 	Name string
 }
 
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
-	ID       id.ADT
+	ID       ID
 	Name     string
 	Via      chnl.Spec
 	Ctx      map[chnl.Sym]chnl.Spec

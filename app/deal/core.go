@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/app/seat"
 )
 
-type ID interface{}
+type ID = id.ADT
 
 type DealSpec struct {
 	Name string
@@ -45,7 +45,7 @@ type DealApi interface {
 	Retrieve(id.ADT) (DealRoot, error)
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
-	Involve(PartSpec) (chnl.Ref, error)
+	Involve(PartSpec) (PartRoot, error)
 	Take(TranSpec) error
 }
 
@@ -128,34 +128,59 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *dealService) Involve(spec PartSpec) (chnl.Ref, error) {
+func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 	s.log.Debug("seat involvement started", slog.Any("spec", spec))
-	seat, err := s.seats.Retrieve(spec.SeatID)
+	seatRoot, err := s.seats.Retrieve(spec.SeatID)
 	if err != nil {
 		s.log.Error("seat selection failed",
 			slog.Any("reason", err),
 			slog.Any("spec", spec),
 		)
-		return chnl.Ref{}, err
+		return PartRoot{}, err
 	}
-	// TODO переоформление контекста
-	newChnl := chnl.Root{
+	via := chnl.Root{
+		Name: seatRoot.Via.Name,
 		ID:   id.New(),
-		Name: seat.Via.Name,
 		PAK:  ak.New(),
 		CAK:  ak.New(),
-		St:   seat.Via.St,
+		St:   seatRoot.Via.St,
 	}
-	err = s.chnls.Insert(newChnl)
+	err = s.chnls.Insert(via)
 	if err != nil {
-		s.log.Error("channel insertion failed",
+		s.log.Error("via insertion failed",
 			slog.Any("reason", err),
-			slog.Any("chnl", newChnl),
+			slog.Any("via", via),
 		)
-		return chnl.Ref{}, err
+		return PartRoot{}, err
 	}
-	s.log.Debug("seat involvement succeeded", slog.Any("chnl", newChnl))
-	return chnl.ConvertRootToRef(newChnl), nil
+	var ctx []chnl.Root
+	for _, preID := range spec.Ctx {
+		ch := chnl.Root{
+			ID:    id.New(),
+			PreID: preID,
+			CAK:   ak.New(),
+		}
+		ctx = append(ctx, ch)
+	}
+	ctx, err = s.chnls.InsertCtx(ctx)
+	if err != nil {
+		s.log.Error("ctx insertion failed",
+			slog.Any("reason", err),
+			slog.Any("ctx", ctx),
+		)
+		return PartRoot{}, err
+	}
+	eps := make(map[chnl.Sym]chnl.Ep, len(ctx))
+	for _, ch := range ctx {
+		eps[ch.Name] = chnl.Ep{ID: ch.ID, AK: ch.CAK}
+	}
+	root := PartRoot{
+		Seat: seat.ConvertRootToRef(seatRoot),
+		Ctx:  eps,
+		Via:  chnl.Ep{ID: via.ID, AK: via.PAK},
+	}
+	s.log.Debug("seat involvement succeeded", slog.Any("root", root))
+	return root, nil
 }
 
 func (s *dealService) Take(spec TranSpec) error {
@@ -165,7 +190,7 @@ func (s *dealService) Take(spec TranSpec) error {
 	s.log.Debug("transition taking started", slog.Any("spec", spec))
 	switch term := spec.Term.(type) {
 	case step.CloseSpec:
-		curChnl, err := s.chnls.SelectByID(term.A.ID)
+		curChnl, err := s.chnls.SelectByID(term.A)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -189,13 +214,13 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.AK {
+		switch spec.SeatAK {
 		case curChnl.PAK:
 			err = s.checkProducer(term, curSt)
 		case curChnl.CAK:
 			err = s.checkConsumer(term, curSt)
 		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.AK)
+			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -220,7 +245,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if srv == nil {
 			newMsg := step.MsgRoot{
 				ID:    id.New(),
-				ViaID: term.A.ID,
+				ViaID: term.A,
 				Val:   term,
 			}
 			err = s.msgs.Insert(newMsg)
@@ -231,7 +256,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
+			s.log.Debug("transition taking half done", slog.Any("msg", newMsg))
 			return nil
 		}
 		wait, ok := srv.Cont.(step.WaitSpec)
@@ -258,11 +283,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		// чтобы нельзя было воспользоваться потребленным каналом
-		step.Subst(wait.Cont, wait.X, chnl.ConvertRootToRef(finChnl))
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: wait.Cont})
+		s.log.Debug("transition taking succeeded")
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: wait.Cont})
 	case step.WaitSpec:
-		curChnl, err := s.chnls.SelectByID(term.X.ID)
+		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -286,13 +310,13 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.AK {
+		switch spec.SeatAK {
 		case curChnl.PAK:
 			err = s.checkProducer(term, curSt)
 		case curChnl.CAK:
 			err = s.checkConsumer(term, curSt)
 		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.AK)
+			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -316,7 +340,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if msg == nil {
 			newSrv := step.SrvRoot{
 				ID:    id.New(),
-				ViaID: term.X.ID,
+				ViaID: term.X,
 				Cont:  term,
 			}
 			err = s.srvs.Insert(newSrv)
@@ -327,7 +351,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
+			s.log.Debug("transition taking half done", slog.Any("srv", newSrv))
 			return nil
 		}
 		_, ok := msg.Val.(step.CloseSpec)
@@ -354,11 +378,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		// чтобы нельзя было воспользоваться потребленным каналом
-		step.Subst(term.Cont, term.X, chnl.ConvertRootToRef(finChnl))
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: term.Cont})
+		s.log.Debug("transition taking succeeded")
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: term.Cont})
 	case step.SendSpec:
-		curChnl, err := s.chnls.SelectByID(term.A.ID)
+		curChnl, err := s.chnls.SelectByID(term.A)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -383,7 +406,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		var nextSt state.Ref
-		switch spec.AK {
+		switch spec.SeatAK {
 		case curChnl.PAK:
 			nextSt = curSt.(state.TensorRoot).Next()
 			err = s.checkProducer(term, curSt)
@@ -391,7 +414,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			nextSt = curSt.(state.LolliRoot).Next()
 			err = s.checkConsumer(term, curSt)
 		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.AK)
+			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -415,7 +438,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if srv == nil {
 			newMsg := step.MsgRoot{
 				ID:    id.New(),
-				ViaID: term.A.ID,
+				ViaID: term.A,
 				Val:   term,
 			}
 			err = s.msgs.Insert(newMsg)
@@ -426,7 +449,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
+			s.log.Debug("transition taking half done", slog.Any("msg", newMsg))
 			return nil
 		}
 		recv, ok := srv.Cont.(step.RecvSpec)
@@ -440,7 +463,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		newChnl := chnl.Root{
 			ID:    id.New(),
-			Name:  recv.X.Name,
+			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
 			CAK:   curChnl.CAK,
@@ -454,12 +477,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		newA := chnl.ConvertRootToRef(newChnl)
-		recv.Cont = step.Subst(recv.Cont, recv.X, newA)
+		recv.Cont = step.Subst(recv.Cont, recv.X, newChnl.ID)
 		recv.Cont = step.Subst(recv.Cont, recv.Y, term.B)
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: recv.Cont})
+		s.log.Debug("transition taking succeeded")
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: recv.Cont})
 	case step.RecvSpec:
-		curChnl, err := s.chnls.SelectByID(term.X.ID)
+		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -483,13 +506,13 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.AK {
+		switch spec.SeatAK {
 		case curChnl.PAK:
 			err = s.checkProducer(term, curSt)
 		case curChnl.CAK:
 			err = s.checkConsumer(term, curSt)
 		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.AK)
+			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -513,7 +536,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if msg == nil {
 			newSrv := step.SrvRoot{
 				ID:    id.New(),
-				ViaID: term.X.ID,
+				ViaID: term.X,
 				Cont:  term,
 			}
 			err = s.srvs.Insert(newSrv)
@@ -524,7 +547,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
+			s.log.Debug("transition taking half done", slog.Any("srv", newSrv))
 			return nil
 		}
 		val, ok := msg.Val.(step.SendSpec)
@@ -538,7 +561,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		newChnl := chnl.Root{
 			ID:    id.New(),
-			Name:  val.A.Name,
+			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
 			CAK:   curChnl.CAK,
@@ -552,11 +575,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		step.Subst(term.Cont, term.X, chnl.ConvertRootToRef(newChnl))
+		step.Subst(term.Cont, term.X, newChnl.ID)
 		step.Subst(term.Cont, term.Y, val.B)
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: term.Cont})
+		s.log.Debug("transition taking succeeded")
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: term.Cont})
 	case step.LabSpec:
-		curChnl, err := s.chnls.SelectByID(term.C.ID)
+		curChnl, err := s.chnls.SelectByID(term.C)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -599,7 +623,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if srv == nil {
 			newMsg := step.MsgRoot{
 				ID:    id.New(),
-				ViaID: term.C.ID,
+				ViaID: term.C,
 				Val:   term,
 			}
 			err = s.msgs.Insert(newMsg)
@@ -610,7 +634,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("msg", newMsg))
+			s.log.Debug("transition taking half done", slog.Any("msg", newMsg))
 			return nil
 		}
 		cont, ok := srv.Cont.(step.CaseSpec)
@@ -624,7 +648,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		newChnl := chnl.Root{
 			ID:    id.New(),
-			Name:  cont.X.Name,
+			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
 			CAK:   curChnl.CAK,
@@ -639,10 +663,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		branch := cont.Branches[term.L]
-		step.Subst(branch, cont.X, chnl.ConvertRootToRef(newChnl))
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: branch})
+		step.Subst(branch, cont.X, newChnl.ID)
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: branch})
 	case step.CaseSpec:
-		curChnl, err := s.chnls.SelectByID(term.X.ID)
+		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
 			s.log.Error("channel selection failed",
 				slog.Any("reason", err),
@@ -685,7 +709,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		if msg == nil {
 			newSrv := step.SrvRoot{
 				ID:    id.New(),
-				ViaID: term.X.ID,
+				ViaID: term.X,
 				Cont:  term,
 			}
 			err = s.srvs.Insert(newSrv)
@@ -696,7 +720,7 @@ func (s *dealService) Take(spec TranSpec) error {
 				)
 				return err
 			}
-			s.log.Debug("transition taking succeeded", slog.Any("srv", newSrv))
+			s.log.Debug("transition taking half done", slog.Any("srv", newSrv))
 			return nil
 		}
 		val, ok := msg.Val.(step.LabSpec)
@@ -710,7 +734,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		newChnl := chnl.Root{
 			ID:    id.New(),
-			Name:  val.C.Name,
+			Name:  curChnl.Name,
 			PreID: curChnl.ID,
 			PAK:   curChnl.PAK,
 			CAK:   curChnl.CAK,
@@ -725,8 +749,8 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		branch := term.Branches[val.L]
-		step.Subst(branch, term.X, chnl.ConvertRootToRef(newChnl))
-		return s.Take(TranSpec{DealID: spec.DealID, AK: spec.AK, Term: branch})
+		step.Subst(branch, term.X, newChnl.ID)
+		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: branch})
 	default:
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
@@ -735,15 +759,15 @@ func (s *dealService) Take(spec TranSpec) error {
 type dealRepo interface {
 	Insert(DealRoot) error
 	SelectAll() ([]DealRef, error)
-	SelectByID(id.ADT) (DealRoot, error)
-	SelectChildren(id.ADT) ([]DealRef, error)
-	SelectSeats(id.ADT) ([]seat.SeatRef, error)
+	SelectByID(ID) (DealRoot, error)
+	SelectChildren(ID) ([]DealRef, error)
+	SelectSeats(ID) ([]seat.SeatRef, error)
 }
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID    id.ADT
-	ChildrenIDs []id.ADT
+	ParentID    ID
+	ChildrenIDs []ID
 }
 
 type KinshipRoot struct {
@@ -757,16 +781,16 @@ type kinshipRepo interface {
 
 // Participation
 type PartSpec struct {
-	DealID id.ADT
-	SeatID id.ADT
-	Ctx    map[chnl.Sym]id.ADT
+	DealID ID
+	SeatID seat.ID
+	Ctx    map[chnl.Sym]chnl.ID
 }
 
 type PartRoot struct {
 	Deal DealRef
 	Seat seat.SeatRef
-	Via  chnl.EP
-	// Ctx  map[chnl.Sym]chnl.EP
+	Ctx  map[chnl.Sym]chnl.Ep
+	Via  chnl.Ep
 }
 
 type partRepo interface {
@@ -775,8 +799,8 @@ type partRepo interface {
 
 // Transition
 type TranSpec struct {
-	DealID id.ADT
-	AK     ak.ADT
+	DealID ID
+	SeatAK ak.ADT
 	Term   step.Term
 }
 
@@ -793,7 +817,7 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", state.TensorRoot{}, st)
 		}
-		got, err := s.chnls.SelectByID(term.B.ID)
+		got, err := s.chnls.SelectByID(term.B)
 		if err != nil {
 			return err
 		}
@@ -809,7 +833,7 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliRoot{}, st)
 		}
 		// check value
-		got, err := s.chnls.SelectByID(term.Y.ID)
+		got, err := s.chnls.SelectByID(term.Y)
 		if err != nil {
 			return err
 		}
@@ -866,7 +890,7 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %#v", state.LolliRoot{}, st)
 		}
-		got, err := s.chnls.SelectByID(term.B.ID)
+		got, err := s.chnls.SelectByID(term.B)
 		if err != nil {
 			return err
 		}
@@ -882,7 +906,7 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 			return fmt.Errorf("state mismatch: 111 want %T, got %#v", state.TensorRoot{}, st)
 		}
 		// check value
-		got, err := s.chnls.SelectByID(term.Y.ID)
+		got, err := s.chnls.SelectByID(term.Y)
 		if err != nil {
 			return err
 		}

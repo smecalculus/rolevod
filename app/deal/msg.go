@@ -3,6 +3,7 @@ package deal
 import (
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/step"
 
 	"smecalculus/rolevod/app/seat"
@@ -85,8 +86,9 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string `json:"deal_id" param:"id"`
-	SeatID string `json:"seat_id"`
+	DealID string            `json:"deal_id" param:"id"`
+	SeatID string            `json:"seat_id"`
+	Ctx    map[string]string `json:"ctx"`
 }
 
 func (mto *PartSpecMsg) Validate() error {
@@ -97,33 +99,34 @@ func (mto *PartSpecMsg) Validate() error {
 }
 
 type PartRootMsg struct {
-	Deal DealRefMsg      `json:"deal"`
-	Seat seat.SeatRefMsg `json:"seat"`
+	Deal DealRefMsg            `json:"deal"`
+	Seat seat.SeatRefMsg       `json:"seat"`
+	Ctx  map[string]chnl.EpMsg `json:"ctx"`
+	Via  chnl.EpMsg            `json:"via"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
-	// goverter:ignore Ctx
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)
 	MsgFromPartRoot func(PartRoot) PartRootMsg
-	// goverter:ignore Via
-	MsgToPartRoot func(PartRootMsg) (PartRoot, error)
+	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
 )
 
 type TranSpecMsg struct {
 	DealID string        `json:"deal_id"`
-	AK     string        `json:"access_key"`
+	SeatAK string        `json:"seat_ak"`
 	Term   *step.TermMsg `json:"term"`
 }
 
 func (mto *TranSpecMsg) Validate() error {
 	return valid.ValidateStruct(mto,
 		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.AK, valid.Required, valid.Length(1, 36)),
+		valid.Field(&mto.SeatAK, valid.Required, valid.Length(1, 36)),
 		valid.Field(&mto.Term, valid.Required),
 	)
 }

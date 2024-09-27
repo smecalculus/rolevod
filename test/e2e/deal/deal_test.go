@@ -86,6 +86,9 @@ func TestTakeWaitClose(t *testing.T) {
 	// and
 	seatSpec2 := seat.SeatSpec{
 		Name: "seat-2",
+		Ctx: map[chnl.Sym]chnl.Spec{
+			seatSpec1.Via.Name: seatSpec1.Via,
+		},
 		Via: chnl.Spec{
 			Name: "chnl-2",
 			St:   roleRoot.St,
@@ -104,29 +107,37 @@ func TestTakeWaitClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	partSpec1 := deal.PartSpec{
+	producerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	chnlRef1, err := dealApi.Involve(partSpec1)
+	producerRoot, err := dealApi.Involve(producerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	partSpec2 := deal.PartSpec{
+	consumerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
+		Ctx: map[chnl.Sym]chnl.ID{
+			seatSpec1.Via.Name: producerRoot.Via.ID,
+		},
 	}
-	chnlRef2, err := dealApi.Involve(partSpec2)
+	consumerRoot, err := dealApi.Involve(consumerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// and
+	consumerEp := consumerRoot.Ctx[seatSpec1.Via.Name]
 	// and
 	waitSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
+		SeatAK: producerRoot.Via.AK,
 		Term: step.WaitSpec{
-			X:    chnlRef1,
-			Cont: step.CloseSpec{A: chnlRef2},
+			X: consumerEp.ID,
+			Cont: step.CloseSpec{
+				A: consumerRoot.Via.ID,
+			},
 		},
 	}
 	// when
@@ -137,8 +148,9 @@ func TestTakeWaitClose(t *testing.T) {
 	// and
 	closeSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
+		SeatAK: consumerEp.AK,
 		Term: step.CloseSpec{
-			A: chnlRef1,
+			A: consumerEp.ID,
 		},
 	}
 	// and
@@ -205,32 +217,38 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	partSpec1 := deal.PartSpec{
+	producerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	chnlRef1, err := dealApi.Involve(partSpec1)
+	producerRoot, err := dealApi.Involve(producerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	partSpec2 := deal.PartSpec{
+	consumerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
-		Ctx:    map[chnl.Sym]id.ADT{"chnl-1": chnlRef1.ID},
+		Ctx: map[chnl.Sym]chnl.ID{
+			seatSpec1.Via.Name: producerRoot.Via.ID,
+		},
 	}
-	chnlRef2, err := dealApi.Involve(partSpec2)
+	consumerRoot, err := dealApi.Involve(consumerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// and
+	consumerEp := consumerRoot.Ctx[seatSpec1.Via.Name]
 	// and
 	recvSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
-		AK:     chnlRef1.PAK,
+		SeatAK: producerRoot.Via.AK,
 		Term: step.RecvSpec{
-			X:    chnlRef1,
-			Y:    chnlRef2,
-			Cont: step.CloseSpec{A: chnlRef1},
+			X: consumerEp.ID,
+			Y: consumerRoot.Via.ID,
+			Cont: step.CloseSpec{
+				A: consumerEp.ID,
+			},
 		},
 	}
 	// when
@@ -241,10 +259,10 @@ func TestTakeRecvSend(t *testing.T) {
 	// and
 	sendSpec := deal.TranSpec{
 		DealID: dealRoot.ID,
-		AK:     chnlRef1.CAK,
+		SeatAK: consumerEp.AK,
 		Term: step.SendSpec{
-			A: chnlRef1,
-			B: chnlRef2,
+			A: consumerEp.ID,
+			B: consumerRoot.Via.ID,
 		},
 	}
 	// and

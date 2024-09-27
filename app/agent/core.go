@@ -6,7 +6,7 @@ import (
 	"smecalculus/rolevod/lib/id"
 )
 
-type ID interface{}
+type ID = id.ADT
 
 type AgentSpec struct {
 	Name string

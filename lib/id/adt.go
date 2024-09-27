@@ -14,18 +14,18 @@ func Ident(id ADT) ADT {
 	return id
 }
 
-func (id ADT) String() string {
-	return xid.ID(id).String()
-}
-
-func StringTo(id ADT) string {
-	return xid.ID(id).String()
-}
-
-func StringFrom(s string) (ADT, error) {
+func StringTo(s string) (ADT, error) {
 	xid, err := xid.FromString(s)
 	if err != nil {
 		return ADT{}, err
 	}
 	return ADT(xid), nil
+}
+
+func StringFrom(id ADT) string {
+	return xid.ID(id).String()
+}
+
+func (id ADT) String() string {
+	return xid.ID(id).String()
 }

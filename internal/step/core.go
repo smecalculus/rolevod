@@ -9,7 +9,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type ID interface{}
+type ID = id.ADT
 
 type Ref interface {
 	rootID() id.ADT
@@ -73,12 +73,12 @@ type Continuation interface {
 }
 
 type Substitutable interface {
-	Subst(chnl.Ref, chnl.Ref)
+	Subst(chnl.ID, chnl.ID)
 }
 
 type FwdSpec struct {
-	A chnl.Ref // from
-	C chnl.Ref // to
+	A chnl.ID // from
+	C chnl.ID // to
 }
 
 func (FwdSpec) term() {}
@@ -86,14 +86,14 @@ func (FwdSpec) term() {}
 type SpawnSpec struct {
 	Name string
 	C    chnl.Sym
-	Ctx  []chnl.Ref
+	Ctx  []chnl.ID
 	Cont Term
 }
 
 func (SpawnSpec) term() {}
 
 type LabSpec struct {
-	C chnl.Ref
+	C chnl.ID
 	L state.Label
 	// Cont Term
 }
@@ -102,7 +102,7 @@ func (LabSpec) term() {}
 func (LabSpec) val()  {}
 
 type CaseSpec struct {
-	X        chnl.Ref
+	X        chnl.ID
 	Branches map[state.Label]Term
 }
 
@@ -110,8 +110,8 @@ func (CaseSpec) term() {}
 func (CaseSpec) cont() {}
 
 type SendSpec struct {
-	A chnl.Ref // channel
-	B chnl.Ref // value
+	A chnl.ID // channel
+	B chnl.ID // value
 	// Cont  Term
 }
 
@@ -119,8 +119,8 @@ func (SendSpec) term() {}
 func (SendSpec) val()  {}
 
 type RecvSpec struct {
-	X    chnl.Ref // channel
-	Y    chnl.Ref // value
+	X    chnl.ID // channel
+	Y    chnl.ID // value
 	Cont Term
 }
 
@@ -128,20 +128,20 @@ func (RecvSpec) term() {}
 func (RecvSpec) cont() {}
 
 type CloseSpec struct {
-	A chnl.Ref
+	A chnl.ID
 }
 
 func (CloseSpec) term() {}
 func (CloseSpec) val()  {}
 
-func (t *CloseSpec) Subst(varRef chnl.Ref, valRef chnl.Ref) {
+func (t *CloseSpec) Subst(varRef chnl.ID, valRef chnl.ID) {
 	if varRef == t.A {
 		t.A = valRef
 	}
 }
 
 type WaitSpec struct {
-	X    chnl.Ref
+	X    chnl.ID
 	Cont Term
 }
 
@@ -164,21 +164,21 @@ type Repo[T root] interface {
 	SelectByCh(id.ADT) (*T, error)
 }
 
-func Subst(t Term, varRef chnl.Ref, valRef chnl.Ref) Term {
+func Subst(t Term, varID chnl.ID, valID chnl.ID) Term {
 	if t == nil {
 		return nil
 	}
 	switch term := t.(type) {
 	case CloseSpec:
-		if varRef == term.A {
-			term.A = valRef
+		if varID == term.A {
+			term.A = valID
 		}
 		return term
 	case WaitSpec:
-		if varRef == term.X {
-			term.X = valRef
+		if varID == term.X {
+			term.X = valID
 		}
-		term.Cont = Subst(term.Cont, varRef, valRef)
+		term.Cont = Subst(term.Cont, varID, valID)
 		return term
 	default:
 		panic(ErrUnexpectedTerm(t))

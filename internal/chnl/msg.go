@@ -21,15 +21,18 @@ func (mto *SpecMsg) Validate() error {
 type RefMsg struct {
 	ID   string `json:"id" param:"id"`
 	Name string `json:"name"`
-	PAK  string `json:"pak"`
-	CAK  string `json:"cak"`
 }
 
 func (mto *RefMsg) Validate() error {
 	return valid.ValidateStruct(mto,
 		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 	)
+}
+
+type EpMsg struct {
+	ID string `json:"id"`
+	AK string `json:"ak"`
 }
 
 type RootMsg struct {
