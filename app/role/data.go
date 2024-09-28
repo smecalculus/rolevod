@@ -1,8 +1,6 @@
 package role
 
 import (
-	"database/sql"
-
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/state"
@@ -11,13 +9,13 @@ import (
 type RoleRefData struct {
 	ID   string         `db:"id"`
 	Name string         `db:"name"`
-	St   sql.NullString `db:"state"`
+	St   *state.RefData `db:"state"`
 }
 
 type roleRootData struct {
 	ID       string         `db:"id"`
 	Name     string         `db:"name"`
-	St       sql.NullString `db:"state"`
+	St       *state.RefData `db:"state"`
 	Children []RoleRefData  `db:"-"`
 }
 
@@ -25,7 +23,7 @@ type roleRootData struct {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend data.*
-// goverter:extend smecalculus/rolevod/internal/state:Json.*
+// goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToRoleRef     func(RoleRefData) (RoleRef, error)
 	DataFromRoleRef   func(RoleRef) (RoleRefData, error)
@@ -42,7 +40,7 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 	if err != nil {
 		return RoleRoot{}, nil
 	}
-	state, err := state.JsonToRef(dto.St)
+	state, err := state.DataToRef(dto.St)
 	if err != nil {
 		return RoleRoot{}, nil
 	}
@@ -59,10 +57,7 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 }
 
 func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
-	stateJson, err := state.JsonFromRef(root.St)
-	if err != nil {
-		return roleRootData{}, err
-	}
+	stateDTO := state.DataFromRef(root.St)
 	childrenDTOs, err := DataFromRoleRefs(root.Children)
 	if err != nil {
 		return roleRootData{}, err
@@ -70,7 +65,7 @@ func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
 	return roleRootData{
 		ID:       root.ID.String(),
 		Name:     root.Name,
-		St:       stateJson,
+		St:       stateDTO,
 		Children: childrenDTOs,
 	}, nil
 }
@@ -83,7 +78,7 @@ type kinshipRootData struct {
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/internal/state:Json.*
+// goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
 	DataFromKinshipRoot func(KinshipRoot) (kinshipRootData, error)

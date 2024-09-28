@@ -47,7 +47,6 @@ type partRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend data.*
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
 var (

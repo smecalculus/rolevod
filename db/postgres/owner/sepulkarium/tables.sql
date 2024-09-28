@@ -1,14 +1,14 @@
 CREATE TABLE roles (
 	id varchar(20) UNIQUE,
 	name varchar(20),
-	state text
+	state jsonb
 );
 
 CREATE TABLE seats (
 	id varchar(20) UNIQUE,
 	name varchar(20),
-	via text,
-	ctx text
+	via jsonb,
+	ctx jsonb
 );
 
 CREATE TABLE agents (
@@ -33,25 +33,24 @@ CREATE TABLE states (
 	id varchar(20) UNIQUE,
 	kind smallint,
 	from_id varchar(20),
-	on_ref text,
+	on_ref jsonb,
 	on_key varchar(20),
 	to_id varchar(20),
-	to_ids varchar(20)[][2]
+	to_ids jsonb
 );
 
 CREATE TABLE channels (
 	id varchar(20),
 	name varchar(20),
 	pre_id varchar(20),
-	state text
+	state jsonb
 );
 
 CREATE TABLE steps (
 	id varchar(20) UNIQUE,
-	pre_id varchar(20),
 	via_id varchar(20),
 	kind smallint,
-	payload text
+	payload jsonb
 );
 
 CREATE TABLE kinships (

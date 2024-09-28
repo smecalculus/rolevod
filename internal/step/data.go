@@ -1,7 +1,6 @@
 package step
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
@@ -13,11 +12,10 @@ type refData struct {
 }
 
 type rootData struct {
-	K     stepKind `db:"kind"`
-	ID    string   `db:"id"`
-	ViaID string   `db:"via_id"`
-	PreID string   `db:"pre_id"`
-	Term  string   `db:"payload"`
+	ID    string    `db:"id"`
+	K     stepKind  `db:"kind"`
+	ViaID string    `db:"via_id"`
+	Term  *termData `db:"payload"`
 }
 
 type stepKind int
@@ -29,7 +27,7 @@ const (
 )
 
 type termData struct {
-	K termKind `json:"kind"`
+	K     termKind   `json:"kind"`
 	Close *closeData `json:"close,omitempty"`
 	Wait  *waitData  `json:"wait,omitempty"`
 	Send  *sendData  `json:"send,omitempty"`
@@ -100,38 +98,24 @@ func dataFromRoot(r root) (*rootData, error) {
 	}
 	switch root := r.(type) {
 	case ProcRoot:
-		pl, err := json.Marshal(dataFromTerm(root.Term))
-		if err != nil {
-			return nil, err
-		}
 		return &rootData{
 			K:    proc,
 			ID:   root.ID.String(),
-			Term: string(pl),
+			Term: dataFromTerm(root.Term),
 		}, nil
 	case MsgRoot:
-		pl, err := json.Marshal(dataFromValue(root.Val))
-		if err != nil {
-			return nil, err
-		}
 		return &rootData{
 			K:     msg,
 			ID:    root.ID.String(),
-			PreID: root.PreID.String(),
 			ViaID: root.ViaID.String(),
-			Term:  string(pl),
+			Term:  dataFromValue(root.Val),
 		}, nil
 	case SrvRoot:
-		pl, err := json.Marshal(dataFromCont(root.Cont))
-		if err != nil {
-			return nil, err
-		}
 		return &rootData{
 			K:     srv,
 			ID:    root.ID.String(),
-			PreID: root.PreID.String(),
 			ViaID: root.ViaID.String(),
-			Term:  string(pl),
+			Term:  dataFromCont(root.Cont),
 		}, nil
 	default:
 		panic(ErrUnexpectedStep(root))
@@ -146,38 +130,29 @@ func dataToRoot(dto *rootData) (root, error) {
 	if err != nil {
 		return nil, err
 	}
-	preID, err := id.StringTo(dto.PreID)
-	if err != nil {
-		return nil, err
-	}
 	viaID, err := id.StringTo(dto.ViaID)
-	if err != nil {
-		return nil, err
-	}
-	var pl termData
-	err = json.Unmarshal([]byte(dto.Term), &pl)
 	if err != nil {
 		return nil, err
 	}
 	switch dto.K {
 	case proc:
-		term, err := dataToTerm(&pl)
+		term, err := dataToTerm(dto.Term)
 		if err != nil {
 			return nil, err
 		}
 		return ProcRoot{ID: rootID, Term: term}, nil
 	case msg:
-		val, err := dataToValue(&pl)
+		val, err := dataToValue(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return MsgRoot{ID: rootID, PreID: preID, ViaID: viaID, Val: val}, nil
+		return MsgRoot{ID: rootID, ViaID: viaID, Val: val}, nil
 	case srv:
-		cont, err := dataToCont(&pl)
+		cont, err := dataToCont(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return SrvRoot{ID: rootID, PreID: preID, ViaID: viaID, Cont: cont}, nil
+		return SrvRoot{ID: rootID, ViaID: viaID, Cont: cont}, nil
 	default:
 		panic(errUnexpectedStepKind(dto.K))
 	}

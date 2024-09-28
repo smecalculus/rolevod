@@ -7,7 +7,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type specData struct {
+type SpecData struct {
 	Name string         `json:"name"`
 	St   *state.RefData `json:"state"`
 }
@@ -21,7 +21,7 @@ type rootData struct {
 	ID    string         `db:"id"`
 	Name  string         `db:"name"`
 	PreID string         `db:"pre_id"`
-	St    sql.NullString `db:"state"`
+	St    *state.RefData `db:"state"`
 }
 
 // goverter:variables
@@ -31,10 +31,10 @@ type rootData struct {
 // goverter:extend smecalculus/rolevod/internal/state:Json.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
-	DataToSpec    func(specData) (Spec, error)
-	DataFromSpec  func(Spec) (specData, error)
-	DataToSpecs   func([]specData) ([]Spec, error)
-	DataFromSpecs func([]Spec) ([]specData, error)
+	DataToSpec    func(SpecData) (Spec, error)
+	DataFromSpec  func(Spec) (SpecData, error)
+	DataToSpecs   func([]SpecData) ([]Spec, error)
+	DataFromSpecs func([]Spec) ([]SpecData, error)
 	DataToRef     func(RefData) (Ref, error)
 	DataFromRef   func(Ref) RefData
 	DataToRefs    func([]RefData) ([]Ref, error)
@@ -61,7 +61,7 @@ func JsonToSpec(jsn sql.NullString) (Spec, error) {
 	if !jsn.Valid {
 		return Spec{}, nil
 	}
-	var dto specData
+	var dto SpecData
 	err := json.Unmarshal([]byte(jsn.String), &dto)
 	if err != nil {
 		return Spec{}, err
@@ -85,7 +85,7 @@ func JsonToSpecs(jsn sql.NullString) ([]Spec, error) {
 	if !jsn.Valid {
 		return []Spec{}, nil
 	}
-	var dtos []specData
+	var dtos []SpecData
 	err := json.Unmarshal([]byte(jsn.String), &dtos)
 	if err != nil {
 		return nil, err

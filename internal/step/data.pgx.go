@@ -40,14 +40,13 @@ func (r *repoPgx[T]) Insert(root root) error {
 	}
 	query := `
 		INSERT INTO steps (
-			id, kind, pre_id, via_id, payload
+			id, kind, via_id, payload
 		) VALUES (
-			@id, @kind, @pre_id, @via_id, @payload
+			@id, @kind, @via_id, @payload
 		)`
 	args := pgx.NamedArgs{
 		"id":      dto.ID,
 		"kind":    dto.K,
-		"pre_id":  dto.PreID,
 		"via_id":  dto.ViaID,
 		"payload": dto.Term,
 	}
@@ -61,31 +60,14 @@ func (r *repoPgx[T]) Insert(root root) error {
 
 func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
 	return nil, nil
-	// query := `
-	// 	SELECT
-	// 		id
-	// 	FROM steps`
-	// ctx := context.Background()
-	// rows, err := r.pool.Query(ctx, query)
-	// if err != nil {
-	// 	r.log.Error("query execution failed", slog.Any("reason", err))
-	// 	return nil, err
-	// }
-	// defer rows.Close()
-	// dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
-	// if err != nil {
-	// 	r.log.Error("rows collection failed", slog.Any("reason", err))
-	// 	return nil, err
-	// }
-	// return DataToRefs(dtos)
 }
 
 func (r *repoPgx[T]) SelectByID(rid id.ADT) (*T, error) {
 	query := `
 		SELECT
-			id, kind, pre_id, via_id, payload
+			id, kind, via_id, payload
 		FROM steps
-		WHERE id=$1`
+		WHERE id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
@@ -113,9 +95,9 @@ func (r *repoPgx[T]) SelectByID(rid id.ADT) (*T, error) {
 func (r *repoPgx[T]) SelectByCh(chid id.ADT) (*T, error) {
 	query := `
 		SELECT
-			id, kind, pre_id, via_id, payload
+			id, kind, via_id, payload
 		FROM steps
-		WHERE via_id=$1`
+		WHERE via_id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, chid.String())
 	if err != nil {

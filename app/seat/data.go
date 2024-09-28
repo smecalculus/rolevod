@@ -1,7 +1,7 @@
 package seat
 
 import (
-	"database/sql"
+	"smecalculus/rolevod/internal/chnl"
 )
 
 type SeatRefData struct {
@@ -10,11 +10,11 @@ type SeatRefData struct {
 }
 
 type seatRootData struct {
-	ID       string         `db:"id"`
-	Name     string         `db:"name"`
-	Via      sql.NullString `db:"via"`
-	Ctx      sql.NullString `db:"ctx"`
-	Children []SeatRefData  `db:"-"`
+	ID       string          `db:"id"`
+	Name     string          `db:"name"`
+	Via      chnl.SpecData   `db:"via"`
+	Ctx      []chnl.SpecData `db:"ctx"`
+	Children []SeatRefData   `db:"-"`
 }
 
 // goverter:variables

@@ -29,7 +29,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoot3(root)
+	dto := dataFromRoot(root)
 	query := `
 		INSERT INTO states (
 			id, kind, from_id, on_ref, to_id, to_ids
@@ -108,7 +108,7 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state2])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
@@ -117,7 +117,7 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, fmt.Errorf("no rows selected")
 	}
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	return dataToRoot3(dtos, rid.String())
+	return dataToRoot(dtos, rid.String())
 
 	// fooId := id.New()
 	// queue := &WithRoot{

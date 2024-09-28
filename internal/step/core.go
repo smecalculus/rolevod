@@ -12,20 +12,20 @@ import (
 type ID = id.ADT
 
 type Ref interface {
-	rootID() id.ADT
+	rootID() ID
 }
 
-type ProcRef id.ADT
+type ProcRef ID
 
-func (r ProcRef) rootID() id.ADT { return id.ADT(r) }
+func (r ProcRef) rootID() ID { return ID(r) }
 
-type MsgRef id.ADT
+type MsgRef ID
 
-func (r MsgRef) rootID() id.ADT { return id.ADT(r) }
+func (r MsgRef) rootID() ID { return ID(r) }
 
-type SrvRef id.ADT
+type SrvRef ID
 
-func (r SrvRef) rootID() id.ADT { return id.ADT(r) }
+func (r SrvRef) rootID() ID { return ID(r) }
 
 type root interface {
 	step()
@@ -33,7 +33,7 @@ type root interface {
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID   id.ADT
+	ID   ID
 	Term Term
 }
 
@@ -41,18 +41,16 @@ func (ProcRoot) step() {}
 
 // aka exec.Msg
 type MsgRoot struct {
-	ID    id.ADT
-	PreID id.ADT
-	ViaID id.ADT
+	ID    ID
+	ViaID chnl.ID
 	Val   Value
 }
 
 func (MsgRoot) step() {}
 
 type SrvRoot struct {
-	ID    id.ADT
-	PreID id.ADT
-	ViaID id.ADT
+	ID    ID
+	ViaID chnl.ID
 	Cont  Continuation
 }
 
@@ -160,8 +158,8 @@ func (RecurSpec) term() {}
 type Repo[T root] interface {
 	Insert(root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (*T, error)
-	SelectByCh(id.ADT) (*T, error)
+	SelectByID(ID) (*T, error)
+	SelectByCh(ID) (*T, error)
 }
 
 func Subst(t Term, varID chnl.ID, valID chnl.ID) Term {
