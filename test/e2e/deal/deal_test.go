@@ -120,7 +120,7 @@ func TestTakeWaitClose(t *testing.T) {
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
 		Ctx: map[chnl.Sym]chnl.ID{
-			seatSpec1.Via.Name: producerRoot.Via.ID,
+			seatSpec1.Via.Name: producerRoot.PID,
 		},
 	}
 	consumerRoot, err := dealApi.Involve(consumerSpec)
@@ -128,15 +128,16 @@ func TestTakeWaitClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	consumerEp := consumerRoot.Ctx[seatSpec1.Via.Name]
+	producerRootVia := consumerRoot.Ctx[seatSpec1.Via.Name]
 	// and
 	waitSpec := deal.TranSpec{
-		DealID: dealRoot.ID,
-		SeatAK: producerRoot.Via.AK,
+		DealID:  dealRoot.ID,
+		PartID:  producerRoot.PartID,
+		AgentAK: producerRoot.PAK,
 		Term: step.WaitSpec{
-			X: consumerEp.ID,
+			X: producerRootVia,
 			Cont: step.CloseSpec{
-				A: consumerRoot.Via.ID,
+				A: consumerRoot.PID,
 			},
 		},
 	}
@@ -147,10 +148,11 @@ func TestTakeWaitClose(t *testing.T) {
 	}
 	// and
 	closeSpec := deal.TranSpec{
-		DealID: dealRoot.ID,
-		SeatAK: consumerEp.AK,
+		DealID:  dealRoot.ID,
+		PartID:  consumerRoot.PartID,
+		AgentAK: consumerRoot.CAK,
 		Term: step.CloseSpec{
-			A: consumerEp.ID,
+			A: producerRootVia,
 		},
 	}
 	// and
@@ -230,7 +232,7 @@ func TestTakeRecvSend(t *testing.T) {
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
 		Ctx: map[chnl.Sym]chnl.ID{
-			seatSpec1.Via.Name: producerRoot.Via.ID,
+			seatSpec1.Via.Name: producerRoot.PID,
 		},
 	}
 	consumerRoot, err := dealApi.Involve(consumerSpec)
@@ -238,16 +240,17 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	consumerEp := consumerRoot.Ctx[seatSpec1.Via.Name]
+	producerRootVia := consumerRoot.Ctx[seatSpec1.Via.Name]
 	// and
 	recvSpec := deal.TranSpec{
-		DealID: dealRoot.ID,
-		SeatAK: producerRoot.Via.AK,
+		DealID:  dealRoot.ID,
+		PartID:  producerRoot.PartID,
+		AgentAK: producerRoot.PAK,
 		Term: step.RecvSpec{
-			X: consumerEp.ID,
-			Y: consumerRoot.Via.ID,
+			X: producerRootVia,
+			Y: consumerRoot.PID,
 			Cont: step.CloseSpec{
-				A: consumerEp.ID,
+				A: producerRootVia,
 			},
 		},
 	}
@@ -258,11 +261,12 @@ func TestTakeRecvSend(t *testing.T) {
 	}
 	// and
 	sendSpec := deal.TranSpec{
-		DealID: dealRoot.ID,
-		SeatAK: consumerEp.AK,
+		DealID:  dealRoot.ID,
+		PartID:  consumerRoot.PartID,
+		AgentAK: consumerRoot.CAK,
 		Term: step.SendSpec{
-			A: consumerEp.ID,
-			B: consumerRoot.Via.ID,
+			A: producerRootVia,
+			B: consumerRoot.PID,
 		},
 	}
 	// and

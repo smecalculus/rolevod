@@ -35,16 +35,14 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		INSERT INTO channels (
-			id, name, pre_id, pak, cak, state
+			id, name, pre_id, state
 		) VALUES (
-			@id, @name, @pre_id, @pak, @cak, @state
+			@id, @name, @pre_id, @state
 		)`
 	args := pgx.NamedArgs{
 		"id":     dto.ID,
 		"name":   dto.Name,
 		"pre_id": dto.PreID,
-		"pak":    dto.PAK,
-		"cak":    dto.CAK,
 		"state":  dto.St,
 	}
 	_, err = tx.Exec(ctx, query, args)
@@ -57,13 +55,13 @@ func (r *repoPgx) Insert(root Root) error {
 func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 	query := `
 		INSERT INTO channels (
-			id, name, pre_id, pak, cak, state
+			id, name, pre_id, state
 		)
 		SELECT
-			@new_id, name, @pre_id, pak, @cak, state
+			@new_id, name, @pre_id, state
 		FROM channels
 		WHERE id = @id
-		RETURNING id, name, pre_id, pak, cak, state`
+		RETURNING *`
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -78,7 +76,6 @@ func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 		args := pgx.NamedArgs{
 			"new_id": dto.ID,
 			"pre_id": dto.PreID,
-			"cak":    dto.CAK,
 			"id":     dto.PreID,
 		}
 		batch.Queue(query, args)
@@ -115,7 +112,6 @@ func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 	if err != nil {
 		return nil, errors.Join(err, tx.Rollback(ctx))
 	}
-	r.log.Debug("context insertion succeeded", slog.Any("dtos", dtos))
 	r.log.Log(ctx, core.LevelTrace, "context insertion succeeded", slog.Any("dtos", dtos))
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -132,7 +128,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
 		SELECT
-			id, name, pre_id, pak, cak, state
+			id, name, pre_id, state
 		FROM channels
 		WHERE id = $1`
 	ctx := context.Background()

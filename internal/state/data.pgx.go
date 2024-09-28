@@ -31,7 +31,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	}
 	dto := dataFromRoot3(root)
 	query := `
-		INSERT INTO states2 (
+		INSERT INTO states (
 			id, kind, from_id, on_ref, to_id, to_ids
 		) VALUES (
 			@id, @kind, @from_id, @on_ref, @to_id, @to_ids
@@ -92,12 +92,12 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		WITH RECURSIVE sts AS (
 			SELECT
 				id, kind, from_id, on_ref, to_id, to_ids
-			FROM states2
+			FROM states
 			WHERE id = $1
 			UNION ALL
 			SELECT
 				s1.id, s1.kind, s1.from_id, s1.on_ref, s1.to_id, s1.to_ids
-			FROM states2 s1, sts s2
+			FROM states s1, sts s2
 			WHERE s1.from_id = s2.id
 		)
 		SELECT * FROM sts`

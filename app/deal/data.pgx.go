@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/seat"
@@ -157,41 +158,54 @@ func newPartRepoPgx(p *pgxpool.Pool, l *slog.Logger) *partRepoPgx {
 }
 
 func (r *partRepoPgx) Insert(root PartRoot) error {
-	query := `
-		INSERT INTO participations (
-			deal_id, seat_id
-		) values (
-			@deal_id, @seat_id
-		)`
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	batch := pgx.Batch{}
 	dto := DataFromPartRoot(root)
+	query := `
+		INSERT INTO participations (
+			part_id, deal_id, seat_id, pak, cak
+		) values (
+			@part_id, @deal_id, @seat_id, @pak, @cak
+		)`
 	args := pgx.NamedArgs{
-		"deal_id": dto.Deal.ID,
-		"seat_id": dto.Seat.ID,
+		"part_id": dto.PartID,
+		"deal_id": dto.DealID,
+		"seat_id": dto.SeatID,
+		"pak":     dto.PAK,
+		"cak":     dto.CAK,
 	}
-	batch.Queue(query, args)
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	_, err = br.Exec()
+	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed",
+		r.log.Error("participation insertion failed",
 			slog.Any("reason", err),
-			slog.Any("deal", dto.Deal),
-			slog.Any("seat", dto.Seat))
-	}
-	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	err = br.Close()
-	if err != nil {
+			slog.Any("part", args),
+		)
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
+}
+
+func (r *partRepoPgx) SelectByID(rid ID) (PartRoot, error) {
+	query := `
+		SELECT
+			part_id, deal_id, seat_id, pak, cak
+		FROM participations
+		WHERE part_id = $1`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return PartRoot{}, err
+	}
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[partRootData])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return PartRoot{}, err
+	}
+	r.log.Log(ctx, core.LevelTrace, "participation selection succeeded", slog.Any("dto", dto))
+	return DataToPartRoot(dto)
 }

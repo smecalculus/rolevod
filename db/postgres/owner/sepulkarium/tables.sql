@@ -22,39 +22,27 @@ CREATE TABLE deals (
 );
 
 CREATE TABLE participations (
+	part_id varchar(20),
 	deal_id varchar(20),
-	seat_id varchar(20)
+	seat_id varchar(20),
+	pak varchar(36),
+	cak varchar(36)
 );
 
 CREATE TABLE states (
-	id varchar(20) UNIQUE,
-	kind smallint,
-	name varchar(20)
-);
-
-CREATE TABLE states2 (
 	id varchar(20) UNIQUE,
 	kind smallint,
 	from_id varchar(20),
 	on_ref text,
 	on_key varchar(20),
 	to_id varchar(20),
-	to_ids varchar(20)[][]
-);
-
-CREATE TABLE transitions (
-	from_id varchar(20),
-	to_id varchar(20),
-	msg_id varchar(20),
-	msg_key varchar(20)
+	to_ids varchar(20)[][2]
 );
 
 CREATE TABLE channels (
 	id varchar(20),
 	name varchar(20),
 	pre_id varchar(20),
-	pak varchar(36),
-	cak varchar(36),
 	state text
 );
 

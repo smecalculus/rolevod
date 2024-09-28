@@ -52,6 +52,7 @@ type DealApi interface {
 type dealService struct {
 	deals    dealRepo
 	seats    seat.SeatApi
+	parts    partRepo
 	chnls    chnl.Repo
 	procs    step.Repo[step.ProcRoot]
 	msgs     step.Repo[step.MsgRoot]
@@ -64,6 +65,7 @@ type dealService struct {
 func newDealService(
 	deals dealRepo,
 	seats seat.SeatApi,
+	parts partRepo,
 	chnls chnl.Repo,
 	procs step.Repo[step.ProcRoot],
 	msgs step.Repo[step.MsgRoot],
@@ -73,7 +75,7 @@ func newDealService(
 	l *slog.Logger,
 ) *dealService {
 	name := slog.String("name", "dealService")
-	return &dealService{deals, seats, chnls, procs, msgs, srvs, states, kinships, l.With(name)}
+	return &dealService{deals, seats, parts, chnls, procs, msgs, srvs, states, kinships, l.With(name)}
 }
 
 func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
@@ -130,7 +132,7 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 
 func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 	s.log.Debug("seat involvement started", slog.Any("spec", spec))
-	seatRoot, err := s.seats.Retrieve(spec.SeatID)
+	seat, err := s.seats.Retrieve(spec.SeatID)
 	if err != nil {
 		s.log.Error("seat selection failed",
 			slog.Any("reason", err),
@@ -139,11 +141,9 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		return PartRoot{}, err
 	}
 	via := chnl.Root{
-		Name: seatRoot.Via.Name,
 		ID:   id.New(),
-		PAK:  ak.New(),
-		CAK:  ak.New(),
-		St:   seatRoot.Via.St,
+		Name: seat.Via.Name,
+		St:   seat.Via.St,
 	}
 	err = s.chnls.Insert(via)
 	if err != nil {
@@ -153,31 +153,44 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		)
 		return PartRoot{}, err
 	}
-	var ctx []chnl.Root
-	for _, preID := range spec.Ctx {
-		ch := chnl.Root{
-			ID:    id.New(),
-			PreID: preID,
-			CAK:   ak.New(),
+	ctx := make(map[chnl.Sym]chnl.ID, len(spec.Ctx))
+	if len(spec.Ctx) > 0 {
+		var chnls []chnl.Root
+		for _, preID := range spec.Ctx {
+			ch := chnl.Root{
+				ID:    id.New(),
+				PreID: preID,
+			}
+			chnls = append(chnls, ch)
 		}
-		ctx = append(ctx, ch)
-	}
-	ctx, err = s.chnls.InsertCtx(ctx)
-	if err != nil {
-		s.log.Error("ctx insertion failed",
-			slog.Any("reason", err),
-			slog.Any("ctx", ctx),
-		)
-		return PartRoot{}, err
-	}
-	eps := make(map[chnl.Sym]chnl.Ep, len(ctx))
-	for _, ch := range ctx {
-		eps[ch.Name] = chnl.Ep{ID: ch.ID, AK: ch.CAK}
+		chnls, err = s.chnls.InsertCtx(chnls)
+		if err != nil {
+			s.log.Error("ctx insertion failed",
+				slog.Any("reason", err),
+				slog.Any("ctx", chnls),
+			)
+			return PartRoot{}, err
+		}
+		for _, ch := range chnls {
+			ctx[ch.Name] = ch.ID
+		}
 	}
 	root := PartRoot{
-		Seat: seat.ConvertRootToRef(seatRoot),
-		Ctx:  eps,
-		Via:  chnl.Ep{ID: via.ID, AK: via.PAK},
+		PartID: id.New(),
+		DealID: spec.DealID,
+		SeatID: spec.SeatID,
+		PAK:    ak.New(),
+		CAK:    ak.New(),
+		PID:    via.ID,
+		Ctx:    ctx,
+	}
+	err = s.parts.Insert(root)
+	if err != nil {
+		s.log.Error("participation insertion failed",
+			slog.Any("reason", err),
+			slog.Any("root", root),
+		)
+		return PartRoot{}, err
 	}
 	s.log.Debug("seat involvement succeeded", slog.Any("root", root))
 	return root, nil
@@ -188,6 +201,14 @@ func (s *dealService) Take(spec TranSpec) error {
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
 	s.log.Debug("transition taking started", slog.Any("spec", spec))
+	part, err := s.parts.SelectByID(spec.PartID)
+	if err != nil {
+		s.log.Error("participation selection failed",
+			slog.Any("reason", err),
+			slog.Any("id", spec.PartID),
+		)
+		return err
+	}
 	switch term := spec.Term.(type) {
 	case step.CloseSpec:
 		curChnl, err := s.chnls.SelectByID(term.A)
@@ -214,13 +235,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.SeatAK {
-		case curChnl.PAK:
+		if spec.AgentAK == part.PAK {
 			err = s.checkProducer(term, curSt)
-		case curChnl.CAK:
+		} else if spec.AgentAK == part.CAK {
 			err = s.checkConsumer(term, curSt)
-		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
+		} else {
+			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -284,7 +304,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: wait.Cont})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: wait.Cont})
 	case step.WaitSpec:
 		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
@@ -310,13 +330,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.SeatAK {
-		case curChnl.PAK:
+		if spec.AgentAK == part.PAK {
 			err = s.checkProducer(term, curSt)
-		case curChnl.CAK:
+		} else if spec.AgentAK == part.CAK {
 			err = s.checkConsumer(term, curSt)
-		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
+		} else {
+			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -379,7 +398,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: term.Cont})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: term.Cont})
 	case step.SendSpec:
 		curChnl, err := s.chnls.SelectByID(term.A)
 		if err != nil {
@@ -406,15 +425,14 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		var nextSt state.Ref
-		switch spec.SeatAK {
-		case curChnl.PAK:
+		if spec.AgentAK == part.PAK {
 			nextSt = curSt.(state.TensorRoot).Next()
 			err = s.checkProducer(term, curSt)
-		case curChnl.CAK:
+		} else if spec.AgentAK == part.CAK {
 			nextSt = curSt.(state.LolliRoot).Next()
 			err = s.checkConsumer(term, curSt)
-		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
+		} else {
+			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -465,8 +483,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			PAK:   curChnl.PAK,
-			CAK:   curChnl.CAK,
 			St:    nextSt,
 		}
 		err = s.chnls.Insert(newChnl)
@@ -480,7 +496,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		recv.Cont = step.Subst(recv.Cont, recv.X, newChnl.ID)
 		recv.Cont = step.Subst(recv.Cont, recv.Y, term.B)
 		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: recv.Cont})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: recv.Cont})
 	case step.RecvSpec:
 		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
@@ -506,13 +522,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		switch spec.SeatAK {
-		case curChnl.PAK:
+		if spec.AgentAK == part.PAK {
 			err = s.checkProducer(term, curSt)
-		case curChnl.CAK:
+		} else if spec.AgentAK == part.CAK {
 			err = s.checkConsumer(term, curSt)
-		default:
-			err = fmt.Errorf("unexpected access key: %s", spec.SeatAK)
+		} else {
+			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -563,8 +578,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			PAK:   curChnl.PAK,
-			CAK:   curChnl.CAK,
 			St:    curSt.(state.LolliRoot).Next(),
 		}
 		err = s.chnls.Insert(newChnl)
@@ -575,10 +588,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		step.Subst(term.Cont, term.X, newChnl.ID)
-		step.Subst(term.Cont, term.Y, val.B)
+		term.Cont = step.Subst(term.Cont, term.X, newChnl.ID)
+		term.Cont = step.Subst(term.Cont, term.Y, val.B)
 		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: term.Cont})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: term.Cont})
 	case step.LabSpec:
 		curChnl, err := s.chnls.SelectByID(term.C)
 		if err != nil {
@@ -650,8 +663,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			PAK:   curChnl.PAK,
-			CAK:   curChnl.CAK,
 			St:    curSt.(state.PlusRoot).Next(term.L),
 		}
 		err = s.chnls.Insert(newChnl)
@@ -664,7 +675,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		branch := cont.Branches[term.L]
 		step.Subst(branch, cont.X, newChnl.ID)
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: branch})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: branch})
 	case step.CaseSpec:
 		curChnl, err := s.chnls.SelectByID(term.X)
 		if err != nil {
@@ -736,8 +747,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			PAK:   curChnl.PAK,
-			CAK:   curChnl.CAK,
 			St:    curSt.(state.WithRoot).Next(val.L),
 		}
 		err = s.chnls.Insert(newChnl)
@@ -750,7 +759,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		branch := term.Branches[val.L]
 		step.Subst(branch, term.X, newChnl.ID)
-		return s.Take(TranSpec{DealID: spec.DealID, SeatAK: spec.SeatAK, Term: branch})
+		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: branch})
 	default:
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
@@ -780,6 +789,7 @@ type kinshipRepo interface {
 }
 
 // Participation
+// aka Spawn
 type PartSpec struct {
 	DealID ID
 	SeatID seat.ID
@@ -787,21 +797,30 @@ type PartSpec struct {
 }
 
 type PartRoot struct {
-	Deal DealRef
-	Seat seat.SeatRef
-	Ctx  map[chnl.Sym]chnl.Ep
-	Via  chnl.Ep
+	PartID ID
+	DealID ID
+	SeatID seat.ID
+	// Producible Access Key
+	PAK ak.ADT
+	// Consumables Access Key
+	CAK ak.ADT
+	// Producible Channel
+	PID chnl.ID
+	// Consumable Channels
+	Ctx map[chnl.Sym]chnl.ID
 }
 
 type partRepo interface {
 	Insert(PartRoot) error
+	SelectByID(ID) (PartRoot, error)
 }
 
 // Transition
 type TranSpec struct {
-	DealID ID
-	SeatAK ak.ADT
-	Term   step.Term
+	DealID  ID
+	PartID  ID
+	AgentAK ak.ADT
+	Term    step.Term
 }
 
 // aka checkExp

@@ -21,8 +21,6 @@ type rootData struct {
 	ID    string         `db:"id"`
 	Name  string         `db:"name"`
 	PreID string         `db:"pre_id"`
-	PAK   string         `db:"pak"`
-	CAK   string         `db:"cak"`
 	St    sql.NullString `db:"state"`
 }
 

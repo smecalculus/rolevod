@@ -1,9 +1,5 @@
 package deal
 
-import (
-	"smecalculus/rolevod/app/seat"
-)
-
 type dealRefData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
@@ -42,16 +38,20 @@ var (
 )
 
 type partRootData struct {
-	Deal dealRefData
-	Seat seat.SeatRefData
+	PartID string `db:"part_id"`
+	DealID string `db:"deal_id"`
+	SeatID string `db:"seat_id"`
+	PAK    string `db:"pak"`
+	CAK    string `db:"cak"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
+// goverter:extend data.*
 // goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/app/seat:Data.*
+// goverter:extend smecalculus/rolevod/lib/ak:String.*
 var (
-	// goverter:ignore Ctx Via
+	// goverter:ignore PID Ctx
 	DataToPartRoot   func(partRootData) (PartRoot, error)
 	DataFromPartRoot func(PartRoot) partRootData
 )
