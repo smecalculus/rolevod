@@ -88,7 +88,7 @@ func (FwdSpec) term() {}
 type SpawnSpec struct {
 	DecID id.ADT // seat id
 	C     chnl.ID
-	Ctx   map[chnl.Sym]chnl.ID
+	Ctx   map[chnl.Name]chnl.ID
 	Cont  Term
 }
 
@@ -147,8 +147,8 @@ func (WaitSpec) cont() {}
 // aka ExpName
 type RecurSpec struct {
 	Name string
-	C    chnl.Sym
-	Ctx  []chnl.Sym
+	C    chnl.Name
+	Ctx  []chnl.Name
 }
 
 func (RecurSpec) term() {}

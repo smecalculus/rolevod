@@ -6,26 +6,24 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
+type Name = string
 type ID = id.ADT
-
-// Symbol
-type Sym string
 
 // aka ChanTp
 type Spec struct {
-	Name Sym
+	Name Name
 	St   state.Ref
 }
 
 // aka Z
 type Ref struct {
 	ID   ID
-	Name Sym
+	Name Name
 }
 
 type Root struct {
 	ID   ID
-	Name Sym
+	Name Name
 	// Preceding Channel ID
 	PreID ID
 	// State

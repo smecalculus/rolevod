@@ -3,6 +3,7 @@ package seat
 import (
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -16,7 +17,7 @@ type SeatSpecMsg struct {
 
 func (mto SeatSpecMsg) Validate() error {
 	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
+		valid.Field(&mto.Name, core.NameRequired...),
 		valid.Field(&mto.Via, valid.Required),
 	)
 }
@@ -60,8 +61,8 @@ var (
 )
 
 type KinshipSpecMsg struct {
-	ParentID    string   `param:"id" json:"parent"`
-	ChildrenIDs []string `json:"children"`
+	ParentID string   `json:"parent_id" param:"id"`
+	ChildIDs []string `json:"child_ids"`
 }
 
 type KinshipRootMsg struct {

@@ -5,8 +5,9 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	valid "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -15,18 +16,18 @@ type SpecMsg struct {
 	Recur  *RecurMsg `json:"recur,omitempty"`
 	Tensor *ProdMsg  `json:"tensor,omitempty"`
 	Lolli  *ProdMsg  `json:"lolli,omitempty"`
-	With   *SumMsg   `json:"with,omitempty"`
 	Plus   *SumMsg   `json:"plus,omitempty"`
+	With   *SumMsg   `json:"with,omitempty"`
 }
 
 func (mto SpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
-		valid.Field(&mto.Recur, valid.Required.When(mto.K == Recur)),
-		valid.Field(&mto.Tensor, valid.Required.When(mto.K == Tensor)),
-		valid.Field(&mto.Lolli, valid.Required.When(mto.K == Lolli)),
-		valid.Field(&mto.With, valid.Required.When(mto.K == With)),
-		valid.Field(&mto.Plus, valid.Required.When(mto.K == Plus)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.K, kindRequired...),
+		validation.Field(&mto.Recur, validation.Required.When(mto.K == Recur)),
+		validation.Field(&mto.Tensor, validation.Required.When(mto.K == Tensor)),
+		validation.Field(&mto.Lolli, validation.Required.When(mto.K == Lolli)),
+		validation.Field(&mto.Plus, validation.Required.When(mto.K == Plus)),
+		validation.Field(&mto.With, validation.Required.When(mto.K == With)),
 	)
 }
 
@@ -36,14 +37,14 @@ type RecurMsg struct {
 }
 
 type ProdMsg struct {
-	Value *SpecMsg `json:"value"`
-	State *SpecMsg `json:"state"`
+	Value SpecMsg `json:"value"`
+	Cont  SpecMsg `json:"cont"`
 }
 
 func (mto ProdMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Value, valid.Required),
-		valid.Field(&mto.State, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Value, validation.Required),
+		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
@@ -52,32 +53,36 @@ type SumMsg struct {
 }
 
 func (mto SumMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Choices, valid.Required, valid.Length(1, 20)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Choices,
+			validation.Required,
+			validation.Length(1, 10),
+			validation.Each(validation.Required),
+		),
 	)
 }
 
 type ChoiceMsg struct {
-	Label string   `json:"label"`
-	State *SpecMsg `json:"state"`
+	Label string  `json:"label"`
+	Cont  SpecMsg `json:"cont"`
 }
 
 func (mto ChoiceMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Label, valid.Required, valid.Length(1, 36)),
-		valid.Field(&mto.State, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Label, core.NameRequired...),
+		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
 type RefMsg struct {
-	ID string `param:"id" json:"id"`
+	ID string `json:"id" param:"id"`
 	K  Kind   `json:"kind"`
 }
 
 func (mto RefMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+		validation.Field(&mto.K, kindRequired...),
 	)
 }
 
@@ -92,6 +97,11 @@ const (
 	Plus   = Kind("plus")
 )
 
+var kindRequired = []validation.Rule{
+	validation.Required,
+	validation.In(One, Recur, Tensor, Lolli, Plus, With),
+}
+
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
@@ -101,54 +111,48 @@ var (
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
 )
 
-func MsgFromSpec(s Spec) *SpecMsg {
-	if s == nil {
-		return nil
-	}
+func MsgFromSpec(s Spec) SpecMsg {
 	switch spec := s.(type) {
 	case OneSpec:
-		return &SpecMsg{K: One}
+		return SpecMsg{K: One}
 	case RecurSpec:
-		return &SpecMsg{
+		return SpecMsg{
 			K:     Recur,
 			Recur: &RecurMsg{ToID: spec.ToID.String(), Name: spec.Name}}
 	case TensorSpec:
-		return &SpecMsg{
+		return SpecMsg{
 			K: Tensor,
 			Tensor: &ProdMsg{
 				Value: MsgFromSpec(spec.B),
-				State: MsgFromSpec(spec.C),
+				Cont:  MsgFromSpec(spec.C),
 			},
 		}
 	case LolliSpec:
-		return &SpecMsg{
+		return SpecMsg{
 			K: Lolli,
 			Lolli: &ProdMsg{
 				Value: MsgFromSpec(spec.Y),
-				State: MsgFromSpec(spec.Z),
+				Cont:  MsgFromSpec(spec.Z),
 			},
 		}
 	case WithSpec:
 		choices := make([]ChoiceMsg, len(spec.Choices))
 		for i, l := range maps.Keys(spec.Choices) {
-			choices[i] = ChoiceMsg{Label: string(l), State: MsgFromSpec(spec.Choices[l])}
+			choices[i] = ChoiceMsg{Label: string(l), Cont: MsgFromSpec(spec.Choices[l])}
 		}
-		return &SpecMsg{K: With, With: &SumMsg{Choices: choices}}
+		return SpecMsg{K: With, With: &SumMsg{Choices: choices}}
 	case PlusSpec:
 		choices := make([]ChoiceMsg, len(spec.Choices))
 		for i, l := range maps.Keys(spec.Choices) {
-			choices[i] = ChoiceMsg{Label: string(l), State: MsgFromSpec(spec.Choices[l])}
+			choices[i] = ChoiceMsg{Label: string(l), Cont: MsgFromSpec(spec.Choices[l])}
 		}
-		return &SpecMsg{K: Plus, Plus: &SumMsg{Choices: choices}}
+		return SpecMsg{K: Plus, Plus: &SumMsg{Choices: choices}}
 	default:
 		panic(ErrUnexpectedSpec(s))
 	}
 }
 
-func MsgToSpec(mto *SpecMsg) (Spec, error) {
-	if mto == nil {
-		return nil, nil
-	}
+func MsgToSpec(mto SpecMsg) (Spec, error) {
 	switch mto.K {
 	case One:
 		return OneSpec{}, nil
@@ -163,7 +167,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		s, err := MsgToSpec(mto.Tensor.State)
+		s, err := MsgToSpec(mto.Tensor.Cont)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +177,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		s, err := MsgToSpec(mto.Lolli.State)
+		s, err := MsgToSpec(mto.Lolli.Cont)
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +185,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	case With:
 		choices := make(map[Label]Spec, len(mto.With.Choices))
 		for _, ch := range mto.With.Choices {
-			choice, err := MsgToSpec(ch.State)
+			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
 			}
@@ -191,7 +195,7 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	case Plus:
 		choices := make(map[Label]Spec, len(mto.Plus.Choices))
 		for _, ch := range mto.Plus.Choices {
-			choice, err := MsgToSpec(ch.State)
+			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
 			}
@@ -203,33 +207,27 @@ func MsgToSpec(mto *SpecMsg) (Spec, error) {
 	}
 }
 
-func MsgFromRef(ref Ref) *RefMsg {
-	if ref == nil {
-		return nil
-	}
+func MsgFromRef(ref Ref) RefMsg {
 	id := ref.RID().String()
 	switch ref.(type) {
 	case OneRef, OneRoot:
-		return &RefMsg{K: One, ID: id}
+		return RefMsg{K: One, ID: id}
 	case RecurRef, RecurRoot:
-		return &RefMsg{K: Recur, ID: id}
+		return RefMsg{K: Recur, ID: id}
 	case TensorRef, TensorRoot:
-		return &RefMsg{K: Tensor, ID: id}
+		return RefMsg{K: Tensor, ID: id}
 	case LolliRef, LolliRoot:
-		return &RefMsg{K: Lolli, ID: id}
-	case WithRef, WithRoot:
-		return &RefMsg{K: With, ID: id}
+		return RefMsg{K: Lolli, ID: id}
 	case PlusRef, PlusRoot:
-		return &RefMsg{K: Plus, ID: id}
+		return RefMsg{K: Plus, ID: id}
+	case WithRef, WithRoot:
+		return RefMsg{K: With, ID: id}
 	default:
 		panic(ErrUnexpectedRef(ref))
 	}
 }
 
-func MsgToRef(mto *RefMsg) (Ref, error) {
-	if mto == nil {
-		return nil, nil
-	}
+func MsgToRef(mto RefMsg) (Ref, error) {
 	rid, err := id.StringToID(mto.ID)
 	if err != nil {
 		return nil, err
@@ -243,10 +241,10 @@ func MsgToRef(mto *RefMsg) (Ref, error) {
 		return TensorRef{rid}, nil
 	case Lolli:
 		return LolliRef{rid}, nil
-	case With:
-		return WithRef{rid}, nil
 	case Plus:
 		return PlusRef{rid}, nil
+	case With:
+		return WithRef{rid}, nil
 	default:
 		panic(ErrUnexpectedKind(mto.K))
 	}

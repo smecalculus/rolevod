@@ -42,8 +42,8 @@ func TestEstablishKinship(t *testing.T) {
 	}
 	// when
 	ks := deal.KinshipSpec{
-		ParentID:    pr.ID,
-		ChildrenIDs: []id.ADT{cr.ID},
+		ParentID: pr.ID,
+		ChildIDs: []id.ADT{cr.ID},
 	}
 	err = dealApi.Establish(ks)
 	if err != nil {
@@ -86,7 +86,7 @@ func TestTakeWaitClose(t *testing.T) {
 	// and
 	seatSpec2 := seat.SeatSpec{
 		Name: "seat-2",
-		Ctx: map[chnl.Sym]chnl.Spec{
+		Ctx: map[chnl.Name]chnl.Spec{
 			seatSpec1.Via.Name: seatSpec1.Via,
 		},
 		Via: chnl.Spec{
@@ -119,7 +119,7 @@ func TestTakeWaitClose(t *testing.T) {
 	consumerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
-		Ctx: map[chnl.Sym]chnl.ID{
+		Ctx: map[chnl.Name]chnl.ID{
 			seatSpec1.Via.Name: producerRoot.PID,
 		},
 	}
@@ -231,7 +231,7 @@ func TestTakeRecvSend(t *testing.T) {
 	consumerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
-		Ctx: map[chnl.Sym]chnl.ID{
+		Ctx: map[chnl.Name]chnl.ID{
 			seatSpec1.Via.Name: producerRoot.PID,
 		},
 	}
@@ -348,7 +348,7 @@ func TestTakeCaseLab(t *testing.T) {
 	consumerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
-		Ctx: map[chnl.Sym]chnl.ID{
+		Ctx: map[chnl.Name]chnl.ID{
 			seatSpec1.Via.Name: producerRoot.PID,
 		},
 	}
@@ -451,7 +451,7 @@ func TestTakeSpawn(t *testing.T) {
 	producerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
-		Ctx:    make(map[chnl.Sym]id.ADT),
+		Ctx:    make(map[chnl.Name]id.ADT),
 	}
 	producerRoot, err := dealApi.Involve(producerSpec)
 	if err != nil {
@@ -465,7 +465,7 @@ func TestTakeSpawn(t *testing.T) {
 		Term: step.SpawnSpec{
 			DecID: seatRoot2.ID,
 			C:     id.New(),
-			Ctx: map[chnl.Sym]chnl.ID{
+			Ctx: map[chnl.Name]chnl.ID{
 				seatSpec1.Via.Name: producerRoot.PID,
 			},
 			Cont: step.CloseSpec{

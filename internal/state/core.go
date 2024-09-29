@@ -40,19 +40,19 @@ type LolliSpec struct {
 
 func (LolliSpec) spec() {}
 
-// aka External Choice
-type WithSpec struct {
-	Choices map[Label]Spec
-}
-
-func (WithSpec) spec() {}
-
 // aka Internal Choice
 type PlusSpec struct {
 	Choices map[Label]Spec
 }
 
 func (PlusSpec) spec() {}
+
+// aka External Choice
+type WithSpec struct {
+	Choices map[Label]Spec
+}
+
+func (WithSpec) spec() {}
 
 type UpSpec struct {
 	A Spec
@@ -70,17 +70,17 @@ type Ref interface {
 	RID() ID
 }
 
-type WithRef struct {
-	ID ID
-}
-
-func (r WithRef) RID() ID { return r.ID }
-
 type PlusRef struct {
 	ID ID
 }
 
 func (r PlusRef) RID() ID { return r.ID }
+
+type WithRef struct {
+	ID ID
+}
+
+func (r WithRef) RID() ID { return r.ID }
 
 type TensorRef struct {
 	ID ID
@@ -123,7 +123,7 @@ type Root interface {
 	Ref
 }
 
-type Product interface {
+type Prod interface {
 	Next() Ref
 }
 
@@ -214,18 +214,6 @@ type Repo interface {
 	SelectByID(ID) (Root, error)
 }
 
-func ErrUnexpectedSpec(v Spec) error {
-	return fmt.Errorf("unexpected spec %#v", v)
-}
-
-func ErrUnexpectedRef(v Ref) error {
-	return fmt.Errorf("unexpected ref %#v", v)
-}
-
-func ErrUnexpectedRoot(v Root) error {
-	return fmt.Errorf("unexpected root %#v", v)
-}
-
 func ConvertSpecToRoot(s Spec) Root {
 	if s == nil {
 		return nil
@@ -275,4 +263,16 @@ func ConvertRootToRef(r Root) Ref {
 		return nil
 	}
 	return r.(Ref)
+}
+
+func ErrUnexpectedSpec(v Spec) error {
+	return fmt.Errorf("unexpected spec %#v", v)
+}
+
+func ErrUnexpectedRef(v Ref) error {
+	return fmt.Errorf("unexpected ref %#v", v)
+}
+
+func ErrUnexpectedRoot(v Root) error {
+	return fmt.Errorf("unexpected root %#v", v)
 }

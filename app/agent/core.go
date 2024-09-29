@@ -69,7 +69,7 @@ func (s *agentService) Retrieve(id id.ADT) (AgentRoot, error) {
 
 func (s *agentService) Establish(spec KinshipSpec) error {
 	var children []AgentRef
-	for _, id := range spec.ChildrenIDs {
+	for _, id := range spec.ChildIDs {
 		children = append(children, AgentRef{ID: id})
 	}
 	root := KinshipRoot{
@@ -97,8 +97,8 @@ type agentRepo interface {
 }
 
 type KinshipSpec struct {
-	ParentID    id.ADT
-	ChildrenIDs []id.ADT
+	ParentID id.ADT
+	ChildIDs []id.ADT
 }
 
 type KinshipRoot struct {

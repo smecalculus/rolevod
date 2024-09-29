@@ -1,12 +1,22 @@
 package role
 
 import (
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+
 	"smecalculus/rolevod/internal/state"
+	"smecalculus/rolevod/lib/core"
 )
 
 type RoleSpecMsg struct {
-	Name string         `json:"name"`
-	St   *state.SpecMsg `json:"state"`
+	Name string        `json:"name"`
+	St   state.SpecMsg `json:"state"`
+}
+
+func (mto RoleSpecMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Name, core.NameRequired...),
+		validation.Field(&mto.St, validation.Required),
+	)
 }
 
 type RefMsg struct {
@@ -14,16 +24,15 @@ type RefMsg struct {
 }
 
 type RoleRefMsg struct {
-	ID   string        `json:"id" param:"id"`
-	Name string        `json:"name"`
-	St   *state.RefMsg `json:"state"`
+	ID   string `json:"id" param:"id"`
+	Name string `json:"name"`
 }
 
 type RoleRootMsg struct {
-	ID       string        `json:"id" param:"id"`
-	Name     string        `json:"name"`
-	St       *state.RefMsg `json:"state"`
-	Children []RoleRefMsg  `json:"children"`
+	ID       string       `json:"id" param:"id"`
+	Name     string       `json:"name"`
+	St       state.RefMsg `json:"state"`
+	Children []RoleRefMsg `json:"children"`
 }
 
 // goverter:variables
@@ -44,8 +53,8 @@ var (
 )
 
 type KinshipSpecMsg struct {
-	ParentID    string   `json:"parent_id" param:"id"`
-	ChildrenIDs []string `json:"children_ids"`
+	ParentID string   `json:"parent_id" param:"id"`
+	ChildIDs []string `json:"child_ids"`
 }
 
 type KinshipRootMsg struct {

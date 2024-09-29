@@ -18,7 +18,6 @@ type RoleSpec struct {
 type RoleRef struct {
 	ID   id.ADT
 	Name string
-	St   state.Ref
 }
 
 // aka TpDef
@@ -104,7 +103,7 @@ func (s *roleService) RetreiveAll() ([]RoleRef, error) {
 
 func (s *roleService) Establish(spec KinshipSpec) error {
 	var children []RoleRef
-	for _, id := range spec.ChildrenIDs {
+	for _, id := range spec.ChildIDs {
 		children = append(children, RoleRef{ID: id})
 	}
 	root := KinshipRoot{
@@ -127,8 +126,8 @@ type roleRepo interface {
 }
 
 type KinshipSpec struct {
-	ParentID    id.ADT
-	ChildrenIDs []id.ADT
+	ParentID id.ADT
+	ChildIDs []id.ADT
 }
 
 type KinshipRoot struct {

@@ -16,7 +16,7 @@ type Sym = string
 type SeatSpec struct {
 	Name Sym
 	Via  chnl.Spec
-	Ctx  map[chnl.Sym]chnl.Spec
+	Ctx  map[chnl.Name]chnl.Spec
 }
 
 type SeatRef struct {
@@ -29,7 +29,7 @@ type SeatRoot struct {
 	ID       ID
 	Name     Sym
 	Via      chnl.Spec
-	Ctx      map[chnl.Sym]chnl.Spec
+	Ctx      map[chnl.Name]chnl.Spec
 	Children []SeatRef
 }
 
@@ -86,7 +86,7 @@ func (s *seatService) Retrieve(rid id.ADT) (SeatRoot, error) {
 
 func (s *seatService) Establish(spec KinshipSpec) error {
 	var children []SeatRef
-	for _, id := range spec.ChildrenIDs {
+	for _, id := range spec.ChildIDs {
 		children = append(children, SeatRef{ID: id})
 	}
 	root := KinshipRoot{
@@ -114,8 +114,8 @@ type SeatRepo interface {
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID    id.ADT
-	ChildrenIDs []id.ADT
+	ParentID id.ADT
+	ChildIDs []id.ADT
 }
 
 type KinshipRoot struct {

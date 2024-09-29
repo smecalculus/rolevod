@@ -1,22 +1,23 @@
 package chnl
 
 import (
-	valid "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/state"
 )
 
 type SpecMsg struct {
-	Name string        `json:"name"`
-	St   *state.RefMsg `json:"state"`
+	Name string       `json:"name"`
+	St   state.RefMsg `json:"state"`
 }
 
 func (mto SpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
-		valid.Field(&mto.St, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Name, core.NameRequired...),
+		validation.Field(&mto.St, validation.Required),
 	)
 }
 
@@ -26,16 +27,10 @@ type RefMsg struct {
 }
 
 func (mto RefMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+		validation.Field(&mto.Name, core.NameRequired...),
 	)
-}
-
-type RootMsg struct {
-	ID   string        `json:"id"`
-	Name string        `json:"name"`
-	St   *state.RefMsg `json:"state"`
 }
 
 // goverter:variables
@@ -44,30 +39,28 @@ type RootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToSpec    func(SpecMsg) (Spec, error)
-	MsgFromSpec  func(Spec) SpecMsg
-	MsgToRef     func(RefMsg) (Ref, error)
-	MsgFromRef   func(Ref) RefMsg
-	MsgFromRoot  func(Root) RootMsg
-	MsgFromRoots func([]Root) []RootMsg
+	MsgToSpec   func(SpecMsg) (Spec, error)
+	MsgFromSpec func(Spec) SpecMsg
+	MsgToRef    func(RefMsg) (Ref, error)
+	MsgFromRef  func(Ref) RefMsg
 )
 
-func MsgFromRefMap(refs map[Sym]ID) []RefMsg {
+func MsgFromRefMap(refs map[Name]ID) []RefMsg {
 	var mtos []RefMsg
 	for name, rid := range refs {
-		mtos = append(mtos, RefMsg{rid.String(), string(name)})
+		mtos = append(mtos, RefMsg{rid.String(), name})
 	}
 	return mtos
 }
 
-func MsgToRefMap(mtos []RefMsg) (map[Sym]ID, error) {
-	refs := make(map[Sym]ID, len(mtos))
+func MsgToRefMap(mtos []RefMsg) (map[Name]ID, error) {
+	refs := make(map[Name]ID, len(mtos))
 	for _, mto := range mtos {
-		rid, err := id.StringToID(mto.ID)
+		mtoID, err := id.StringToID(mto.ID)
 		if err != nil {
 			return nil, err
 		}
-		refs[Sym(mto.Name)] = rid
+		refs[mto.Name] = mtoID
 	}
 	return refs, nil
 }

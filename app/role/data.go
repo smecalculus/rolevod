@@ -9,7 +9,6 @@ import (
 type RoleRefData struct {
 	ID   string         `db:"id"`
 	Name string         `db:"name"`
-	St   *state.RefData `db:"state"`
 }
 
 type roleRootData struct {

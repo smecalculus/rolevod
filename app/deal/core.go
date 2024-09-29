@@ -115,7 +115,7 @@ func (s *dealService) RetreiveAll() ([]DealRef, error) {
 func (s *dealService) Establish(spec KinshipSpec) error {
 	s.log.Debug("kinship establishment started", slog.Any("spec", spec))
 	var children []DealRef
-	for _, id := range spec.ChildrenIDs {
+	for _, id := range spec.ChildIDs {
 		children = append(children, DealRef{ID: id})
 	}
 	root := KinshipRoot{
@@ -153,7 +153,7 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		)
 		return PartRoot{}, err
 	}
-	ctx := make(map[chnl.Sym]chnl.ID, len(spec.Ctx))
+	ctx := make(map[chnl.Name]chnl.ID, len(spec.Ctx))
 	if len(spec.Ctx) > 0 {
 		var chnls []chnl.Root
 		for _, preID := range spec.Ctx {
@@ -480,7 +480,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			St:    curSt.(state.Product).Next(),
+			St:    curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newChnl)
 		if err != nil {
@@ -575,7 +575,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
-			St:    curSt.(state.Product).Next(),
+			St:    curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newChnl)
 		if err != nil {
@@ -797,8 +797,8 @@ type dealRepo interface {
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID    ID
-	ChildrenIDs []ID
+	ParentID ID
+	ChildIDs []ID
 }
 
 type KinshipRoot struct {
@@ -814,7 +814,7 @@ type kinshipRepo interface {
 type PartSpec struct {
 	DealID ID
 	SeatID seat.ID
-	Ctx    map[chnl.Sym]chnl.ID
+	Ctx    map[chnl.Name]chnl.ID
 }
 
 type PartRoot struct {
@@ -828,7 +828,7 @@ type PartRoot struct {
 	// Producible Channel ID
 	PID chnl.ID
 	// Consumable Channel IDs
-	Ctx map[chnl.Sym]chnl.ID
+	Ctx map[chnl.Name]chnl.ID
 }
 
 type partRepo interface {

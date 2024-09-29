@@ -1,7 +1,11 @@
 package deal
 
 import (
-	valid "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"smecalculus/rolevod/lib/ak"
+	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/step"
@@ -14,8 +18,8 @@ type DealSpecMsg struct {
 }
 
 func (mto DealSpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Name, core.NameRequired...),
 	)
 }
 
@@ -29,9 +33,9 @@ type DealRefMsg struct {
 }
 
 func (mto DealRefMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+		validation.Field(&mto.Name, core.NameRequired...),
 	)
 }
 
@@ -57,16 +61,16 @@ var (
 )
 
 type KinshipSpecMsg struct {
-	ParentID    string   `json:"parent_id" param:"id"`
-	ChildrenIDs []string `json:"children_ids"`
+	ParentID string   `json:"parent_id" param:"id"`
+	ChildIDs []string `json:"child_ids"`
 }
 
 func (mto KinshipSpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.ParentID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.ChildrenIDs,
-			valid.Required, valid.Length(0, 10),
-			valid.Each(valid.Required, valid.Length(20, 20))),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ParentID, id.Required...),
+		validation.Field(&mto.ChildIDs,
+			validation.Required, validation.Length(0, 10),
+			validation.Each(id.Required...)),
 	)
 }
 
@@ -92,10 +96,10 @@ type PartSpecMsg struct {
 }
 
 func (mto PartSpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.SeatID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Ctx, valid.Length(0, 10), valid.Each(valid.Required)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.DealID, id.Required...),
+		validation.Field(&mto.SeatID, id.Required...),
+		validation.Field(&mto.Ctx, validation.Length(0, 10), validation.Each(validation.Required)),
 	)
 }
 
@@ -130,11 +134,11 @@ type TranSpecMsg struct {
 }
 
 func (mto TranSpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.PartID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.AgentAK, valid.Required, valid.Length(1, 36)),
-		valid.Field(&mto.Term, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.DealID, id.Required...),
+		validation.Field(&mto.PartID, id.Required...),
+		validation.Field(&mto.AgentAK, ak.Required...),
+		validation.Field(&mto.Term, validation.Required),
 	)
 }
 

@@ -3,8 +3,9 @@ package step
 import (
 	"fmt"
 
-	valid "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -22,6 +23,11 @@ const (
 	Msg  = StepKind("msg")
 	Srv  = StepKind("srv")
 )
+
+var stepKindRequired = []validation.Rule{
+	validation.Required,
+	validation.In(Proc, Msg, Srv),
+}
 
 type RootMsg struct {
 	ID string   `json:"id"`
@@ -42,6 +48,11 @@ const (
 	Fwd   = TermKind("fwd")
 )
 
+var termKindRequired = []validation.Rule{
+	validation.Required,
+	validation.In(Close, Wait, Send, Recv, Lab, Case, Spawn),
+}
+
 type TermMsg struct {
 	K     TermKind  `json:"kind"`
 	Close *CloseMsg `json:"close,omitempty"`
@@ -54,18 +65,15 @@ type TermMsg struct {
 }
 
 func (mto TermMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.K,
-			valid.Required,
-			valid.In(Close, Wait, Send, Recv, Lab, Case, Spawn),
-		),
-		valid.Field(&mto.Close, valid.Required.When(mto.K == Close)),
-		valid.Field(&mto.Wait, valid.Required.When(mto.K == Wait)),
-		valid.Field(&mto.Send, valid.Required.When(mto.K == Send)),
-		valid.Field(&mto.Recv, valid.Required.When(mto.K == Recv)),
-		valid.Field(&mto.Lab, valid.Required.When(mto.K == Lab)),
-		valid.Field(&mto.Case, valid.Required.When(mto.K == Case)),
-		valid.Field(&mto.Spawn, valid.Required.When(mto.K == Spawn)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.K, termKindRequired...),
+		validation.Field(&mto.Close, validation.Required.When(mto.K == Close)),
+		validation.Field(&mto.Wait, validation.Required.When(mto.K == Wait)),
+		validation.Field(&mto.Send, validation.Required.When(mto.K == Send)),
+		validation.Field(&mto.Recv, validation.Required.When(mto.K == Recv)),
+		validation.Field(&mto.Lab, validation.Required.When(mto.K == Lab)),
+		validation.Field(&mto.Case, validation.Required.When(mto.K == Case)),
+		validation.Field(&mto.Spawn, validation.Required.When(mto.K == Spawn)),
 	)
 }
 
@@ -74,8 +82,8 @@ type CloseMsg struct {
 }
 
 func (mto CloseMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.A, valid.Required, valid.Length(20, 20)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.A, id.Required...),
 	)
 }
 
@@ -85,9 +93,9 @@ type WaitMsg struct {
 }
 
 func (mto WaitMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.X, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Cont, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.X, id.Required...),
+		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
@@ -97,9 +105,9 @@ type SendMsg struct {
 }
 
 func (mto SendMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.A, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.B, valid.Required, valid.Length(20, 20)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.A, id.Required...),
+		validation.Field(&mto.B, id.Required...),
 	)
 }
 
@@ -110,10 +118,10 @@ type RecvMsg struct {
 }
 
 func (mto RecvMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.X, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Y, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Cont, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.X, id.Required...),
+		validation.Field(&mto.Y, id.Required...),
+		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
@@ -123,9 +131,9 @@ type LabMsg struct {
 }
 
 func (mto LabMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.C, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Label, valid.Required, valid.Length(1, 64)),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.C, id.Required...),
+		validation.Field(&mto.Label, core.NameRequired...),
 	)
 }
 
@@ -135,12 +143,12 @@ type CaseMsg struct {
 }
 
 func (mto CaseMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Z, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Conts,
-			valid.Required,
-			valid.Length(1, 10),
-			valid.Each(valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Z, id.Required...),
+		validation.Field(&mto.Conts,
+			validation.Required,
+			validation.Length(1, 10),
+			validation.Each(validation.Required),
 		),
 	)
 }
@@ -153,11 +161,11 @@ type SpawnMsg struct {
 }
 
 func (mto SpawnMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.DecID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.C, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Ctx, valid.Length(0, 10), valid.Each(valid.Required)),
-		valid.Field(&mto.Cont, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.DecID, id.Required...),
+		validation.Field(&mto.C, id.Required...),
+		validation.Field(&mto.Ctx, validation.Length(0, 10), validation.Each(validation.Required)),
+		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
@@ -219,7 +227,7 @@ func MsgFromTerm(t Term) TermMsg {
 		// ctx := make([]chnl.RefMsg, len(term.Ctx))
 		var ctx []chnl.RefMsg
 		for name, chID := range term.Ctx {
-			ctx = append(ctx, chnl.RefMsg{ID: chID.String(), Name: string(name)})
+			ctx = append(ctx, chnl.RefMsg{ID: chID.String(), Name: name})
 		}
 		return TermMsg{
 			K: Spawn,
@@ -306,13 +314,13 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		ctx := make(map[chnl.Sym]chnl.ID, len(mto.Spawn.Ctx))
+		ctx := make(map[chnl.Name]chnl.ID, len(mto.Spawn.Ctx))
 		for _, ref := range mto.Spawn.Ctx {
-			chID, err := id.StringToID(ref.ID)
+			refID, err := id.StringToID(ref.ID)
 			if err != nil {
 				return nil, err
 			}
-			ctx[chnl.Sym(ref.Name)] = chID
+			ctx[ref.Name] = refID
 		}
 		cont, err := MsgToTerm(mto.Spawn.Cont)
 		if err != nil {

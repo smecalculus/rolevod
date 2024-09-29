@@ -20,8 +20,8 @@ type AgentRefMsg struct {
 }
 
 type KinshipSpecMsg struct {
-	ParentID    string   `param:"id" json:"parent"`
-	ChildrenIDs []string `json:"children"`
+	ParentID string   `param:"id" json:"parent"`
+	ChildIDs []string `json:"children"`
 }
 
 type KinshipRootMsg struct {
