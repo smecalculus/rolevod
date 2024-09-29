@@ -264,9 +264,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New(),
-				ViaID: term.A,
-				Val:   term,
+				ID:  id.New(),
+				VID: term.A,
+				Val: term,
 			}
 			err = s.msgs.Insert(newMsg)
 			if err != nil {
@@ -358,9 +358,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New(),
-				ViaID: term.X,
-				Cont:  term,
+				ID:   id.New(),
+				VID:  term.X,
+				Cont: term,
 			}
 			err = s.srvs.Insert(newSrv)
 			if err != nil {
@@ -452,9 +452,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New(),
-				ViaID: term.A,
-				Val:   term,
+				ID:  id.New(),
+				VID: term.A,
+				Val: term,
 			}
 			err = s.msgs.Insert(newMsg)
 			if err != nil {
@@ -547,9 +547,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New(),
-				ViaID: term.X,
-				Cont:  term,
+				ID:   id.New(),
+				VID:  term.X,
+				Cont: term,
 			}
 			err = s.srvs.Insert(newSrv)
 			if err != nil {
@@ -642,9 +642,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if srv == nil {
 			newMsg := step.MsgRoot{
-				ID:    id.New(),
-				ViaID: term.C,
-				Val:   term,
+				ID:  id.New(),
+				VID: term.C,
+				Val: term,
 			}
 			err = s.msgs.Insert(newMsg)
 			if err != nil {
@@ -680,7 +680,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		branch := step.Subst(cont.Branches[term.L], cont.Z, newChnl.ID)
+		branch := step.Subst(cont.Conts[term.L], cont.Z, newChnl.ID)
 		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: branch})
 	case step.CaseSpec:
 		curChnl, err := s.chnls.SelectByID(term.Z)
@@ -735,9 +735,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		}
 		if msg == nil {
 			newSrv := step.SrvRoot{
-				ID:    id.New(),
-				ViaID: term.Z,
-				Cont:  term,
+				ID:   id.New(),
+				VID:  term.Z,
+				Cont: term,
 			}
 			err = s.srvs.Insert(newSrv)
 			if err != nil {
@@ -773,8 +773,15 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		branch := step.Subst(term.Branches[val.L], term.Z, newChnl.ID)
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: branch})
+		branch := step.Subst(term.Conts[val.L], term.Z, newChnl.ID)
+		return s.Take(TranSpec{spec.DealID, spec.PartID, spec.AgentAK, branch})
+	case step.SpawnSpec:
+		part, err := s.Involve(PartSpec{spec.DealID, term.DecID, term.Ctx})
+		if err != nil {
+			return err
+		}
+		term.Cont = step.Subst(term.Cont, term.C, part.PID)
+		return s.Take(TranSpec{spec.DealID, spec.PartID, spec.AgentAK, term.Cont})
 	default:
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
@@ -803,8 +810,7 @@ type kinshipRepo interface {
 	Insert(KinshipRoot) error
 }
 
-// Participation
-// aka Spawn
+// Participation aka Spawn (but external)
 type PartSpec struct {
 	DealID ID
 	SeatID seat.ID
@@ -819,9 +825,9 @@ type PartRoot struct {
 	PAK ak.ADT
 	// Consumables Access Key
 	CAK ak.ADT
-	// Producible Channel
+	// Producible Channel ID
 	PID chnl.ID
-	// Consumable Channels
+	// Consumable Channel IDs
 	Ctx map[chnl.Sym]chnl.ID
 }
 
@@ -893,11 +899,11 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.WithRoot{}, st)
 		}
-		if len(term.Branches) != len(want.Choices) {
-			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Branches))
+		if len(term.Conts) != len(want.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Conts))
 		}
 		for wantL, wantCh := range want.Choices {
-			gotBr, ok := term.Branches[wantL]
+			gotBr, ok := term.Conts[wantL]
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 			}
@@ -966,11 +972,11 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.PlusRoot{}, st)
 		}
-		if len(term.Branches) != len(want.Choices) {
-			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Branches))
+		if len(term.Conts) != len(want.Choices) {
+			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Conts))
 		}
 		for wantL, wantCh := range want.Choices {
-			gotBr, ok := term.Branches[wantL]
+			gotBr, ok := term.Conts[wantL]
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 			}

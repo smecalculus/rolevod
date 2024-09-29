@@ -127,14 +127,17 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 	var mto PartSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
+		h.log.Error("mto binding failed", slog.Any("reason", err))
 		return err
 	}
 	err = mto.Validate()
 	if err != nil {
+		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("spec", mto))
 		return err
 	}
 	spec, err := MsgToPartSpec(mto)
 	if err != nil {
+		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("spec", mto))
 		return err
 	}
 	root, err := h.api.Involve(spec)
@@ -160,17 +163,19 @@ func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
 	var mto TranSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
+		h.log.Error("mto binding failed", slog.Any("reason", err))
 		return err
 	}
 	ctx := c.Request().Context()
-	h.log.Debug("transition posting started", slog.Any("mto", mto))
 	h.log.Log(ctx, core.LevelTrace, "transition posting started", slog.Any("mto", mto))
 	err = mto.Validate()
 	if err != nil {
+		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
 	}
 	spec, err := MsgToTranSpec(mto)
 	if err != nil {
+		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
 	}
 	err = h.api.Take(spec)

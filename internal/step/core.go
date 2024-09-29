@@ -12,20 +12,26 @@ import (
 type ID = id.ADT
 
 type Ref interface {
-	rootID() ID
+	rID() ID
 }
 
-type ProcRef ID
+type ProcRef struct {
+	ID ID
+}
 
-func (r ProcRef) rootID() ID { return ID(r) }
+func (r ProcRef) rID() ID { return r.ID }
 
-type MsgRef ID
+type MsgRef struct {
+	ID ID
+}
 
-func (r MsgRef) rootID() ID { return ID(r) }
+func (r MsgRef) rID() ID { return r.ID }
 
-type SrvRef ID
+type SrvRef struct {
+	ID ID
+}
 
-func (r SrvRef) rootID() ID { return ID(r) }
+func (r SrvRef) rID() ID { return r.ID }
 
 type root interface {
 	step()
@@ -41,17 +47,17 @@ func (ProcRoot) step() {}
 
 // aka exec.Msg
 type MsgRoot struct {
-	ID    ID
-	ViaID chnl.ID
-	Val   Value
+	ID  ID
+	VID chnl.ID
+	Val Value
 }
 
 func (MsgRoot) step() {}
 
 type SrvRoot struct {
-	ID    ID
-	ViaID chnl.ID
-	Cont  Continuation
+	ID   ID
+	VID  chnl.ID
+	Cont Continuation
 }
 
 func (SrvRoot) step() {}
@@ -63,15 +69,13 @@ type Term interface {
 
 // aka ast.Msg
 type Value interface {
+	Term
 	val()
 }
 
 type Continuation interface {
+	Term
 	cont()
-}
-
-type Substitutable interface {
-	Subst(chnl.ID, chnl.ID)
 }
 
 type FwdSpec struct {
@@ -82,10 +86,10 @@ type FwdSpec struct {
 func (FwdSpec) term() {}
 
 type SpawnSpec struct {
-	Name string
-	C    chnl.Sym
-	Ctx  []chnl.ID
-	Cont Term
+	DecID id.ADT // seat id
+	C     chnl.ID
+	Ctx   map[chnl.Sym]chnl.ID
+	Cont  Term
 }
 
 func (SpawnSpec) term() {}
@@ -100,8 +104,8 @@ func (LabSpec) term() {}
 func (LabSpec) val()  {}
 
 type CaseSpec struct {
-	Z        chnl.ID
-	Branches map[state.Label]Term
+	Z     chnl.ID
+	Conts map[state.Label]Term
 }
 
 func (CaseSpec) term() {}
@@ -132,12 +136,6 @@ type CloseSpec struct {
 func (CloseSpec) term() {}
 func (CloseSpec) val()  {}
 
-func (t *CloseSpec) Subst(varRef chnl.ID, valRef chnl.ID) {
-	if varRef == t.A {
-		t.A = valRef
-	}
-}
-
 type WaitSpec struct {
 	X    chnl.ID
 	Cont Term
@@ -159,7 +157,7 @@ type Repo[T root] interface {
 	Insert(root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (*T, error)
-	SelectByCh(ID) (*T, error)
+	SelectByCh(chnl.ID) (*T, error)
 }
 
 func Subst(t Term, varID chnl.ID, valID chnl.ID) Term {

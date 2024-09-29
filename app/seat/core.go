@@ -11,8 +11,10 @@ import (
 
 type ID = id.ADT
 
+type Sym = string
+
 type SeatSpec struct {
-	Name string
+	Name Sym
 	Via  chnl.Spec
 	Ctx  map[chnl.Sym]chnl.Spec
 }
@@ -25,7 +27,7 @@ type SeatRef struct {
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       ID
-	Name     string
+	Name     Sym
 	Via      chnl.Spec
 	Ctx      map[chnl.Sym]chnl.Spec
 	Children []SeatRef

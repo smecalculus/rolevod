@@ -47,7 +47,7 @@ func (r *repoPgx[T]) Insert(root root) error {
 	args := pgx.NamedArgs{
 		"id":      dto.ID,
 		"kind":    dto.K,
-		"via_id":  dto.ViaID,
+		"via_id":  dto.VID,
 		"payload": dto.Term,
 	}
 	_, err = tx.Exec(ctx, query, args)

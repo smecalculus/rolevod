@@ -19,8 +19,8 @@ type SpecMsg struct {
 	Plus   *SumMsg   `json:"plus,omitempty"`
 }
 
-func (mto *SpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto SpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
 		valid.Field(&mto.Recur, valid.Required.When(mto.K == Recur)),
 		valid.Field(&mto.Tensor, valid.Required.When(mto.K == Tensor)),
@@ -40,8 +40,8 @@ type ProdMsg struct {
 	State *SpecMsg `json:"state"`
 }
 
-func (mto *ProdMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto ProdMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.Value, valid.Required),
 		valid.Field(&mto.State, valid.Required),
 	)
@@ -51,8 +51,8 @@ type SumMsg struct {
 	Choices []ChoiceMsg `json:"choices"`
 }
 
-func (mto *SumMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto SumMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.Choices, valid.Required, valid.Length(1, 20)),
 	)
 }
@@ -62,8 +62,8 @@ type ChoiceMsg struct {
 	State *SpecMsg `json:"state"`
 }
 
-func (mto *ChoiceMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto ChoiceMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.Label, valid.Required, valid.Length(1, 36)),
 		valid.Field(&mto.State, valid.Required),
 	)
@@ -74,8 +74,8 @@ type RefMsg struct {
 	K  Kind   `json:"kind"`
 }
 
-func (mto *RefMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto RefMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.K, valid.Required, valid.In(One, Recur, Tensor, Lolli, With, Plus)),
 	)

@@ -3,6 +3,8 @@ package chnl
 import (
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/id"
+
 	"smecalculus/rolevod/internal/state"
 )
 
@@ -11,9 +13,9 @@ type SpecMsg struct {
 	St   *state.RefMsg `json:"state"`
 }
 
-func (mto *SpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
-		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+func (mto SpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
+		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 		valid.Field(&mto.St, valid.Required),
 	)
 }
@@ -23,16 +25,11 @@ type RefMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto *RefMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto RefMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 	)
-}
-
-type EpMsg struct {
-	ID string `json:"id"`
-	AK string `json:"ak"`
 }
 
 type RootMsg struct {
@@ -54,3 +51,23 @@ var (
 	MsgFromRoot  func(Root) RootMsg
 	MsgFromRoots func([]Root) []RootMsg
 )
+
+func MsgFromRefMap(refs map[Sym]ID) []RefMsg {
+	var mtos []RefMsg
+	for name, rid := range refs {
+		mtos = append(mtos, RefMsg{rid.String(), string(name)})
+	}
+	return mtos
+}
+
+func MsgToRefMap(mtos []RefMsg) (map[Sym]ID, error) {
+	refs := make(map[Sym]ID, len(mtos))
+	for _, mto := range mtos {
+		rid, err := id.StringToID(mto.ID)
+		if err != nil {
+			return nil, err
+		}
+		refs[Sym(mto.Name)] = rid
+	}
+	return refs, nil
+}

@@ -3,6 +3,7 @@ package deal
 import (
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/step"
 
 	"smecalculus/rolevod/app/seat"
@@ -12,9 +13,9 @@ type DealSpecMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto *DealSpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
-		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+func (mto DealSpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
+		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 	)
 }
 
@@ -27,10 +28,10 @@ type DealRefMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto *DealRefMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto DealRefMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.ID, valid.Required, valid.Length(20, 20)),
-		valid.Field(&mto.Name, valid.Required, valid.Max(64)),
+		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 	)
 }
 
@@ -60,11 +61,11 @@ type KinshipSpecMsg struct {
 	ChildrenIDs []string `json:"children_ids"`
 }
 
-func (mto *KinshipSpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto KinshipSpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.ParentID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.ChildrenIDs,
-			valid.Required, valid.Max(10),
+			valid.Required, valid.Length(0, 10),
 			valid.Each(valid.Required, valid.Length(20, 20))),
 	)
 }
@@ -85,32 +86,34 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string            `json:"deal_id" param:"id"`
-	SeatID string            `json:"seat_id"`
-	Ctx    map[string]string `json:"ctx"`
+	DealID string        `json:"deal_id" param:"id"`
+	SeatID string        `json:"seat_id"`
+	Ctx    []chnl.RefMsg `json:"ctx"`
 }
 
-func (mto *PartSpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto PartSpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.SeatID, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.Ctx, valid.Length(0, 10), valid.Each(valid.Required)),
 	)
 }
 
 type PartRootMsg struct {
-	PartID string            `json:"part_id"`
-	DealID string            `json:"deal_id"`
-	SeatID string            `json:"seat_id"`
-	PAK    string            `json:"pak"`
-	CAK    string            `json:"cak"`
-	PID    string            `json:"pid"`
-	Ctx    map[string]string `json:"ctx"`
+	PartID string        `json:"part_id"`
+	DealID string        `json:"deal_id"`
+	SeatID string        `json:"seat_id"`
+	PAK    string        `json:"pak"`
+	CAK    string        `json:"cak"`
+	PID    string        `json:"pid"`
+	Ctx    []chnl.RefMsg `json:"ctx"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
+// goverter:extend smecalculus/rolevod/internal/chnl:Msg.*
 // goverter:extend smecalculus/rolevod/app/seat:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
@@ -120,14 +123,15 @@ var (
 )
 
 type TranSpecMsg struct {
-	DealID  string        `json:"deal_id"`
-	PartID  string        `json:"part_id"`
-	AgentAK string        `json:"agent_ak"`
-	Term    *step.TermMsg `json:"term"`
+	DealID  string       `json:"deal_id"`
+	PartID  string       `json:"part_id"`
+	AgentAK string       `json:"agent_ak"`
+	Term    step.TermMsg `json:"term"`
 }
 
-func (mto *TranSpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto TranSpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
+		valid.Field(&mto.DealID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.PartID, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.AgentAK, valid.Required, valid.Length(1, 36)),
 		valid.Field(&mto.Term, valid.Required),

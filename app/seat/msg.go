@@ -14,8 +14,8 @@ type SeatSpecMsg struct {
 	Ctx  []chnl.SpecMsg `json:"ctx"`
 }
 
-func (mto *SeatSpecMsg) Validate() error {
-	return valid.ValidateStruct(mto,
+func (mto SeatSpecMsg) Validate() error {
+	return valid.ValidateStruct(&mto,
 		valid.Field(&mto.Name, valid.Required, valid.Length(1, 64)),
 		valid.Field(&mto.Via, valid.Required),
 	)
@@ -44,10 +44,10 @@ type SeatRootMsg struct {
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToID         func(string) (id.ADT, error)
-	MsgFromID       func(id.ADT) string
+	MsgToID   func(string) (id.ADT, error)
+	MsgFromID func(id.ADT) string
 	// goverter:ignore Ctx
-	MsgToSeatSpec   func(SeatSpecMsg) (SeatSpec, error)
+	MsgToSeatSpec func(SeatSpecMsg) (SeatSpec, error)
 	// goverter:ignore Ctx
 	MsgFromSeatSpec func(SeatSpec) SeatSpecMsg
 	MsgToSeatRef    func(SeatRefMsg) (SeatRef, error)
