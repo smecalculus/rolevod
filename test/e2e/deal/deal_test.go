@@ -240,17 +240,17 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	producerRootVia := consumerRoot.Ctx[seatSpec1.Via.Name]
+	producerRootPID := consumerRoot.Ctx[seatSpec1.Via.Name]
 	// and
 	recvSpec := deal.TranSpec{
 		DealID:  dealRoot.ID,
 		PartID:  producerRoot.PartID,
 		AgentAK: producerRoot.PAK,
 		Term: step.RecvSpec{
-			X: producerRootVia,
+			X: producerRootPID,
 			Y: consumerRoot.PID,
 			Cont: step.CloseSpec{
-				A: producerRootVia,
+				A: producerRootPID,
 			},
 		},
 	}
@@ -265,12 +265,130 @@ func TestTakeRecvSend(t *testing.T) {
 		PartID:  consumerRoot.PartID,
 		AgentAK: consumerRoot.CAK,
 		Term: step.SendSpec{
-			A: producerRootVia,
+			A: producerRootPID,
 			B: consumerRoot.PID,
 		},
 	}
 	// and
 	err = dealApi.Take(sendSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// then
+	// TODO добавить проверку
+}
+
+func TestTakeCaseLab(t *testing.T) {
+	// given
+	label := state.Label("label-1")
+	// and
+	roleSpec1 := role.RoleSpec{
+		Name: "role-1",
+		St: state.WithSpec{
+			Choices: map[state.Label]state.Spec{
+				label: state.OneSpec{},
+			},
+		},
+	}
+	roleRoot1, err := roleApi.Create(roleSpec1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	roleSpec2 := role.RoleSpec{
+		Name: "role-2",
+		St:   state.OneSpec{},
+	}
+	roleRoot2, err := roleApi.Create(roleSpec2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	seatSpec1 := seat.SeatSpec{
+		Name: "seat-1",
+		Via: chnl.Spec{
+			Name: "chnl-1",
+			St:   roleRoot1.St,
+		},
+	}
+	seatRoot1, err := seatApi.Create(seatSpec1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	seatSpec2 := seat.SeatSpec{
+		Name: "seat-2",
+		Via: chnl.Spec{
+			Name: "chnl-2",
+			St:   roleRoot2.St,
+		},
+	}
+	seatRoot2, err := seatApi.Create(seatSpec2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	dealSpec := deal.DealSpec{
+		Name: "deal-1",
+	}
+	dealRoot, err := dealApi.Create(dealSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	producerSpec := deal.PartSpec{
+		DealID: dealRoot.ID,
+		SeatID: seatRoot1.ID,
+	}
+	producerRoot, err := dealApi.Involve(producerSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	consumerSpec := deal.PartSpec{
+		DealID: dealRoot.ID,
+		SeatID: seatRoot2.ID,
+		Ctx: map[chnl.Sym]chnl.ID{
+			seatSpec1.Via.Name: producerRoot.PID,
+		},
+	}
+	consumerRoot, err := dealApi.Involve(consumerSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	producerRootPID := consumerRoot.Ctx[seatSpec1.Via.Name]
+	// and
+	caseSpec := deal.TranSpec{
+		DealID:  dealRoot.ID,
+		PartID:  producerRoot.PartID,
+		AgentAK: producerRoot.PAK,
+		Term: step.CaseSpec{
+			Z: producerRootPID,
+			Branches: map[state.Label]step.Term{
+				label: step.CloseSpec{
+					A: producerRootPID,
+				},
+			},
+		},
+	}
+	// when
+	err = dealApi.Take(caseSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// and
+	labSpec := deal.TranSpec{
+		DealID:  dealRoot.ID,
+		PartID:  consumerRoot.PartID,
+		AgentAK: consumerRoot.CAK,
+		Term: step.LabSpec{
+			C: producerRootPID,
+			L: label,
+		},
+	}
+	// and
+	err = dealApi.Take(labSpec)
 	if err != nil {
 		t.Fatal(err)
 	}

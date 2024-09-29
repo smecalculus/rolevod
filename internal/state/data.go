@@ -2,7 +2,6 @@ package state
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
@@ -11,7 +10,8 @@ import (
 type kind int
 
 const (
-	one = iota
+	unknown = iota
+	one
 	recur
 	tensor
 	lolli
@@ -24,18 +24,23 @@ type RefData struct {
 	K  kind   `db:"kind" json:"kind"`
 }
 
+type choiceData struct {
+	Pat  string `json:"on"`
+	ToID string `json:"to"`
+}
+
 type rootData struct {
 	ID     string
 	States map[string]state
 }
 
 type state struct {
-	ID     string         `db:"id"`
-	K      kind           `db:"kind"`
-	FromID sql.NullString `db:"from_id"`
-	OnRef  *RefData       `db:"on_ref"`
-	ToID   sql.NullString `db:"to_id"`
-	ToIDs  [][2]string    `db:"to_ids"`
+	ID      string         `db:"id"`
+	K       kind           `db:"kind"`
+	FromID  sql.NullString `db:"from_id"`
+	OnRef   *RefData       `db:"on_ref"`
+	ToID    sql.NullString `db:"to_id"`
+	Choices []choiceData   `db:"choices"`
 }
 
 // goverter:variables
@@ -50,29 +55,6 @@ var (
 	DataToRoots   func([]*rootData) ([]Root, error)
 	DataFromRoots func([]Root) []*rootData
 )
-
-func JsonFromRef(ref Ref) (sql.NullString, error) {
-	if ref == nil {
-		return sql.NullString{}, nil
-	}
-	jsn, err := json.Marshal(DataFromRef(ref))
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	return sql.NullString{String: string(jsn), Valid: true}, nil
-}
-
-func JsonToRef(jsn sql.NullString) (Ref, error) {
-	if !jsn.Valid {
-		return nil, nil
-	}
-	var dto RefData
-	err := json.Unmarshal([]byte(jsn.String), &dto)
-	if err != nil {
-		return nil, err
-	}
-	return DataToRef(&dto)
-}
 
 func DataFromRef(ref Ref) *RefData {
 	if ref == nil {
@@ -101,7 +83,7 @@ func DataToRef(dto *RefData) (Ref, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rid, err := id.StringTo(dto.ID)
+	rid, err := id.StringToID(dto.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -195,36 +177,38 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 		dto.States[stID] = st
 		return stID, nil
 	case PlusRoot:
-		toIDs := make([][2]string, len(root.Choices))
-		for l, s := range root.Choices {
-			toID, err := dataFromState(dto, s, stID)
+		// choices := make([]choiceData, len(root.Choices))
+		var choices []choiceData
+		for pat, toSt := range root.Choices {
+			toID, err := dataFromState(dto, toSt, stID)
 			if err != nil {
 				return "", err
 			}
-			toIDs = append(toIDs, [2]string{string(l), toID})
+			choices = append(choices, choiceData{string(pat), toID})
 		}
 		st := state{
-			ID:     stID,
-			K:      plus,
-			FromID: fromID,
-			ToIDs:  toIDs,
+			ID:      stID,
+			K:       plus,
+			FromID:  fromID,
+			Choices: choices,
 		}
 		dto.States[stID] = st
 		return stID, nil
 	case WithRoot:
-		toIDs := make([][2]string, len(root.Choices))
-		for l, s := range root.Choices {
-			toID, err := dataFromState(dto, s, stID)
+		// choices := make([]choiceData, len(root.Choices))
+		var choices []choiceData
+		for pat, toSt := range root.Choices {
+			toID, err := dataFromState(dto, toSt, stID)
 			if err != nil {
 				return "", err
 			}
-			toIDs = append(toIDs, [2]string{string(l), toID})
+			choices = append(choices, choiceData{string(pat), toID})
 		}
 		st := state{
-			ID:     stID,
-			K:      with,
-			FromID: fromID,
-			ToIDs:  toIDs,
+			ID:      stID,
+			K:       with,
+			FromID:  fromID,
+			Choices: choices,
 		}
 		dto.States[stID] = st
 		return stID, nil
@@ -234,7 +218,7 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 }
 
 func dataToState(states map[string]state, st state) (Root, error) {
-	stID, err := id.StringTo(st.ID)
+	stID, err := id.StringToID(st.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -263,24 +247,24 @@ func dataToState(states map[string]state, st state) (Root, error) {
 		return LolliRoot{ID: stID, Y: x, Z: z}, nil
 	case plus:
 		dto := states[st.ID]
-		chs := make(map[Label]Root, len(dto.ToIDs))
-		for _, pair := range dto.ToIDs {
-			ch, err := dataToState(states, states[pair[1]])
+		chs := make(map[Label]Root, len(dto.Choices))
+		for _, choice := range dto.Choices {
+			ch, err := dataToState(states, states[choice.ToID])
 			if err != nil {
 				return nil, err
 			}
-			chs[Label(pair[0])] = ch
+			chs[Label(choice.Pat)] = ch
 		}
 		return PlusRoot{ID: stID, Choices: chs}, nil
 	case with:
 		dto := states[st.ID]
-		chs := make(map[Label]Root, len(dto.ToIDs))
-		for _, pair := range dto.ToIDs {
-			ch, err := dataToState(states, states[pair[1]])
+		chs := make(map[Label]Root, len(dto.Choices))
+		for _, choice := range dto.Choices {
+			ch, err := dataToState(states, states[choice.ToID])
 			if err != nil {
 				return nil, err
 			}
-			chs[Label(pair[0])] = ch
+			chs[Label(choice.Pat)] = ch
 		}
 		return WithRoot{ID: stID, Choices: chs}, nil
 	default:

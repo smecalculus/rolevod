@@ -46,7 +46,7 @@ func (h *roleHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringTo(mto.ID)
+	id, err := id.StringToID(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (h *roleHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringTo(mto.ID)
+	id, err := id.StringToID(mto.ID)
 	if err != nil {
 		return err
 	}

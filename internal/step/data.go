@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/state"
 )
 
 type refData struct {
@@ -126,11 +128,11 @@ func dataToRoot(dto *rootData) (root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rootID, err := id.StringTo(dto.ID)
+	rootID, err := id.StringToID(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	viaID, err := id.StringTo(dto.ViaID)
+	viaID, err := id.StringToID(dto.ViaID)
 	if err != nil {
 		return nil, err
 	}
@@ -166,24 +168,24 @@ func dataFromTerm(t Term) *termData {
 	case CloseSpec:
 		return &termData{
 			K:     close,
-			Close: &closeData{id.StringFrom(term.A)},
+			Close: &closeData{id.StringFromID(term.A)},
 		}
 	case WaitSpec:
 		return &termData{
 			K:    wait,
-			Wait: &waitData{id.StringFrom(term.X), dataFromTerm(term.Cont)},
+			Wait: &waitData{id.StringFromID(term.X), dataFromTerm(term.Cont)},
 		}
 	case SendSpec:
 		return &termData{
 			K:    send,
-			Send: &sendData{id.StringFrom(term.A), id.StringFrom(term.B)},
+			Send: &sendData{id.StringFromID(term.A), id.StringFromID(term.B)},
 		}
 	case RecvSpec:
 		return &termData{
 			K: recv,
 			Recv: &recvData{
-				id.StringFrom(term.X),
-				id.StringFrom(term.Y),
+				id.StringFromID(term.X),
+				id.StringFromID(term.Y),
 				dataFromTerm(term.Cont),
 			},
 		}
@@ -198,13 +200,13 @@ func dataToTerm(dto *termData) (Term, error) {
 	}
 	switch dto.K {
 	case close:
-		a, err := id.StringTo(dto.Close.A)
+		a, err := id.StringToID(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case wait:
-		x, err := id.StringTo(dto.Wait.X)
+		x, err := id.StringToID(dto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -214,21 +216,21 @@ func dataToTerm(dto *termData) (Term, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case send:
-		a, err := id.StringTo(dto.Send.A)
+		a, err := id.StringToID(dto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := id.StringTo(dto.Send.B)
+		b, err := id.StringToID(dto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case recv:
-		x, err := id.StringTo(dto.Recv.X)
+		x, err := id.StringToID(dto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := id.StringTo(dto.Recv.Y)
+		y, err := id.StringToID(dto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -250,12 +252,17 @@ func dataFromValue(v Value) *termData {
 	case CloseSpec:
 		return &termData{
 			K:     close,
-			Close: &closeData{id.StringFrom(val.A)},
+			Close: &closeData{val.A.String()},
 		}
 	case SendSpec:
 		return &termData{
 			K:    send,
-			Send: &sendData{id.StringFrom(val.A), id.StringFrom(val.B)},
+			Send: &sendData{val.A.String(), val.B.String()},
+		}
+	case LabSpec:
+		return &termData{
+			K:   lab,
+			Lab: &labData{val.C.String(), string(val.L)},
 		}
 	default:
 		panic(ErrUnexpectedValue(val))
@@ -268,21 +275,27 @@ func dataToValue(dto *termData) (Value, error) {
 	}
 	switch dto.K {
 	case close:
-		a, err := id.StringTo(dto.Close.A)
+		a, err := id.StringToID(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case send:
-		a, err := id.StringTo(dto.Send.A)
+		a, err := id.StringToID(dto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := id.StringTo(dto.Send.B)
+		b, err := id.StringToID(dto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
+	case lab:
+		c, err := id.StringToID(dto.Lab.C)
+		if err != nil {
+			return nil, err
+		}
+		return LabSpec{C: c, L: state.Label(dto.Lab.Label)}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
@@ -295,13 +308,32 @@ func dataFromCont(c Continuation) *termData {
 	switch cont := c.(type) {
 	case WaitSpec:
 		return &termData{
-			K:    wait,
-			Wait: &waitData{id.StringFrom(cont.X), dataFromTerm(cont.Cont)},
+			K: wait,
+			Wait: &waitData{
+				X:    cont.X.String(),
+				Cont: dataFromTerm(cont.Cont),
+			},
 		}
 	case RecvSpec:
 		return &termData{
-			K:    recv,
-			Recv: &recvData{id.StringFrom(cont.X), id.StringFrom(cont.Y), dataFromTerm(cont.Cont)},
+			K: recv,
+			Recv: &recvData{
+				X:    cont.X.String(),
+				Y:    cont.Y.String(),
+				Cont: dataFromTerm(cont.Cont),
+			},
+		}
+	case CaseSpec:
+		conts := make(map[string]*termData, len(cont.Branches))
+		for l, t := range cont.Branches {
+			conts[string(l)] = dataFromTerm(t)
+		}
+		return &termData{
+			K: caseK,
+			Case: &caseData{
+				Z:     cont.Z.String(),
+				Conts: conts,
+			},
 		}
 	default:
 		panic(ErrUnexpectedCont(cont))
@@ -314,7 +346,7 @@ func dataToCont(dto *termData) (Continuation, error) {
 	}
 	switch dto.K {
 	case wait:
-		x, err := id.StringTo(dto.Wait.X)
+		x, err := id.StringToID(dto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -324,11 +356,11 @@ func dataToCont(dto *termData) (Continuation, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case recv:
-		x, err := id.StringTo(dto.Recv.X)
+		x, err := id.StringToID(dto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := id.StringTo(dto.Recv.Y)
+		y, err := id.StringToID(dto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -337,6 +369,20 @@ func dataToCont(dto *termData) (Continuation, error) {
 			return nil, err
 		}
 		return RecvSpec{X: x, Y: y, Cont: cont}, nil
+	case caseK:
+		z, err := id.StringToID(dto.Case.Z)
+		if err != nil {
+			return nil, err
+		}
+		branches := make(map[state.Label]Term, len(dto.Case.Conts))
+		for l, t := range dto.Case.Conts {
+			branch, err := dataToTerm(t)
+			if err != nil {
+				return nil, err
+			}
+			branches[state.Label(l)] = branch
+		}
+		return CaseSpec{Z: z, Branches: branches}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}

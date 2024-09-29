@@ -100,7 +100,7 @@ func (LabSpec) term() {}
 func (LabSpec) val()  {}
 
 type CaseSpec struct {
-	X        chnl.ID
+	Z        chnl.ID
 	Branches map[state.Label]Term
 }
 

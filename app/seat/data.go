@@ -21,7 +21,6 @@ type seatRootData struct {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
-// goverter:extend smecalculus/rolevod/internal/state:Json.*
 // goverter:extend smecalculus/rolevod/internal/chnl:Json.*
 var (
 	DataToSeatRef    func(SeatRefData) (SeatRef, error)

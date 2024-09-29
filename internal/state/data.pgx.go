@@ -32,19 +32,19 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	dto := dataFromRoot(root)
 	query := `
 		INSERT INTO states (
-			id, kind, from_id, on_ref, to_id, to_ids
+			id, kind, from_id, on_ref, to_id, choices
 		) VALUES (
-			@id, @kind, @from_id, @on_ref, @to_id, @to_ids
+			@id, @kind, @from_id, @on_ref, @to_id, @choices
 		)`
 	batch := pgx.Batch{}
-	for _, s := range dto.States {
+	for _, st := range dto.States {
 		sa := pgx.NamedArgs{
-			"id":      s.ID,
-			"kind":    s.K,
-			"from_id": s.FromID,
-			"on_ref":  s.OnRef,
-			"to_id":   s.ToID,
-			"to_ids":  s.ToIDs,
+			"id":      st.ID,
+			"kind":    st.K,
+			"from_id": st.FromID,
+			"on_ref":  st.OnRef,
+			"to_id":   st.ToID,
+			"choices": st.Choices,
 		}
 		batch.Queue(query, sa)
 	}
@@ -91,12 +91,12 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
 		WITH RECURSIVE sts AS (
 			SELECT
-				id, kind, from_id, on_ref, to_id, to_ids
+				id, kind, from_id, on_ref, to_id, choices
 			FROM states
 			WHERE id = $1
 			UNION ALL
 			SELECT
-				s1.id, s1.kind, s1.from_id, s1.on_ref, s1.to_id, s1.to_ids
+				s1.id, s1.kind, s1.from_id, s1.on_ref, s1.to_id, s1.choices
 			FROM states s1, sts s2
 			WHERE s1.from_id = s2.id
 		)

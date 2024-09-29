@@ -14,19 +14,17 @@ type Spec interface {
 	spec()
 }
 
-// aka External Choice
-type WithSpec struct {
-	Choices map[Label]Spec
+type OneSpec struct{}
+
+func (OneSpec) spec() {}
+
+// aka TpName
+type RecurSpec struct {
+	Name string
+	ToID ID
 }
 
-func (WithSpec) spec() {}
-
-// aka Internal Choice
-type PlusSpec struct {
-	Choices map[Label]Spec
-}
-
-func (PlusSpec) spec() {}
+func (RecurSpec) spec() {}
 
 type TensorSpec struct {
 	B Spec
@@ -42,17 +40,19 @@ type LolliSpec struct {
 
 func (LolliSpec) spec() {}
 
-type OneSpec struct{}
-
-func (OneSpec) spec() {}
-
-// aka TpName
-type RecurSpec struct {
-	Name string
-	ToID id.ADT
+// aka External Choice
+type WithSpec struct {
+	Choices map[Label]Spec
 }
 
-func (RecurSpec) spec() {}
+func (WithSpec) spec() {}
+
+// aka Internal Choice
+type PlusSpec struct {
+	Choices map[Label]Spec
+}
+
+func (PlusSpec) spec() {}
 
 type UpSpec struct {
 	A Spec
@@ -67,56 +67,56 @@ type DownSpec struct {
 func (DownSpec) spec() {}
 
 type Ref interface {
-	RID() id.ADT
+	RID() ID
 }
 
 type WithRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r WithRef) RID() id.ADT { return r.ID }
+func (r WithRef) RID() ID { return r.ID }
 
 type PlusRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r PlusRef) RID() id.ADT { return r.ID }
+func (r PlusRef) RID() ID { return r.ID }
 
 type TensorRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r TensorRef) RID() id.ADT { return r.ID }
+func (r TensorRef) RID() ID { return r.ID }
 
 type LolliRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r LolliRef) RID() id.ADT { return r.ID }
+func (r LolliRef) RID() ID { return r.ID }
 
 type OneRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r OneRef) RID() id.ADT { return r.ID }
+func (r OneRef) RID() ID { return r.ID }
 
 type RecurRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r RecurRef) RID() id.ADT { return r.ID }
+func (r RecurRef) RID() ID { return r.ID }
 
 type UpRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r UpRef) RID() id.ADT { return r.ID }
+func (r UpRef) RID() ID { return r.ID }
 
 type DownRef struct {
-	ID id.ADT
+	ID ID
 }
 
-func (r DownRef) RID() id.ADT { return r.ID }
+func (r DownRef) RID() ID { return r.ID }
 
 // aka Stype
 type Root interface {
@@ -133,85 +133,85 @@ type Sum interface {
 
 // aka Internal Choice
 type PlusRoot struct {
-	ID      id.ADT
+	ID      ID
 	Choices map[Label]Root
 }
 
-func (r PlusRoot) RID() id.ADT { return r.ID }
+func (r PlusRoot) RID() ID { return r.ID }
 
 func (r PlusRoot) Next(l Label) Ref { return r.Choices[l] }
 
 // aka External Choice
 type WithRoot struct {
-	ID      id.ADT
+	ID      ID
 	Choices map[Label]Root
 }
 
-func (r WithRoot) RID() id.ADT { return r.ID }
+func (r WithRoot) RID() ID { return r.ID }
 
 func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
 
 type TensorRoot struct {
-	ID id.ADT
+	ID ID
 	B  Ref  // value
 	C  Root // cont
 }
 
-func (r TensorRoot) RID() id.ADT { return r.ID }
+func (r TensorRoot) RID() ID { return r.ID }
 
 func (r TensorRoot) Next() Ref { return r.C }
 
 type LolliRoot struct {
-	ID id.ADT
+	ID ID
 	Y  Ref  // value
 	Z  Root // cont
 }
 
-func (r LolliRoot) RID() id.ADT { return r.ID }
+func (r LolliRoot) RID() ID { return r.ID }
 
 func (r LolliRoot) Next() Ref { return r.Z }
 
 type OneRoot struct {
-	ID id.ADT
+	ID ID
 }
 
 func (OneRoot) spec() {}
 
-func (r OneRoot) RID() id.ADT { return r.ID }
+func (r OneRoot) RID() ID { return r.ID }
 
 // aka TpName
 type RecurRoot struct {
-	ID   id.ADT
+	ID   ID
 	Name string
-	ToID id.ADT
+	ToID ID
 }
 
 func (RecurRoot) spec() {}
 
-func (r RecurRoot) RID() id.ADT { return r.ID }
+func (r RecurRoot) RID() ID { return r.ID }
 
 type UpRoot struct {
-	ID id.ADT
+	ID ID
 	A  Root
 }
 
 func (UpRoot) spec() {}
 
-func (r UpRoot) RID() id.ADT { return r.ID }
+func (r UpRoot) RID() ID { return r.ID }
 
 type DownRoot struct {
-	ID id.ADT
+	ID ID
 	A  Root
 }
 
 func (DownRoot) spec() {}
 
-func (r DownRoot) RID() id.ADT { return r.ID }
+func (r DownRoot) RID() ID { return r.ID }
 
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
+	SelectByID(ID) (Root, error)
 }
 
 func ErrUnexpectedSpec(v Spec) error {
@@ -249,6 +249,18 @@ func ConvertSpecToRoot(s Spec) Root {
 			Y:  ConvertSpecToRoot(spec.Y),
 			Z:  ConvertSpecToRoot(spec.Z),
 		}
+	case WithSpec:
+		choices := make(map[Label]Root, len(spec.Choices))
+		for lab, st := range spec.Choices {
+			choices[lab] = ConvertSpecToRoot(st)
+		}
+		return WithRoot{ID: newID, Choices: choices}
+	case PlusSpec:
+		choices := make(map[Label]Root, len(spec.Choices))
+		for lab, st := range spec.Choices {
+			choices[lab] = ConvertSpecToRoot(st)
+		}
+		return PlusRoot{ID: newID, Choices: choices}
 	default:
 		panic(ErrUnexpectedSpec(spec))
 	}

@@ -34,9 +34,8 @@ CREATE TABLE states (
 	kind smallint,
 	from_id varchar(20),
 	on_ref jsonb,
-	on_key varchar(20),
 	to_id varchar(20),
-	to_ids jsonb
+	choices jsonb
 );
 
 CREATE TABLE channels (
@@ -48,8 +47,8 @@ CREATE TABLE channels (
 
 CREATE TABLE steps (
 	id varchar(20) UNIQUE,
-	via_id varchar(20),
 	kind smallint,
+	via_id varchar(20),
 	payload jsonb
 );
 

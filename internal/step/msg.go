@@ -6,6 +6,8 @@ import (
 	valid "github.com/go-ozzo/ozzo-validation/v4"
 
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/state"
 )
 
 type RefMsg struct {
@@ -124,8 +126,8 @@ type LabMsg struct {
 
 func (mto *LabMsg) Validate() error {
 	return valid.ValidateStruct(mto,
-		valid.Field(&mto.C, valid.Required),
-		valid.Field(&mto.Label, valid.Required),
+		valid.Field(&mto.C, valid.Required, valid.Length(20, 20)),
+		valid.Field(&mto.Label, valid.Required, valid.Length(1, 64)),
 	)
 }
 
@@ -136,7 +138,7 @@ type CaseMsg struct {
 
 func (mto *CaseMsg) Validate() error {
 	return valid.ValidateStruct(mto,
-		valid.Field(&mto.Z, valid.Required),
+		valid.Field(&mto.Z, valid.Required, valid.Length(20, 20)),
 		valid.Field(&mto.Conts, valid.Required, valid.Length(1, 10)),
 	)
 }
@@ -150,15 +152,14 @@ func MsgFromTerm(t Term) *TermMsg {
 		return &TermMsg{
 			K: Close,
 			Close: &CloseMsg{
-				A: id.StringFrom(term.A),
+				A: term.A.String(),
 			},
 		}
 	case WaitSpec:
-		x := id.StringFrom(term.X)
 		return &TermMsg{
 			K: Wait,
 			Wait: &WaitMsg{
-				X:    x,
+				X:    term.X.String(),
 				Cont: MsgFromTerm(term.Cont),
 			},
 		}
@@ -166,17 +167,37 @@ func MsgFromTerm(t Term) *TermMsg {
 		return &TermMsg{
 			K: Send,
 			Send: &SendMsg{
-				A: id.StringFrom(term.A),
-				B: id.StringFrom(term.B),
+				A: term.A.String(),
+				B: term.B.String(),
 			},
 		}
 	case RecvSpec:
 		return &TermMsg{
 			K: Recv,
 			Recv: &RecvMsg{
-				X:    id.StringFrom(term.X),
-				Y:    id.StringFrom(term.Y),
+				X:    term.X.String(),
+				Y:    term.Y.String(),
 				Cont: MsgFromTerm(term.Cont),
+			},
+		}
+	case LabSpec:
+		return &TermMsg{
+			K: Lab,
+			Lab: &LabMsg{
+				C:     term.C.String(),
+				Label: string(term.L),
+			},
+		}
+	case CaseSpec:
+		conts := make(map[string]*TermMsg, len(term.Branches))
+		for l, t := range term.Branches {
+			conts[string(l)] = MsgFromTerm(t)
+		}
+		return &TermMsg{
+			K: Case,
+			Case: &CaseMsg{
+				Z:     term.Z.String(),
+				Conts: conts,
 			},
 		}
 	default:
@@ -190,13 +211,13 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 	}
 	switch mto.K {
 	case Close:
-		a, err := id.StringTo(mto.Close.A)
+		a, err := id.StringToID(mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case Wait:
-		x, err := id.StringTo(mto.Wait.X)
+		x, err := id.StringToID(mto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -206,21 +227,21 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case Send:
-		a, err := id.StringTo(mto.Send.A)
+		a, err := id.StringToID(mto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := id.StringTo(mto.Send.B)
+		b, err := id.StringToID(mto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case Recv:
-		x, err := id.StringTo(mto.Recv.X)
+		x, err := id.StringToID(mto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := id.StringTo(mto.Recv.Y)
+		y, err := id.StringToID(mto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -229,6 +250,26 @@ func MsgToTerm(mto *TermMsg) (Term, error) {
 			return nil, err
 		}
 		return RecvSpec{X: x, Y: y, Cont: cont}, nil
+	case Lab:
+		c, err := id.StringToID(mto.Lab.C)
+		if err != nil {
+			return nil, err
+		}
+		return LabSpec{C: c, L: state.Label(mto.Lab.Label)}, nil
+	case Case:
+		z, err := id.StringToID(mto.Case.Z)
+		if err != nil {
+			return nil, err
+		}
+		branches := make(map[state.Label]Term, len(mto.Case.Conts))
+		for l, t := range mto.Case.Conts {
+			branch, err := MsgToTerm(t)
+			if err != nil {
+				return nil, err
+			}
+			branches[state.Label(l)] = branch
+		}
+		return CaseSpec{Z: z, Branches: branches}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}

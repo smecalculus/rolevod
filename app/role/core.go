@@ -60,8 +60,7 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	root := RoleRoot{
 		ID:   id.New(),
 		Name: spec.Name,
-		// State: state.ConvertRootToRef(st),
-		St: st,
+		St:   st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -71,15 +70,13 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 		)
 		return root, err
 	}
-	if spec.St != nil {
-		err := s.states.Insert(st)
-		if err != nil {
-			s.log.Error("state insertion failed",
-				slog.Any("reason", err),
-				slog.Any("root", st),
-			)
-			return root, err
-		}
+	err = s.states.Insert(st)
+	if err != nil {
+		s.log.Error("state insertion failed",
+			slog.Any("reason", err),
+			slog.Any("root", st),
+		)
+		return root, err
 	}
 	s.log.Debug("role creation succeeded", slog.Any("root", root))
 	return root, nil

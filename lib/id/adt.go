@@ -14,7 +14,7 @@ func Ident(id ADT) ADT {
 	return id
 }
 
-func StringTo(s string) (ADT, error) {
+func StringToID(s string) (ADT, error) {
 	xid, err := xid.FromString(s)
 	if err != nil {
 		return ADT{}, err
@@ -22,7 +22,7 @@ func StringTo(s string) (ADT, error) {
 	return ADT(xid), nil
 }
 
-func StringFrom(id ADT) string {
+func StringFromID(id ADT) string {
 	return xid.ID(id).String()
 }
 

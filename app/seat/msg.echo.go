@@ -52,7 +52,7 @@ func (h *seatHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringTo(mto.ID)
+	id, err := id.StringToID(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (h *seatHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringTo(mto.ID)
+	id, err := id.StringToID(mto.ID)
 	if err != nil {
 		return err
 	}
