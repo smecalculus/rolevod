@@ -115,10 +115,10 @@ func MsgFromSpec(s Spec) SpecMsg {
 	switch spec := s.(type) {
 	case OneSpec:
 		return SpecMsg{K: One}
-	case RecurSpec:
+	case MenSpec:
 		return SpecMsg{
 			K:     Recur,
-			Recur: &RecurMsg{ToID: spec.ToID.String(), Name: spec.Name}}
+			Recur: &RecurMsg{ToID: spec.StID.String(), Name: spec.Name}}
 	case TensorSpec:
 		return SpecMsg{
 			K: Tensor,
@@ -161,7 +161,7 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 		if err != nil {
 			return nil, err
 		}
-		return RecurSpec{ToID: id, Name: mto.Recur.Name}, nil
+		return MenSpec{StID: id, Name: mto.Recur.Name}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {
@@ -212,7 +212,7 @@ func MsgFromRef(ref Ref) RefMsg {
 	switch ref.(type) {
 	case OneRef, OneRoot:
 		return RefMsg{K: One, ID: id}
-	case RecurRef, RecurRoot:
+	case MenRef, MenRoot:
 		return RefMsg{K: Recur, ID: id}
 	case TensorRef, TensorRoot:
 		return RefMsg{K: Tensor, ID: id}
@@ -236,7 +236,7 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 	case One:
 		return OneRef{rid}, nil
 	case Recur:
-		return RecurRef{rid}, nil
+		return MenRef{rid}, nil
 	case Tensor:
 		return TensorRef{rid}, nil
 	case Lolli:

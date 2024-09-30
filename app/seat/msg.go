@@ -1,7 +1,7 @@
 package seat
 
 import (
-	valid "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
@@ -16,14 +16,21 @@ type SeatSpecMsg struct {
 }
 
 func (mto SeatSpecMsg) Validate() error {
-	return valid.ValidateStruct(&mto,
-		valid.Field(&mto.Name, core.NameRequired...),
-		valid.Field(&mto.Via, valid.Required),
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Name, core.NameRequired...),
+		validation.Field(&mto.Via, validation.Required),
+		validation.Field(&mto.Ctx, core.CtxOptional...),
 	)
 }
 
 type RefMsg struct {
-	ID string `param:"id" query:"id" json:"id"`
+	ID string `json:"id" param:"id"`
+}
+
+func (mto RefMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+	)
 }
 
 type SeatRefMsg struct {
@@ -45,17 +52,13 @@ type SeatRootMsg struct {
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToID   func(string) (id.ADT, error)
-	MsgFromID func(id.ADT) string
-	// goverter:ignore Ctx
-	MsgToSeatSpec func(SeatSpecMsg) (SeatSpec, error)
-	// goverter:ignore Ctx
-	MsgFromSeatSpec func(SeatSpec) SeatSpecMsg
-	MsgToSeatRef    func(SeatRefMsg) (SeatRef, error)
-	MsgFromSeatRef  func(SeatRef) SeatRefMsg
-	// goverter:ignore Ctx
-	MsgToSeatRoot func(SeatRootMsg) (SeatRoot, error)
-	// goverter:ignore Ctx
+	MsgToID          func(string) (id.ADT, error)
+	MsgFromID        func(id.ADT) string
+	MsgToSeatSpec    func(SeatSpecMsg) (SeatSpec, error)
+	MsgFromSeatSpec  func(SeatSpec) SeatSpecMsg
+	MsgToSeatRef     func(SeatRefMsg) (SeatRef, error)
+	MsgFromSeatRef   func(SeatRef) SeatRefMsg
+	MsgToSeatRoot    func(SeatRootMsg) (SeatRoot, error)
 	MsgFromSeatRoot  func(SeatRoot) SeatRootMsg
 	MsgFromSeatRoots func([]SeatRoot) []SeatRootMsg
 )

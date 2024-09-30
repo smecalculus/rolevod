@@ -27,9 +27,7 @@ var (
 	DataFromSeatRef  func(SeatRef) SeatRefData
 	DataToSeatRefs   func([]SeatRefData) ([]SeatRef, error)
 	DataFromSeatRefs func([]SeatRef) []SeatRefData
-	// goverter:ignore Ctx
-	DataToSeatRoot func(seatRootData) (SeatRoot, error)
-	// goverter:ignore Ctx
+	DataToSeatRoot   func(seatRootData) (SeatRoot, error)
 	DataFromSeatRoot func(SeatRoot) (seatRootData, error)
 )
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"golang.org/x/exp/maps"
+
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/id"
 
@@ -14,21 +16,22 @@ import (
 	"smecalculus/rolevod/app/seat"
 )
 
+type Name = string
 type ID = id.ADT
 
 type DealSpec struct {
-	Name string
+	Name Name
 }
 
 type DealRef struct {
-	ID   id.ADT
-	Name string
+	ID   ID
+	Name Name
 }
 
 // aka Configuration or Eta
 type DealRoot struct {
-	ID       id.ADT
-	Name     string
+	ID       ID
+	Name     Name
 	Children []DealRef
 	Seats    []seat.SeatRef
 }
@@ -42,7 +45,7 @@ var (
 
 type DealApi interface {
 	Create(DealSpec) (DealRoot, error)
-	Retrieve(id.ADT) (DealRoot, error)
+	Retrieve(ID) (DealRoot, error)
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
 	Involve(PartSpec) (PartRoot, error)
@@ -132,7 +135,7 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 
 func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 	s.log.Debug("seat involvement started", slog.Any("spec", spec))
-	seat, err := s.seats.Retrieve(spec.SeatID)
+	dec, err := s.seats.Retrieve(spec.SeatID)
 	if err != nil {
 		s.log.Error("seat selection failed",
 			slog.Any("reason", err),
@@ -140,10 +143,59 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		)
 		return PartRoot{}, err
 	}
+	if len(dec.Ctx) != len(spec.Ctx) {
+		err = fmt.Errorf("ctx mismatch: want %v items, got %v items", len(dec.Ctx), len(spec.Ctx))
+		s.log.Error("transition taking failed",
+			slog.Any("reason", err),
+			slog.Any("spec", spec),
+		)
+		return PartRoot{}, err
+	}
+	newCtx := make(map[chnl.Name]chnl.ID, len(spec.Ctx))
+	if len(spec.Ctx) > 0 {
+		curChnls, err := s.chnls.SelectCtx(maps.Values(spec.Ctx))
+		if err != nil {
+			s.log.Error("ctx selection failed",
+				slog.Any("reason", err),
+				slog.Any("spec", spec),
+			)
+			return PartRoot{}, err
+		}
+		for i, got := range curChnls {
+			// TODO обеспечить порядок
+			err = checkState(got.St, dec.Ctx[i].St)
+			if err != nil {
+				s.log.Error("type checking failed",
+					slog.Any("reason", err),
+					slog.Any("spec", spec),
+				)
+				return PartRoot{}, err
+			}
+		}
+		var newChnls []chnl.Root
+		for _, preID := range spec.Ctx {
+			ch := chnl.Root{
+				ID:    id.New(),
+				PreID: preID,
+			}
+			newChnls = append(newChnls, ch)
+		}
+		newChnls, err = s.chnls.InsertCtx(newChnls)
+		if err != nil {
+			s.log.Error("ctx insertion failed",
+				slog.Any("reason", err),
+				slog.Any("ctx", newChnls),
+			)
+			return PartRoot{}, err
+		}
+		for _, ch := range newChnls {
+			newCtx[ch.Name] = ch.ID
+		}
+	}
 	via := chnl.Root{
 		ID:   id.New(),
-		Name: seat.Via.Name,
-		St:   seat.Via.St,
+		Name: dec.Via.Name,
+		St:   dec.Via.St,
 	}
 	err = s.chnls.Insert(via)
 	if err != nil {
@@ -153,28 +205,6 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		)
 		return PartRoot{}, err
 	}
-	ctx := make(map[chnl.Name]chnl.ID, len(spec.Ctx))
-	if len(spec.Ctx) > 0 {
-		var chnls []chnl.Root
-		for _, preID := range spec.Ctx {
-			ch := chnl.Root{
-				ID:    id.New(),
-				PreID: preID,
-			}
-			chnls = append(chnls, ch)
-		}
-		chnls, err = s.chnls.InsertCtx(chnls)
-		if err != nil {
-			s.log.Error("ctx insertion failed",
-				slog.Any("reason", err),
-				slog.Any("ctx", chnls),
-			)
-			return PartRoot{}, err
-		}
-		for _, ch := range chnls {
-			ctx[ch.Name] = ch.ID
-		}
-	}
 	root := PartRoot{
 		PartID: id.New(),
 		DealID: spec.DealID,
@@ -182,7 +212,7 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 		PAK:    ak.New(),
 		CAK:    ak.New(),
 		PID:    via.ID,
-		Ctx:    ctx,
+		Ctx:    newCtx,
 	}
 	err = s.parts.Insert(root)
 	if err != nil {
@@ -220,7 +250,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -315,7 +345,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -409,7 +439,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -504,7 +534,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -599,7 +629,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -692,7 +722,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosedChannel(chnl.ConvertRootToRef(curChnl))
+			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
@@ -861,7 +891,7 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 		if err != nil {
 			return err
 		}
-		err = checkProducer(got.St, want.B)
+		err = checkState(got.St, want.B)
 		if err != nil {
 			return err
 		}
@@ -877,7 +907,7 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 		if err != nil {
 			return err
 		}
-		err = checkProducer(got.St, want.Y)
+		err = checkState(got.St, want.Y)
 		if err != nil {
 			return err
 		}
@@ -934,7 +964,7 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 		if err != nil {
 			return err
 		}
-		err = checkConsumer(got.St, want.Y)
+		err = checkState(got.St, want.Y)
 		if err != nil {
 			return err
 		}
@@ -950,7 +980,7 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 		if err != nil {
 			return err
 		}
-		err = checkConsumer(got.St, want.B)
+		err = checkState(got.St, want.B)
 		if err != nil {
 			return err
 		}
@@ -973,14 +1003,14 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.PlusRoot{}, st)
 		}
 		if len(term.Conts) != len(want.Choices) {
-			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Conts))
+			return fmt.Errorf("state mismatch: want %v choices, got %v conts", len(want.Choices), len(term.Conts))
 		}
-		for wantL, wantCh := range want.Choices {
-			gotBr, ok := term.Conts[wantL]
+		for wantL, wantChoice := range want.Choices {
+			gotCont, ok := term.Conts[wantL]
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 			}
-			err := s.checkConsumer(gotBr, wantCh)
+			err := s.checkConsumer(gotCont, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -991,36 +1021,28 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 	}
 }
 
+func checkState(got, want state.Ref) error {
+	if got != want {
+		return fmt.Errorf("state mismatch: want %+v, got %+v", want, got)
+	}
+	return nil
+}
+
 // aka eqtp
 func checkProducer(got, want state.Root) error {
 	switch wantSt := want.(type) {
-	case state.OneRef:
-		_, ok := got.(state.OneRef)
-		if !ok {
-			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
-		}
-		return nil
 	case state.OneRoot:
 		_, ok := got.(state.OneRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
-		}
-		return nil
-	case state.TensorRef:
-		gotSt, ok := got.(state.TensorRef)
-		if !ok {
-			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
-		}
-		if gotSt != wantSt {
-			return fmt.Errorf("state ref mismatch: want %#v, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		return nil
 	case state.TensorRoot:
 		gotSt, ok := got.(state.TensorRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
-		err := checkProducer(gotSt.B, wantSt.B)
+		err := checkState(gotSt.B, wantSt.B)
 		if err != nil {
 			return err
 		}
@@ -1028,9 +1050,9 @@ func checkProducer(got, want state.Root) error {
 	case state.LolliRoot:
 		gotSt, ok := got.(state.LolliRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
-		err := checkProducer(gotSt.Y, wantSt.Y)
+		err := checkState(gotSt.Y, wantSt.Y)
 		if err != nil {
 			return err
 		}
@@ -1038,17 +1060,17 @@ func checkProducer(got, want state.Root) error {
 	case state.PlusRoot:
 		gotSt, ok := got.(state.PlusRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		if len(gotSt.Choices) != len(wantSt.Choices) {
 			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
 		}
-		for wantL, wantCh := range wantSt.Choices {
-			gotCh, ok := gotSt.Choices[wantL]
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
 			if !ok {
-				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := checkProducer(gotCh, wantCh)
+			err := checkProducer(gotChoice, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -1057,17 +1079,17 @@ func checkProducer(got, want state.Root) error {
 	case state.WithRoot:
 		gotSt, ok := got.(state.WithRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		if len(gotSt.Choices) != len(wantSt.Choices) {
 			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
 		}
-		for wantL, wantCh := range wantSt.Choices {
-			gotCh, ok := gotSt.Choices[wantL]
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
 			if !ok {
-				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := checkProducer(gotCh, wantCh)
+			err := checkProducer(gotChoice, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -1080,31 +1102,16 @@ func checkProducer(got, want state.Root) error {
 
 func checkConsumer(got, want state.Root) error {
 	switch wantSt := want.(type) {
-	case state.OneRef:
-		_, ok := got.(state.OneRef)
-		if !ok {
-			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
-		}
-		return nil
 	case state.OneRoot:
 		_, ok := got.(state.OneRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
-		}
-		return nil
-	case state.TensorRef:
-		gotSt, ok := got.(state.TensorRef)
-		if !ok {
-			return fmt.Errorf("state ref mismatch: want %T, got %#v", want, got)
-		}
-		if gotSt != wantSt {
-			return fmt.Errorf("state ref mismatch: want %#v, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		return nil
 	case state.TensorRoot:
 		gotSt, ok := got.(state.LolliRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		err := checkConsumer(gotSt.Y, wantSt.B)
 		if err != nil {
@@ -1114,7 +1121,7 @@ func checkConsumer(got, want state.Root) error {
 	case state.LolliRoot:
 		gotSt, ok := got.(state.TensorRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		err := checkConsumer(gotSt.B, wantSt.Y)
 		if err != nil {
@@ -1124,17 +1131,17 @@ func checkConsumer(got, want state.Root) error {
 	case state.PlusRoot:
 		gotSt, ok := got.(state.WithRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		if len(gotSt.Choices) != len(wantSt.Choices) {
 			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
 		}
-		for wantL, wantCh := range wantSt.Choices {
-			gotCh, ok := gotSt.Choices[wantL]
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
 			if !ok {
-				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := checkConsumer(gotCh, wantCh)
+			err := checkConsumer(gotChoice, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -1143,17 +1150,17 @@ func checkConsumer(got, want state.Root) error {
 	case state.WithRoot:
 		gotSt, ok := got.(state.PlusRoot)
 		if !ok {
-			return fmt.Errorf("state mismatch: want %T, got %#v", want, got)
+			return fmt.Errorf("state mismatch: want %T, got %T", want, got)
 		}
 		if len(gotSt.Choices) != len(wantSt.Choices) {
 			return fmt.Errorf("state mismatch: want %v choices, got %v choices", len(wantSt.Choices), len(gotSt.Choices))
 		}
-		for wantL, wantCh := range wantSt.Choices {
-			gotCh, ok := gotSt.Choices[wantL]
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
 			if !ok {
-				return fmt.Errorf("state mismatch: want label %q, got nothing", wantL)
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := checkConsumer(gotCh, wantCh)
+			err := checkConsumer(gotChoice, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -1164,6 +1171,6 @@ func checkConsumer(got, want state.Root) error {
 	}
 }
 
-func errAlreadyClosedChannel(ref chnl.Ref) error {
-	return fmt.Errorf("channel already finalized %+v", ref)
+func errAlreadyClosed(ref chnl.Ref) error {
+	return fmt.Errorf("channel already closed %+v", ref)
 }

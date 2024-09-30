@@ -12,3 +12,10 @@ var NameOptional = []validation.Rule{
 }
 
 var NameRequired = append(NameOptional, validation.Required)
+
+var CtxOptional = []validation.Rule{
+	validation.Length(0, 10),
+	validation.Each(validation.Required),
+}
+
+var CtxRequired = append(NameOptional, validation.Required)

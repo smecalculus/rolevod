@@ -164,7 +164,7 @@ func (mto SpawnMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.DecID, id.Required...),
 		validation.Field(&mto.C, id.Required...),
-		validation.Field(&mto.Ctx, validation.Length(0, 10), validation.Each(validation.Required)),
+		validation.Field(&mto.Ctx, core.CtxOptional...),
 		validation.Field(&mto.Cont, validation.Required),
 	)
 }

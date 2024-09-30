@@ -9,14 +9,13 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
+type Name = string
 type ID = id.ADT
 
-type Sym = string
-
 type SeatSpec struct {
-	Name Sym
+	Name Name
 	Via  chnl.Spec
-	Ctx  map[chnl.Name]chnl.Spec
+	Ctx  []chnl.Spec
 }
 
 type SeatRef struct {
@@ -27,9 +26,9 @@ type SeatRef struct {
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       ID
-	Name     Sym
+	Name     Name
 	Via      chnl.Spec
-	Ctx      map[chnl.Name]chnl.Spec
+	Ctx      []chnl.Spec
 	Children []SeatRef
 }
 

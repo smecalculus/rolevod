@@ -86,8 +86,8 @@ func TestTakeWaitClose(t *testing.T) {
 	// and
 	seatSpec2 := seat.SeatSpec{
 		Name: "seat-2",
-		Ctx: map[chnl.Name]chnl.Spec{
-			seatSpec1.Via.Name: seatSpec1.Via,
+		Ctx: []chnl.Spec{
+			seatSpec1.Via,
 		},
 		Via: chnl.Spec{
 			Name: "chnl-2",
@@ -204,6 +204,9 @@ func TestTakeRecvSend(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-2",
 			St:   roleRoot2.St,
+		},
+		Ctx: []chnl.Spec{
+			seatSpec1.Via,
 		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)
@@ -322,6 +325,9 @@ func TestTakeCaseLab(t *testing.T) {
 			Name: "chnl-2",
 			St:   roleRoot2.St,
 		},
+		Ctx: []chnl.Spec{
+			seatSpec1.Via,
+		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)
 	if err != nil {
@@ -434,6 +440,9 @@ func TestTakeSpawn(t *testing.T) {
 			Name: "chnl-2",
 			St:   roleRoot2.St,
 		},
+		Ctx: []chnl.Spec{
+			seatSpec1.Via,
+		},
 	}
 	seatRoot2, err := seatApi.Create(seatSpec2)
 	if err != nil {
@@ -451,7 +460,6 @@ func TestTakeSpawn(t *testing.T) {
 	producerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
-		Ctx:    make(map[chnl.Name]id.ADT),
 	}
 	producerRoot, err := dealApi.Involve(producerSpec)
 	if err != nil {

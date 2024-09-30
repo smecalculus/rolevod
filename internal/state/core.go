@@ -18,13 +18,13 @@ type OneSpec struct{}
 
 func (OneSpec) spec() {}
 
-// aka TpName
-type RecurSpec struct {
+// Mention aka TpName
+type MenSpec struct {
+	StID ID
 	Name string
-	ToID ID
 }
 
-func (RecurSpec) spec() {}
+func (MenSpec) spec() {}
 
 type TensorSpec struct {
 	B Spec
@@ -70,6 +70,18 @@ type Ref interface {
 	RID() ID
 }
 
+type OneRef struct {
+	ID ID
+}
+
+func (r OneRef) RID() ID { return r.ID }
+
+type MenRef struct {
+	ID ID
+}
+
+func (r MenRef) RID() ID { return r.ID }
+
 type PlusRef struct {
 	ID ID
 }
@@ -93,18 +105,6 @@ type LolliRef struct {
 }
 
 func (r LolliRef) RID() ID { return r.ID }
-
-type OneRef struct {
-	ID ID
-}
-
-func (r OneRef) RID() ID { return r.ID }
-
-type RecurRef struct {
-	ID ID
-}
-
-func (r RecurRef) RID() ID { return r.ID }
 
 type UpRef struct {
 	ID ID
@@ -131,6 +131,25 @@ type Sum interface {
 	Next(Label) Ref
 }
 
+// aka TpName
+type MenRoot struct {
+	ID   ID
+	StID ID
+	Name string
+}
+
+func (MenRoot) spec() {}
+
+func (r MenRoot) RID() ID { return r.ID }
+
+type OneRoot struct {
+	ID ID
+}
+
+func (OneRoot) spec() {}
+
+func (r OneRoot) RID() ID { return r.ID }
+
 // aka Internal Choice
 type PlusRoot struct {
 	ID      ID
@@ -153,7 +172,7 @@ func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
 
 type TensorRoot struct {
 	ID ID
-	B  Ref  // value
+	B  Root // value
 	C  Root // cont
 }
 
@@ -163,32 +182,13 @@ func (r TensorRoot) Next() Ref { return r.C }
 
 type LolliRoot struct {
 	ID ID
-	Y  Ref  // value
+	Y  Root // value
 	Z  Root // cont
 }
 
 func (r LolliRoot) RID() ID { return r.ID }
 
 func (r LolliRoot) Next() Ref { return r.Z }
-
-type OneRoot struct {
-	ID ID
-}
-
-func (OneRoot) spec() {}
-
-func (r OneRoot) RID() ID { return r.ID }
-
-// aka TpName
-type RecurRoot struct {
-	ID   ID
-	Name string
-	ToID ID
-}
-
-func (RecurRoot) spec() {}
-
-func (r RecurRoot) RID() ID { return r.ID }
 
 type UpRoot struct {
 	ID ID
@@ -223,8 +223,8 @@ func ConvertSpecToRoot(s Spec) Root {
 	case OneSpec:
 		// TODO генерировать zero id или не генерировать id вообще
 		return OneRoot{ID: newID}
-	case RecurSpec:
-		return RecurRoot{ID: newID, Name: spec.Name, ToID: spec.ToID}
+	case MenSpec:
+		return MenRoot{ID: newID, Name: spec.Name, StID: spec.StID}
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,

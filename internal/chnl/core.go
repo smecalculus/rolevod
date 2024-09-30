@@ -35,6 +35,7 @@ type Repo interface {
 	InsertCtx([]Root) ([]Root, error)
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
+	SelectCtx([]ID) ([]Root, error)
 }
 
 // goverter:variables

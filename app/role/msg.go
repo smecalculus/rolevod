@@ -3,8 +3,10 @@ package role
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
-	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/state"
 )
 
 type RoleSpecMsg struct {
@@ -21,6 +23,12 @@ func (mto RoleSpecMsg) Validate() error {
 
 type RefMsg struct {
 	ID string `json:"id" param:"id"`
+}
+
+func (mto RefMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+	)
 }
 
 type RoleRefMsg struct {

@@ -64,7 +64,7 @@ func DataFromRef(ref Ref) *RefData {
 	switch ref.(type) {
 	case OneRef, OneRoot:
 		return &RefData{K: one, ID: rid}
-	case RecurRef, RecurRoot:
+	case MenRef, MenRoot:
 		return &RefData{K: recur, ID: rid}
 	case TensorRef, TensorRoot:
 		return &RefData{K: tensor, ID: rid}
@@ -91,7 +91,7 @@ func DataToRef(dto *RefData) (Ref, error) {
 	case one:
 		return OneRef{rid}, nil
 	case recur:
-		return RecurRef{rid}, nil
+		return MenRef{rid}, nil
 	case tensor:
 		return TensorRef{rid}, nil
 	case lolli:
@@ -143,11 +143,12 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 	case OneRoot:
 		dto.States[stID] = state{ID: stID, K: one, FromID: fromID}
 		return stID, nil
-	case RecurRoot:
+	case MenRoot:
 		dto.States[stID] = state{ID: stID, K: recur, FromID: fromID}
 		return stID, nil
 	case TensorRoot:
 		onRef := DataFromRef(root.B)
+		// onID, err := dataFromState(dto, root.B, "")
 		toID, err := dataFromState(dto, root.C, stID)
 		if err != nil {
 			return "", err

@@ -5,6 +5,7 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
+	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/state"
 )
 
@@ -16,13 +17,13 @@ type RoleSpec struct {
 }
 
 type RoleRef struct {
-	ID   id.ADT
+	ID   ID
 	Name string
 }
 
 // aka TpDef
 type RoleRoot struct {
-	ID       id.ADT
+	ID       ID
 	Name     string
 	St       state.Ref
 	Children []RoleRef
@@ -30,7 +31,7 @@ type RoleRoot struct {
 
 type RoleApi interface {
 	Create(RoleSpec) (RoleRoot, error)
-	Retrieve(id.ADT) (RoleRoot, error)
+	Retrieve(ID) (RoleRoot, error)
 	RetreiveAll() ([]RoleRef, error)
 	Update(RoleRoot) error
 	Establish(KinshipSpec) error
@@ -39,6 +40,7 @@ type RoleApi interface {
 type roleService struct {
 	roles    roleRepo
 	states   state.Repo
+	aliases  alias.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
@@ -46,20 +48,20 @@ type roleService struct {
 func newRoleService(
 	roles roleRepo,
 	states state.Repo,
+	aliases alias.Repo,
 	kinships kinshipRepo,
 	l *slog.Logger,
 ) *roleService {
 	name := slog.String("name", "roleService")
-	return &roleService{roles, states, kinships, l.With(name)}
+	return &roleService{roles, states, aliases, kinships, l.With(name)}
 }
 
 func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
 	st := state.ConvertSpecToRoot(spec.St)
 	root := RoleRoot{
-		ID:   id.New(),
-		Name: spec.Name,
-		St:   st,
+		ID: id.New(),
+		St: st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -85,7 +87,7 @@ func (s *roleService) Update(root RoleRoot) error {
 	return s.roles.Insert(root)
 }
 
-func (s *roleService) Retrieve(rid id.ADT) (RoleRoot, error) {
+func (s *roleService) Retrieve(rid ID) (RoleRoot, error) {
 	root, err := s.roles.SelectByID(rid)
 	if err != nil {
 		return RoleRoot{}, err
@@ -121,13 +123,13 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 type roleRepo interface {
 	Insert(RoleRoot) error
 	SelectAll() ([]RoleRef, error)
-	SelectByID(id.ADT) (RoleRoot, error)
-	SelectChildren(id.ADT) ([]RoleRef, error)
+	SelectByID(ID) (RoleRoot, error)
+	SelectChildren(ID) ([]RoleRef, error)
 }
 
 type KinshipSpec struct {
-	ParentID id.ADT
-	ChildIDs []id.ADT
+	ParentID ID
+	ChildIDs []ID
 }
 
 type KinshipRoot struct {

@@ -68,15 +68,19 @@ func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 		return nil, err
 	}
 	batch := pgx.Batch{}
-	dtos, err := DataFromRoots(roots)
+	reqs, err := DataFromRoots(roots)
 	if err != nil {
+		r.log.Error("dtos mapping failed",
+			slog.Any("reason", err),
+			slog.Any("roots", roots),
+		)
 		return nil, err
 	}
-	for _, dto := range dtos {
+	for _, req := range reqs {
 		args := pgx.NamedArgs{
-			"new_id": dto.ID,
-			"pre_id": dto.PreID,
-			"id":     dto.PreID,
+			"new_id": req.ID,
+			"pre_id": req.PreID,
+			"id":     req.PreID,
 		}
 		batch.Queue(query, args)
 	}
@@ -84,26 +88,23 @@ func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	var foes []rootData
-	for _, dto := range dtos {
-		// var foo rootData
-		// _, err = br.Exec()
-		// err = br.QueryRow().Scan(&foo)
+	var resps []rootData
+	for _, req := range reqs {
 		rows, err := br.Query()
 		if err != nil {
 			r.log.Error("query execution failed",
 				slog.Any("reason", err),
-				slog.Any("dto", dto),
+				slog.Any("req", req),
 			)
 		}
-		foo, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		resp, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
-				slog.Any("dto", dto),
+				slog.Any("req", req),
 			)
 		}
-		foes = append(foes, foo)
+		resps = append(resps, resp)
 	}
 	if err != nil {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
@@ -112,12 +113,12 @@ func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 	if err != nil {
 		return nil, errors.Join(err, tx.Rollback(ctx))
 	}
-	r.log.Log(ctx, core.LevelTrace, "context insertion succeeded", slog.Any("dtos", dtos))
+	r.log.Log(ctx, core.LevelTrace, "ctx insertion succeeded", slog.Any("resps", resps))
 	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
-	return DataToRoots(foes)
+	return DataToRoots(resps)
 }
 
 func (r *repoPgx) SelectAll() ([]Ref, error) {
@@ -134,15 +135,67 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("id", rid))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("row collection failed", slog.Any("reason", err), slog.Any("id", rid))
 		return Root{}, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "channel selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
+}
+
+func (r *repoPgx) SelectCtx(ids []ID) (rs []Root, err error) {
+	query := `
+		SELECT
+			id, name, pre_id, state
+		FROM channels
+		WHERE id = $1`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, rid := range ids {
+		batch.Queue(query, rid.String())
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var dtos []rootData
+	for _, rid := range ids {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("rid", rid),
+			)
+		}
+		dtos = append(dtos, dto)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "ctx selection succeeded", slog.Any("dtos", dtos))
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	return DataToRoots(dtos)
 }

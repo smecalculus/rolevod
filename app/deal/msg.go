@@ -27,6 +27,12 @@ type RefMsg struct {
 	ID string `json:"id" param:"id"`
 }
 
+func (mto RefMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.ID, id.Required...),
+	)
+}
+
 type DealRefMsg struct {
 	ID   string `json:"id" param:"id"`
 	Name string `json:"name"`
@@ -99,7 +105,7 @@ func (mto PartSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.DealID, id.Required...),
 		validation.Field(&mto.SeatID, id.Required...),
-		validation.Field(&mto.Ctx, validation.Length(0, 10), validation.Each(validation.Required)),
+		validation.Field(&mto.Ctx, core.CtxOptional...),
 	)
 }
 

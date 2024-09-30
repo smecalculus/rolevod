@@ -56,3 +56,10 @@ CREATE TABLE kinships (
 	parent_id varchar(20),
 	child_id varchar(20)
 );
+
+CREATE TABLE aliases (
+	sym ltree UNIQUE,
+	id varchar(20)
+);
+
+CREATE INDEX sym_gist_idx ON aliases USING GIST (sym);

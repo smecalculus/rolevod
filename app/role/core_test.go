@@ -6,11 +6,12 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
+	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/state"
 )
 
 func TestKinshipEstalish(t *testing.T) {
-	s := newRoleService(&roleRepoFixture{}, &stateRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
+	s := newRoleService(&roleRepoFixture{}, &stateRepoFixture{}, &aliasRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
 	children := []id.ADT{id.New()}
 	s.Establish(KinshipSpec{ParentID: id.New(), ChildIDs: children})
 }
@@ -48,6 +49,13 @@ func (r *stateRepoFixture) SelectByID(sid id.ADT) (state.Root, error) {
 }
 func (r *stateRepoFixture) SelectNext(sid id.ADT) (state.Ref, error) {
 	return nil, nil
+}
+
+type aliasRepoFixture struct {
+}
+
+func (r *aliasRepoFixture) Insert(ar alias.Root) error {
+	return nil
 }
 
 type kinshipRepoFixture struct {
