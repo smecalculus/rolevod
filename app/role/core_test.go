@@ -47,7 +47,13 @@ func (r *stateRepoFixture) SelectAll() ([]state.Ref, error) {
 func (r *stateRepoFixture) SelectByID(sid id.ADT) (state.Root, error) {
 	return nil, nil
 }
-func (r *stateRepoFixture) SelectNext(sid id.ADT) (state.Ref, error) {
+func (r *stateRepoFixture) SelectByProxy(sid id.ADT) (state.Root, error) {
+	return nil, nil
+}
+func (r *stateRepoFixture) SelectEnv(ids []id.ADT) (map[state.ID]state.Root, error) {
+	return nil, nil
+}
+func (r *stateRepoFixture) SelectMany(ids []id.ADT) ([]state.Root, error) {
 	return nil, nil
 }
 

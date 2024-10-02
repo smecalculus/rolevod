@@ -160,6 +160,21 @@ type Repo[T root] interface {
 	SelectByCh(chnl.ID) (*T, error)
 }
 
+func CollectChnlIDs(t Term, ids []chnl.ID) []chnl.ID {
+	switch term := t.(type) {
+	case CloseSpec:
+		return append(ids, term.A)
+	case WaitSpec:
+		return CollectChnlIDs(term.Cont, append(ids, term.X))
+	case SendSpec:
+		return append(ids, term.A, term.B)
+	case RecvSpec:
+		return CollectChnlIDs(term.Cont, append(ids, term.X, term.Y))
+	default:
+		panic(ErrUnexpectedTerm(t))
+	}
+}
+
 func Subst(t Term, varID chnl.ID, valID chnl.ID) Term {
 	if t == nil {
 		return nil

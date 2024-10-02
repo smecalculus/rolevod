@@ -5,18 +5,19 @@ import (
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 type kind int
 
 const (
-	unknown = iota
+	nonstate = iota
 	one
-	recur
+	link
 	tensor
 	lolli
-	with
 	plus
+	with
 )
 
 type RefData struct {
@@ -24,23 +25,33 @@ type RefData struct {
 	K  kind   `db:"kind" json:"kind"`
 }
 
-type choiceData struct {
-	Pat  string `json:"on"`
-	ToID string `json:"to"`
-}
-
 type rootData struct {
 	ID     string
 	States map[string]state
+}
+
+type rootData2 struct {
+	ID     string
+	States []state
 }
 
 type state struct {
 	ID      string         `db:"id"`
 	K       kind           `db:"kind"`
 	FromID  sql.NullString `db:"from_id"`
-	OnRef   *RefData       `db:"on_ref"`
-	ToID    sql.NullString `db:"to_id"`
+	FQN     sql.NullString `db:"fqn"`
+	Pair    *pairData      `db:"pair"`
 	Choices []choiceData   `db:"choices"`
+}
+
+type pairData struct {
+	OnID string `json:"on"`
+	ToID string `json:"to"`
+}
+
+type choiceData struct {
+	OnPat string `json:"on"`
+	ToID  string `json:"to"`
 }
 
 // goverter:variables
@@ -64,16 +75,16 @@ func DataFromRef(ref Ref) *RefData {
 	switch ref.(type) {
 	case OneRef, OneRoot:
 		return &RefData{K: one, ID: rid}
-	case MenRef, MenRoot:
-		return &RefData{K: recur, ID: rid}
+	case LinkRef, LinkRoot:
+		return &RefData{K: link, ID: rid}
 	case TensorRef, TensorRoot:
 		return &RefData{K: tensor, ID: rid}
 	case LolliRef, LolliRoot:
 		return &RefData{K: lolli, ID: rid}
-	case WithRef, WithRoot:
-		return &RefData{K: with, ID: rid}
 	case PlusRef, PlusRoot:
 		return &RefData{K: plus, ID: rid}
+	case WithRef, WithRoot:
+		return &RefData{K: with, ID: rid}
 	default:
 		panic(ErrUnexpectedRef(ref))
 	}
@@ -90,35 +101,31 @@ func DataToRef(dto *RefData) (Ref, error) {
 	switch dto.K {
 	case one:
 		return OneRef{rid}, nil
-	case recur:
-		return MenRef{rid}, nil
+	case link:
+		return LinkRef{rid}, nil
 	case tensor:
 		return TensorRef{rid}, nil
 	case lolli:
 		return LolliRef{rid}, nil
-	case with:
-		return WithRef{rid}, nil
 	case plus:
 		return PlusRef{rid}, nil
+	case with:
+		return WithRef{rid}, nil
 	default:
 		panic(errUnexpectedKind(dto.K))
 	}
 }
 
-func dataToRoot(dtos []state, rootID string) (Root, error) {
-	states := map[string]state{}
-	for _, dto := range dtos {
-		states[dto.ID] = dto
-	}
-	return dataToState(states, states[rootID])
+func dataToRoot(dto *rootData) (Root, error) {
+	return statesToRoot(dto.States, dto.States[dto.ID])
 }
 
-func dataToRoot2(dto *rootData) (Root, error) {
+func dataToRoot2(dto *rootData2) (Root, error) {
 	states := map[string]state{}
-	for _, st := range dto.States {
-		states[st.ID] = st
+	for _, dto := range dto.States {
+		states[dto.ID] = dto
 	}
-	return dataToState(states, states[dto.ID])
+	return statesToRoot(states, states[dto.ID])
 }
 
 func dataFromRoot(root Root) *rootData {
@@ -129,11 +136,68 @@ func dataFromRoot(root Root) *rootData {
 		ID:     root.RID().String(),
 		States: map[string]state{},
 	}
-	dataFromState(dto, root, "")
+	statesFromRoot(dto, root, "")
 	return dto
 }
 
-func dataFromState(dto *rootData, r Root, from string) (string, error) {
+func statesToRoot(states map[string]state, st state) (Root, error) {
+	stID, err := id.StringToID(st.ID)
+	if err != nil {
+		return nil, err
+	}
+	switch st.K {
+	case one:
+		return OneRoot{ID: stID}, nil
+	case link:
+		return LinkRoot{ID: stID, FQN: sym.StringToSym(st.FQN.String)}, nil
+	case tensor:
+		a, err := statesToRoot(states, states[st.Pair.OnID])
+		if err != nil {
+			return nil, err
+		}
+		c, err := statesToRoot(states, states[st.Pair.ToID])
+		if err != nil {
+			return nil, err
+		}
+		return TensorRoot{ID: stID, B: a, C: c}, nil
+	case lolli:
+		x, err := statesToRoot(states, states[st.Pair.OnID])
+		if err != nil {
+			return nil, err
+		}
+		z, err := statesToRoot(states, states[st.Pair.ToID])
+		if err != nil {
+			return nil, err
+		}
+		return LolliRoot{ID: stID, Y: x, Z: z}, nil
+	case plus:
+		dto := states[st.ID]
+		choices := make(map[Label]Root, len(dto.Choices))
+		for _, ch := range dto.Choices {
+			choice, err := statesToRoot(states, states[ch.ToID])
+			if err != nil {
+				return nil, err
+			}
+			choices[Label(ch.OnPat)] = choice
+		}
+		return PlusRoot{ID: stID, Choices: choices}, nil
+	case with:
+		dto := states[st.ID]
+		choices := make(map[Label]Root, len(dto.Choices))
+		for _, ch := range dto.Choices {
+			choice, err := statesToRoot(states, states[ch.ToID])
+			if err != nil {
+				return nil, err
+			}
+			choices[Label(ch.OnPat)] = choice
+		}
+		return WithRoot{ID: stID, Choices: choices}, nil
+	default:
+		panic(errUnexpectedKind(st.K))
+	}
+}
+
+func statesFromRoot(dto *rootData, r Root, from string) (string, error) {
 	var fromID sql.NullString
 	if len(from) > 0 {
 		fromID = sql.NullString{String: from, Valid: true}
@@ -143,28 +207,33 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 	case OneRoot:
 		dto.States[stID] = state{ID: stID, K: one, FromID: fromID}
 		return stID, nil
-	case MenRoot:
-		dto.States[stID] = state{ID: stID, K: recur, FromID: fromID}
+	case LinkRoot:
+		fqn := sql.NullString{String: sym.StringFromSym(root.FQN), Valid: true}
+		dto.States[stID] = state{ID: stID, K: link, FromID: fromID, FQN: fqn}
 		return stID, nil
 	case TensorRoot:
-		onRef := DataFromRef(root.B)
-		// onID, err := dataFromState(dto, root.B, "")
-		toID, err := dataFromState(dto, root.C, stID)
+		onID, err := statesFromRoot(dto, root.B, stID)
 		if err != nil {
 			return "", err
 		}
-		st := state{
+		toID, err := statesFromRoot(dto, root.C, stID)
+		if err != nil {
+			return "", err
+		}
+		toSt := state{
 			ID:     stID,
 			K:      tensor,
 			FromID: fromID,
-			OnRef:  onRef,
-			ToID:   sql.NullString{String: toID, Valid: true},
+			Pair:   &pairData{OnID: onID, ToID: toID},
 		}
-		dto.States[stID] = st
+		dto.States[stID] = toSt
 		return stID, nil
 	case LolliRoot:
-		onRef := DataFromRef(root.Y)
-		toID, err := dataFromState(dto, root.Z, stID)
+		onID, err := statesFromRoot(dto, root.Y, stID)
+		if err != nil {
+			return "", err
+		}
+		toID, err := statesFromRoot(dto, root.Z, stID)
 		if err != nil {
 			return "", err
 		}
@@ -172,8 +241,7 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 			ID:     stID,
 			K:      lolli,
 			FromID: fromID,
-			OnRef:  onRef,
-			ToID:   sql.NullString{String: toID, Valid: true},
+			Pair:   &pairData{OnID: onID, ToID: toID},
 		}
 		dto.States[stID] = st
 		return stID, nil
@@ -181,7 +249,7 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 		// choices := make([]choiceData, len(root.Choices))
 		var choices []choiceData
 		for pat, toSt := range root.Choices {
-			toID, err := dataFromState(dto, toSt, stID)
+			toID, err := statesFromRoot(dto, toSt, stID)
 			if err != nil {
 				return "", err
 			}
@@ -199,7 +267,7 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 		// choices := make([]choiceData, len(root.Choices))
 		var choices []choiceData
 		for pat, toSt := range root.Choices {
-			toID, err := dataFromState(dto, toSt, stID)
+			toID, err := statesFromRoot(dto, toSt, stID)
 			if err != nil {
 				return "", err
 			}
@@ -216,65 +284,6 @@ func dataFromState(dto *rootData, r Root, from string) (string, error) {
 	default:
 		panic(ErrUnexpectedRoot(r))
 	}
-}
-
-func dataToState(states map[string]state, st state) (Root, error) {
-	stID, err := id.StringToID(st.ID)
-	if err != nil {
-		return nil, err
-	}
-	switch st.K {
-	case one:
-		return OneRoot{ID: stID}, nil
-	case tensor:
-		a, err := DataToRef(st.OnRef)
-		if err != nil {
-			return nil, err
-		}
-		c, err := dataToState(states, states[st.ToID.String])
-		if err != nil {
-			return nil, err
-		}
-		return TensorRoot{ID: stID, B: a, C: c}, nil
-	case lolli:
-		x, err := DataToRef(st.OnRef)
-		if err != nil {
-			return nil, err
-		}
-		z, err := dataToState(states, states[st.ToID.String])
-		if err != nil {
-			return nil, err
-		}
-		return LolliRoot{ID: stID, Y: x, Z: z}, nil
-	case plus:
-		dto := states[st.ID]
-		chs := make(map[Label]Root, len(dto.Choices))
-		for _, choice := range dto.Choices {
-			ch, err := dataToState(states, states[choice.ToID])
-			if err != nil {
-				return nil, err
-			}
-			chs[Label(choice.Pat)] = ch
-		}
-		return PlusRoot{ID: stID, Choices: chs}, nil
-	case with:
-		dto := states[st.ID]
-		chs := make(map[Label]Root, len(dto.Choices))
-		for _, choice := range dto.Choices {
-			ch, err := dataToState(states, states[choice.ToID])
-			if err != nil {
-				return nil, err
-			}
-			chs[Label(choice.Pat)] = ch
-		}
-		return WithRoot{ID: stID, Choices: chs}, nil
-	default:
-		panic(errUnexpectedKind(st.K))
-	}
-}
-
-func errInvalidID(id string) error {
-	return fmt.Errorf("invalid state id %q", id)
 }
 
 func errUnexpectedKind(k kind) error {

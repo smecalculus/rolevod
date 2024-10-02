@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -24,6 +25,7 @@ func newRoleRepoPgx(p *pgxpool.Pool, l *slog.Logger) *roleRepoPgx {
 
 func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	ctx := context.Background()
+	r.log.Log(ctx, core.LevelTrace, "role insertion started", slog.Any("root", root))
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -48,6 +50,7 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
+	r.log.Log(ctx, core.LevelTrace, "role insertion succeeded", slog.Any("dto", dto))
 	return tx.Commit(ctx)
 }
 
@@ -70,36 +73,12 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 	return DataToRoleRefs(dtos)
 }
 
-func (r *roleRepoPgx) SelectByID(rid id.ADT) (RoleRoot, error) {
-	// fooID := id.New()
-	// queueID, _ := id.String[state.ID](rid.String())
-	// queue := &state.WithRoot{
-	// 	ID: id.New(),
-	// 	Choices: map[state.Label]state.Root{
-	// 		"enq": &state.TensorRoot{
-	// 			ID: id.New(),
-	// 			S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
-	// 			T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
-	// 		},
-	// 		"deq": &state.PlusRoot{
-	// 			ID: id.New(),
-	// 			Choices: map[state.Label]state.Root{
-	// 				"some": &state.LolliRoot{
-	// 					ID: id.New(),
-	// 					S:  &state.TpRefRoot{ID: fooID, Name: "Foo"},
-	// 					T:  &state.TpRefRoot{ID: queueID, Name: "Queue"},
-	// 				},
-	// 				"none": &state.OneRoot{ID: id.New()},
-	// 			},
-	// 		},
-	// 	},
-	// }
-	// return RoleRoot{ID: rid, Name: "Queue", State: state.ConvertRootToRef(queue)}, nil
+func (r *roleRepoPgx) SelectByID(rid ID) (RoleRoot, error) {
 	query := `
 		SELECT
 			id, name, state
 		FROM roles
-		WHERE id=$1`
+		WHERE id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {

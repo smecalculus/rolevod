@@ -64,8 +64,8 @@ func TestEstablishKinship(t *testing.T) {
 func TestTakeWaitClose(t *testing.T) {
 	// given
 	roleSpec := role.RoleSpec{
-		Name: "role-1",
-		St:   state.OneSpec{},
+		FQN: "role-1",
+		St:  state.OneSpec{},
 	}
 	roleRoot, err := roleApi.Create(roleSpec)
 	if err != nil {
@@ -76,6 +76,7 @@ func TestTakeWaitClose(t *testing.T) {
 		Name: "seat-1",
 		Via: chnl.Spec{
 			Name: "chnl-1",
+			StID: roleRoot.St.RID(),
 			St:   roleRoot.St,
 		},
 	}
@@ -91,6 +92,7 @@ func TestTakeWaitClose(t *testing.T) {
 		},
 		Via: chnl.Spec{
 			Name: "chnl-2",
+			StID: roleRoot.St.RID(),
 			St:   roleRoot.St,
 		},
 	}
@@ -167,7 +169,7 @@ func TestTakeWaitClose(t *testing.T) {
 func TestTakeRecvSend(t *testing.T) {
 	// given
 	roleSpec1 := role.RoleSpec{
-		Name: "role-1",
+		FQN: "role-1",
 		St: state.LolliSpec{
 			Y: state.OneSpec{},
 			Z: state.OneSpec{},
@@ -179,8 +181,8 @@ func TestTakeRecvSend(t *testing.T) {
 	}
 	// and
 	roleSpec2 := role.RoleSpec{
-		Name: "role-2",
-		St:   state.OneSpec{},
+		FQN: "role-2",
+		St:  state.OneSpec{},
 	}
 	roleRoot2, err := roleApi.Create(roleSpec2)
 	if err != nil {
@@ -191,6 +193,7 @@ func TestTakeRecvSend(t *testing.T) {
 		Name: "seat-1",
 		Via: chnl.Spec{
 			Name: "chnl-1",
+			StID: roleRoot1.St.RID(),
 			St:   roleRoot1.St,
 		},
 	}
@@ -203,6 +206,7 @@ func TestTakeRecvSend(t *testing.T) {
 		Name: "seat-2",
 		Via: chnl.Spec{
 			Name: "chnl-2",
+			StID: roleRoot2.St.RID(),
 			St:   roleRoot2.St,
 		},
 		Ctx: []chnl.Spec{
@@ -286,7 +290,7 @@ func TestTakeCaseLab(t *testing.T) {
 	label := state.Label("label-1")
 	// and
 	roleSpec1 := role.RoleSpec{
-		Name: "role-1",
+		FQN: "role-1",
 		St: state.WithSpec{
 			Choices: map[state.Label]state.Spec{
 				label: state.OneSpec{},
@@ -299,8 +303,8 @@ func TestTakeCaseLab(t *testing.T) {
 	}
 	// and
 	roleSpec2 := role.RoleSpec{
-		Name: "role-2",
-		St:   state.OneSpec{},
+		FQN: "role-2",
+		St:  state.OneSpec{},
 	}
 	roleRoot2, err := roleApi.Create(roleSpec2)
 	if err != nil {
@@ -405,8 +409,8 @@ func TestTakeCaseLab(t *testing.T) {
 func TestTakeSpawn(t *testing.T) {
 	// given
 	roleSpec1 := role.RoleSpec{
-		Name: "role-1",
-		St:   state.OneSpec{},
+		FQN: "role-1",
+		St:  state.OneSpec{},
 	}
 	roleRoot1, err := roleApi.Create(roleSpec1)
 	if err != nil {
@@ -414,8 +418,8 @@ func TestTakeSpawn(t *testing.T) {
 	}
 	// and
 	roleSpec2 := role.RoleSpec{
-		Name: "role-2",
-		St:   state.OneSpec{},
+		FQN: "role-2",
+		St:  state.OneSpec{},
 	}
 	roleRoot2, err := roleApi.Create(roleSpec2)
 	if err != nil {

@@ -153,7 +153,7 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 	}
 	newCtx := make(map[chnl.Name]chnl.ID, len(spec.Ctx))
 	if len(spec.Ctx) > 0 {
-		curChnls, err := s.chnls.SelectCtx(maps.Values(spec.Ctx))
+		curChnls, err := s.chnls.SelectMany(maps.Values(spec.Ctx))
 		if err != nil {
 			s.log.Error("ctx selection failed",
 				slog.Any("reason", err),
@@ -195,6 +195,7 @@ func (s *dealService) Involve(spec PartSpec) (PartRoot, error) {
 	via := chnl.Root{
 		ID:   id.New(),
 		Name: dec.Via.Name,
+		StID: dec.Via.StID,
 		St:   dec.Via.St,
 	}
 	err = s.chnls.Insert(via)
@@ -231,6 +232,24 @@ func (s *dealService) Take(spec TranSpec) error {
 		panic(step.ErrUnexpectedTerm(spec.Term))
 	}
 	s.log.Debug("transition taking started", slog.Any("spec", spec))
+	chIDs := step.CollectChnlIDs(spec.Term, []chnl.ID{})
+	cfg, err := s.chnls.SelectCfg(chIDs)
+	if err != nil {
+		s.log.Error("cfg selection failed",
+			slog.Any("reason", err),
+			slog.Any("ids", chIDs),
+		)
+		return err
+	}
+	stIDs := chnl.CollectStIDs(maps.Values(cfg))
+	env, err := s.states.SelectEnv(stIDs)
+	if err != nil {
+		s.log.Error("env selection failed",
+			slog.Any("reason", err),
+			slog.Any("ids", stIDs),
+		)
+		return err
+	}
 	part, err := s.parts.SelectByID(spec.PartID)
 	if err != nil {
 		s.log.Error("participation selection failed",
@@ -239,36 +258,45 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
+	return s.takeRecur(env, cfg, part, spec)
+}
+
+func (s *dealService) takeRecur(
+	env map[state.ID]state.Root,
+	cfg map[chnl.ID]chnl.Root,
+	part PartRoot,
+	spec TranSpec,
+) (err error) {
 	switch term := spec.Term.(type) {
 	case step.CloseSpec:
-		curChnl, err := s.chnls.SelectByID(term.A)
-		if err != nil {
-			s.log.Error("channel selection failed",
+		curChnl, ok := cfg[term.A]
+		if !ok {
+			err := chnl.ErrDoesNotExist(term.A)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("chnl", term.A),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
+			err := chnl.ErrAlreadyClosed
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
-		curSt, err := s.states.SelectByID(curChnl.St.RID())
-		if err != nil {
-			s.log.Error("state selection failed",
+		curSt, ok := env[curChnl.StID]
+		if !ok {
+			err := state.ErrDoesNotExist(curChnl.StID)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("st", curChnl.St),
 			)
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -283,7 +311,6 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		// TODO выборка с проверкой потребления
 		srv, err := s.srvs.SelectByCh(curChnl.ID)
 		if err != nil {
 			s.log.Error("service selection failed",
@@ -333,37 +360,39 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
+		cfg[finChnl.ID] = finChnl
 		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: wait.Cont})
+		spec.Term = wait.Cont
+		return s.takeRecur(env, cfg, part, spec)
 	case step.WaitSpec:
-		curChnl, err := s.chnls.SelectByID(term.X)
-		if err != nil {
-			s.log.Error("channel selection failed",
+		curChnl, ok := cfg[term.X]
+		if !ok {
+			err = chnl.ErrDoesNotExist(term.X)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("chnl", term.X),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
+			err = chnl.ErrAlreadyClosed
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
-		curSt, err := s.states.SelectByID(curChnl.St.RID())
-		if err != nil {
-			s.log.Error("state selection failed",
+		curSt, ok := env[curChnl.StID]
+		if !ok {
+			err = state.ErrDoesNotExist(curChnl.StID)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("st", curChnl.St),
 			)
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -403,7 +432,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			s.log.Debug("transition taking half done", slog.Any("srv", newSrv))
 			return nil
 		}
-		_, ok := msg.Val.(step.CloseSpec)
+		_, ok = msg.Val.(step.CloseSpec)
 		if !ok {
 			err = fmt.Errorf("unexpected val type: want %T, got %T", step.CloseSpec{}, msg.Val)
 			s.log.Error("transition taking failed",
@@ -427,37 +456,38 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: term.Cont})
+		cfg[finChnl.ID] = finChnl
+		spec.Term = term.Cont
+		return s.takeRecur(env, cfg, part, spec)
 	case step.SendSpec:
-		curChnl, err := s.chnls.SelectByID(term.A)
-		if err != nil {
-			s.log.Error("channel selection failed",
+		curChnl, ok := cfg[term.A]
+		if !ok {
+			err = chnl.ErrDoesNotExist(term.A)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("chnl", term.A),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
+			err = chnl.ErrAlreadyClosed
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
-		curSt, err := s.states.SelectByID(curChnl.St.RID())
-		if err != nil {
-			s.log.Error("state selection failed",
+		curSt, ok := env[curChnl.StID]
+		if !ok {
+			err = state.ErrDoesNotExist(curChnl.StID)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("st", curChnl.St),
 			)
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -510,6 +540,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
+			StID:  curSt.(state.Prod).Next().RID(),
 			St:    curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newChnl)
@@ -520,39 +551,41 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
+		cfg[newChnl.ID] = newChnl
+		s.log.Debug("transition taking succeeded")
 		recv.Cont = step.Subst(recv.Cont, recv.X, newChnl.ID)
 		recv.Cont = step.Subst(recv.Cont, recv.Y, term.B)
-		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: recv.Cont})
+		spec.Term = recv.Cont
+		return s.takeRecur(env, cfg, part, spec)
 	case step.RecvSpec:
-		curChnl, err := s.chnls.SelectByID(term.X)
-		if err != nil {
-			s.log.Error("channel selection failed",
+		curChnl, ok := cfg[term.X]
+		if !ok {
+			err = chnl.ErrDoesNotExist(term.X)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("chnl", term.X),
 			)
 			return err
 		}
 		if curChnl.St == nil {
-			err = errAlreadyClosed(chnl.ConvertRootToRef(curChnl))
+			err = chnl.ErrAlreadyClosed
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("chnl", curChnl),
 			)
 			return err
 		}
-		curSt, err := s.states.SelectByID(curChnl.St.RID())
-		if err != nil {
-			s.log.Error("state selection failed",
+		curSt, ok := env[curChnl.StID]
+		if !ok {
+			err = state.ErrDoesNotExist(curChnl.StID)
+			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
-				slog.Any("st", curChnl.St),
 			)
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -605,6 +638,7 @@ func (s *dealService) Take(spec TranSpec) error {
 			ID:    id.New(),
 			Name:  curChnl.Name,
 			PreID: curChnl.ID,
+			StID:  curSt.(state.Prod).Next().RID(),
 			St:    curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newChnl)
@@ -615,10 +649,12 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
+		cfg[newChnl.ID] = newChnl
 		term.Cont = step.Subst(term.Cont, term.X, newChnl.ID)
 		term.Cont = step.Subst(term.Cont, term.Y, val.B)
-		s.log.Debug("transition taking succeeded")
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: term.Cont})
+		spec.Term = term.Cont
+		// TODO возможно здесь нужно начинать заново
+		return s.takeRecur(env, cfg, part, spec)
 	case step.LabSpec:
 		curChnl, err := s.chnls.SelectByID(term.C)
 		if err != nil {
@@ -645,9 +681,9 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -710,8 +746,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		branch := step.Subst(cont.Conts[term.L], cont.Z, newChnl.ID)
-		return s.Take(TranSpec{PartID: spec.PartID, AgentAK: spec.AgentAK, Term: branch})
+		cfg[newChnl.ID] = newChnl
+		s.log.Debug("transition taking succeeded")
+		spec.Term = step.Subst(cont.Conts[term.L], cont.Z, newChnl.ID)
+		return s.takeRecur(env, cfg, part, spec)
 	case step.CaseSpec:
 		curChnl, err := s.chnls.SelectByID(term.Z)
 		if err != nil {
@@ -738,9 +776,9 @@ func (s *dealService) Take(spec TranSpec) error {
 			return err
 		}
 		if spec.AgentAK == part.PAK {
-			err = s.checkProducer(term, curSt)
+			err = s.checkProducer(cfg, term, env, curSt)
 		} else if spec.AgentAK == part.CAK {
-			err = s.checkConsumer(term, curSt)
+			err = s.checkConsumer(cfg, term, env, curSt)
 		} else {
 			err = fmt.Errorf("unexpected access key: %s", spec.AgentAK)
 			s.log.Error("transition taking failed",
@@ -803,8 +841,10 @@ func (s *dealService) Take(spec TranSpec) error {
 			)
 			return err
 		}
-		branch := step.Subst(term.Conts[val.L], term.Z, newChnl.ID)
-		return s.Take(TranSpec{spec.DealID, spec.PartID, spec.AgentAK, branch})
+		cfg[newChnl.ID] = newChnl
+		s.log.Debug("transition taking succeeded")
+		spec.Term = step.Subst(term.Conts[val.L], term.Z, newChnl.ID)
+		return s.takeRecur(env, cfg, part, spec)
 	case step.SpawnSpec:
 		part, err := s.Involve(PartSpec{spec.DealID, term.DecID, term.Ctx})
 		if err != nil {
@@ -853,7 +893,7 @@ type PartRoot struct {
 	SeatID seat.ID
 	// Producible Access Key
 	PAK ak.ADT
-	// Consumables Access Key
+	// Consumable Access Key
 	CAK ak.ADT
 	// Producible Channel ID
 	PID chnl.ID
@@ -875,23 +915,32 @@ type TranSpec struct {
 }
 
 // aka checkExp
-func (s *dealService) checkProducer(t step.Term, st state.Root) error {
+func (s *dealService) checkProducer(
+	cfg map[chnl.ID]chnl.Root,
+	t step.Term,
+	env map[state.ID]state.Root,
+	st state.Root,
+) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
 		return checkProducer(st, state.OneRoot{})
 	case step.WaitSpec:
 		return checkProducer(st, state.OneRoot{})
 	case step.SendSpec:
-		// check value
 		want, ok := st.(state.TensorRoot)
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.TensorRoot{}, st)
 		}
-		got, err := s.chnls.SelectByID(term.B)
-		if err != nil {
-			return err
+		// check value
+		gotCh, ok := cfg[term.B]
+		if !ok {
+			return chnl.ErrDoesNotExist(term.B)
 		}
-		err = checkState(got.St, want.B)
+		gotSt, ok := env[gotCh.StID]
+		if !ok {
+			return state.ErrDoesNotExist(gotCh.StID)
+		}
+		err := checkProducer(gotSt, want.B)
 		if err != nil {
 			return err
 		}
@@ -903,16 +952,20 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.LolliRoot{}, st)
 		}
 		// check value
-		got, err := s.chnls.SelectByID(term.Y)
-		if err != nil {
-			return err
+		gotCh, ok := cfg[term.Y]
+		if !ok {
+			return chnl.ErrDoesNotExist(term.Y)
 		}
-		err = checkState(got.St, want.Y)
+		gotSt, ok := env[gotCh.StID]
+		if !ok {
+			return state.ErrDoesNotExist(gotCh.StID)
+		}
+		err := checkProducer(gotSt, want.Y)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkProducer(term.Cont, want.Z)
+		return s.checkProducer(cfg, term.Cont, env, want.Z)
 	case step.LabSpec:
 		want, ok := st.(state.PlusRoot)
 		if !ok {
@@ -932,12 +985,12 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 		if len(term.Conts) != len(want.Choices) {
 			return fmt.Errorf("state mismatch: want %v choices, got %v branches", len(want.Choices), len(term.Conts))
 		}
-		for wantL, wantCh := range want.Choices {
-			gotBr, ok := term.Conts[wantL]
+		for wantLab, wantChoice := range want.Choices {
+			gotBr, ok := term.Conts[wantLab]
 			if !ok {
-				return fmt.Errorf("label mismatch: want %q, got nothing", wantL)
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := s.checkProducer(gotBr, wantCh)
+			err := s.checkProducer(cfg, gotBr, env, wantChoice)
 			if err != nil {
 				return err
 			}
@@ -948,7 +1001,12 @@ func (s *dealService) checkProducer(t step.Term, st state.Root) error {
 	}
 }
 
-func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
+func (s *dealService) checkConsumer(
+	cfg map[chnl.ID]chnl.Root,
+	t step.Term,
+	env map[state.ID]state.Root,
+	st state.Root,
+) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
 		return checkConsumer(st, state.OneRoot{})
@@ -960,11 +1018,15 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 		if !ok {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.LolliRoot{}, st)
 		}
-		got, err := s.chnls.SelectByID(term.B)
-		if err != nil {
-			return err
+		gotCh, ok := cfg[term.B]
+		if !ok {
+			return chnl.ErrDoesNotExist(term.B)
 		}
-		err = checkState(got.St, want.Y)
+		gotSt, ok := env[gotCh.StID]
+		if !ok {
+			return state.ErrDoesNotExist(gotCh.StID)
+		}
+		err := checkProducer(gotSt, want.Y)
 		if err != nil {
 			return err
 		}
@@ -976,16 +1038,20 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 			return fmt.Errorf("state mismatch: want %T, got %T", state.TensorRoot{}, st)
 		}
 		// check value
-		got, err := s.chnls.SelectByID(term.Y)
-		if err != nil {
-			return err
+		gotCh, ok := cfg[term.Y]
+		if !ok {
+			return chnl.ErrDoesNotExist(term.Y)
 		}
-		err = checkState(got.St, want.B)
+		gotSt, ok := env[gotCh.StID]
+		if !ok {
+			return state.ErrDoesNotExist(gotCh.StID)
+		}
+		err := checkProducer(gotSt, want.B)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkConsumer(term.Cont, want.C)
+		return s.checkConsumer(cfg, term.Cont, env, want.C)
 	case step.LabSpec:
 		want, ok := st.(state.WithRoot)
 		if !ok {
@@ -1010,7 +1076,7 @@ func (s *dealService) checkConsumer(t step.Term, st state.Root) error {
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 			}
-			err := s.checkConsumer(gotCont, wantChoice)
+			err := s.checkConsumer(cfg, gotCont, env, wantChoice)
 			if err != nil {
 				return err
 			}

@@ -1,24 +1,24 @@
 CREATE TABLE roles (
-	id varchar(20) UNIQUE,
-	name varchar(20),
+	id varchar(20),
+	name varchar(64),
 	state jsonb
 );
 
 CREATE TABLE seats (
-	id varchar(20) UNIQUE,
-	name varchar(20),
+	id varchar(20),
+	name varchar(64),
 	via jsonb,
 	ctx jsonb
 );
 
 CREATE TABLE agents (
-	id varchar(20) UNIQUE,
-	name varchar(20)
+	id varchar(20),
+	name varchar(64)
 );
 
 CREATE TABLE deals (
-	id varchar(20) UNIQUE,
-	name varchar(20)
+	id varchar(20),
+	name varchar(64)
 );
 
 CREATE TABLE participations (
@@ -30,23 +30,24 @@ CREATE TABLE participations (
 );
 
 CREATE TABLE states (
-	id varchar(20) UNIQUE,
+	id varchar(20),
 	kind smallint,
 	from_id varchar(20),
-	on_ref jsonb,
-	to_id varchar(20),
+	fqn varchar(512),
+	pair jsonb,
 	choices jsonb
 );
 
 CREATE TABLE channels (
 	id varchar(20),
-	name varchar(20),
+	name varchar(64),
 	pre_id varchar(20),
+	st_id varchar(20),
 	state jsonb
 );
 
 CREATE TABLE steps (
-	id varchar(20) UNIQUE,
+	id varchar(20),
 	kind smallint,
 	via_id varchar(20),
 	payload jsonb

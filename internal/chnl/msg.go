@@ -11,12 +11,14 @@ import (
 
 type SpecMsg struct {
 	Name string       `json:"name"`
+	StID string       `json:"st_id"`
 	St   state.RefMsg `json:"state"`
 }
 
 func (mto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.Name, core.NameRequired...),
+		validation.Field(&mto.StID, id.Required...),
 		validation.Field(&mto.St, validation.Required),
 	)
 }

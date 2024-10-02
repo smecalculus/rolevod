@@ -9,21 +9,22 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 type SpecMsg struct {
-	K      Kind      `json:"kind"`
-	Recur  *RecurMsg `json:"recur,omitempty"`
-	Tensor *ProdMsg  `json:"tensor,omitempty"`
-	Lolli  *ProdMsg  `json:"lolli,omitempty"`
-	Plus   *SumMsg   `json:"plus,omitempty"`
-	With   *SumMsg   `json:"with,omitempty"`
+	K      Kind     `json:"kind"`
+	Link   *LinkMsg `json:"link,omitempty"`
+	Tensor *ProdMsg `json:"tensor,omitempty"`
+	Lolli  *ProdMsg `json:"lolli,omitempty"`
+	Plus   *SumMsg  `json:"plus,omitempty"`
+	With   *SumMsg  `json:"with,omitempty"`
 }
 
 func (mto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.K, kindRequired...),
-		validation.Field(&mto.Recur, validation.Required.When(mto.K == Recur)),
+		validation.Field(&mto.Link, validation.Required.When(mto.K == Link)),
 		validation.Field(&mto.Tensor, validation.Required.When(mto.K == Tensor)),
 		validation.Field(&mto.Lolli, validation.Required.When(mto.K == Lolli)),
 		validation.Field(&mto.Plus, validation.Required.When(mto.K == Plus)),
@@ -31,9 +32,8 @@ func (mto SpecMsg) Validate() error {
 	)
 }
 
-type RecurMsg struct {
-	Name string `json:"name"`
-	ToID string `json:"to_id"`
+type LinkMsg struct {
+	FQN string `json:"fqn"`
 }
 
 type ProdMsg struct {
@@ -90,7 +90,7 @@ type Kind string
 
 const (
 	One    = Kind("one")
-	Recur  = Kind("recur")
+	Link   = Kind("link")
 	Tensor = Kind("tensor")
 	Lolli  = Kind("lolli")
 	With   = Kind("with")
@@ -99,7 +99,7 @@ const (
 
 var kindRequired = []validation.Rule{
 	validation.Required,
-	validation.In(One, Recur, Tensor, Lolli, Plus, With),
+	validation.In(One, Link, Tensor, Lolli, Plus, With),
 }
 
 // goverter:variables
@@ -115,10 +115,10 @@ func MsgFromSpec(s Spec) SpecMsg {
 	switch spec := s.(type) {
 	case OneSpec:
 		return SpecMsg{K: One}
-	case MenSpec:
+	case LinkSpec:
 		return SpecMsg{
-			K:     Recur,
-			Recur: &RecurMsg{ToID: spec.StID.String(), Name: spec.Name}}
+			K:    Link,
+			Link: &LinkMsg{FQN: sym.StringFromSym(spec.FQN)}}
 	case TensorSpec:
 		return SpecMsg{
 			K: Tensor,
@@ -156,12 +156,8 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 	switch mto.K {
 	case One:
 		return OneSpec{}, nil
-	case Recur:
-		id, err := id.StringToID(mto.Recur.ToID)
-		if err != nil {
-			return nil, err
-		}
-		return MenSpec{StID: id, Name: mto.Recur.Name}, nil
+	case Link:
+		return LinkSpec{FQN: sym.StringToSym(mto.Link.FQN)}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {
@@ -182,16 +178,6 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 			return nil, err
 		}
 		return LolliSpec{Y: v, Z: s}, nil
-	case With:
-		choices := make(map[Label]Spec, len(mto.With.Choices))
-		for _, ch := range mto.With.Choices {
-			choice, err := MsgToSpec(ch.Cont)
-			if err != nil {
-				return nil, err
-			}
-			choices[Label(ch.Label)] = choice
-		}
-		return WithSpec{Choices: choices}, nil
 	case Plus:
 		choices := make(map[Label]Spec, len(mto.Plus.Choices))
 		for _, ch := range mto.Plus.Choices {
@@ -202,6 +188,16 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 			choices[Label(ch.Label)] = choice
 		}
 		return PlusSpec{Choices: choices}, nil
+	case With:
+		choices := make(map[Label]Spec, len(mto.With.Choices))
+		for _, ch := range mto.With.Choices {
+			choice, err := MsgToSpec(ch.Cont)
+			if err != nil {
+				return nil, err
+			}
+			choices[Label(ch.Label)] = choice
+		}
+		return WithSpec{Choices: choices}, nil
 	default:
 		panic(ErrUnexpectedKind(mto.K))
 	}
@@ -212,8 +208,8 @@ func MsgFromRef(ref Ref) RefMsg {
 	switch ref.(type) {
 	case OneRef, OneRoot:
 		return RefMsg{K: One, ID: id}
-	case MenRef, MenRoot:
-		return RefMsg{K: Recur, ID: id}
+	case LinkRef, LinkRoot:
+		return RefMsg{K: Link, ID: id}
 	case TensorRef, TensorRoot:
 		return RefMsg{K: Tensor, ID: id}
 	case LolliRef, LolliRoot:
@@ -235,8 +231,8 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 	switch mto.K {
 	case One:
 		return OneRef{rid}, nil
-	case Recur:
-		return MenRef{rid}, nil
+	case Link:
+		return LinkRef{rid}, nil
 	case Tensor:
 		return TensorRef{rid}, nil
 	case Lolli:

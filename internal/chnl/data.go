@@ -1,14 +1,12 @@
 package chnl
 
 import (
-	"database/sql"
-	"encoding/json"
-
 	"smecalculus/rolevod/internal/state"
 )
 
 type SpecData struct {
 	Name string         `json:"name"`
+	StID string         `json:"st_id"`
 	St   *state.RefData `json:"state"`
 }
 
@@ -20,7 +18,8 @@ type RefData struct {
 type rootData struct {
 	ID    string         `db:"id"`
 	Name  string         `db:"name"`
-	PreID string         `db:"pre_id"`
+	PreID string         `db:"pre_id"` // TODO null string
+	StID  string         `db:"st_id"`  // TODO null string
 	St    *state.RefData `db:"state"`
 }
 
@@ -43,51 +42,3 @@ var (
 	DataToRoots   func([]rootData) ([]Root, error)
 	DataFromRoots func([]Root) ([]rootData, error)
 )
-
-func JsonFromSpec(spec Spec) (sql.NullString, error) {
-	dto, err := DataFromSpec(spec)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	jsn, err := json.Marshal(dto)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	return sql.NullString{String: string(jsn), Valid: true}, nil
-}
-
-func JsonToSpec(jsn sql.NullString) (Spec, error) {
-	if !jsn.Valid {
-		return Spec{}, nil
-	}
-	var dto SpecData
-	err := json.Unmarshal([]byte(jsn.String), &dto)
-	if err != nil {
-		return Spec{}, err
-	}
-	return DataToSpec(dto)
-}
-
-func JsonFromSpecs(specs []Spec) (sql.NullString, error) {
-	dtos, err := DataFromSpecs(specs)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	jsn, err := json.Marshal(dtos)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	return sql.NullString{String: string(jsn), Valid: true}, nil
-}
-
-func JsonToSpecs(jsn sql.NullString) ([]Spec, error) {
-	if !jsn.Valid {
-		return []Spec{}, nil
-	}
-	var dtos []SpecData
-	err := json.Unmarshal([]byte(jsn.String), &dtos)
-	if err != nil {
-		return nil, err
-	}
-	return DataToSpecs(dtos)
-}

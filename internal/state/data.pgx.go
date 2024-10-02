@@ -23,6 +23,12 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "stateRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
+
+// for compilation purposes
+func newRepo() Repo {
+	return &repoPgx{}
+}
+
 func (r *repoPgx) Insert(root Root) (err error) {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
@@ -32,18 +38,18 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	dto := dataFromRoot(root)
 	query := `
 		INSERT INTO states (
-			id, kind, from_id, on_ref, to_id, choices
+			id, kind, from_id, fqn, pair, choices
 		) VALUES (
-			@id, @kind, @from_id, @on_ref, @to_id, @choices
+			@id, @kind, @from_id, @fqn, @pair, @choices
 		)`
 	batch := pgx.Batch{}
 	for _, st := range dto.States {
 		sa := pgx.NamedArgs{
 			"id":      st.ID,
 			"kind":    st.K,
+			"fqn":     st.FQN,
 			"from_id": st.FromID,
-			"on_ref":  st.OnRef,
-			"to_id":   st.ToID,
+			"pair":    st.Pair,
 			"choices": st.Choices,
 		}
 		batch.Queue(query, sa)
@@ -89,18 +95,18 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 
 func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
-		WITH RECURSIVE sts AS (
+		WITH RECURSIVE top_states AS (
 			SELECT
-				id, kind, from_id, on_ref, to_id, choices
-			FROM states
+				rs.id, rs.kind, rs.from_id, rs.fqn, rs.pair, rs.choices
+			FROM states rs
 			WHERE id = $1
 			UNION ALL
 			SELECT
-				s1.id, s1.kind, s1.from_id, s1.on_ref, s1.to_id, s1.choices
-			FROM states s1, sts s2
-			WHERE s1.from_id = s2.id
+				bs.id, bs.kind, bs.from_id, bs.fqn, bs.pair, bs.choices
+			FROM states bs, top_states ts
+			WHERE bs.from_id = ts.id
 		)
-		SELECT * FROM sts`
+		SELECT * FROM top_states`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
@@ -117,7 +123,11 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, fmt.Errorf("no rows selected")
 	}
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	return dataToRoot(dtos, rid.String())
+	states := map[string]state{}
+	for _, dto := range dtos {
+		states[dto.ID] = dto
+	}
+	return statesToRoot(states, states[rid.String()])
 
 	// fooId := id.New()
 	// queue := &WithRoot{
@@ -141,5 +151,133 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	// 		},
 	// 	},
 	// }
-	// return queue, nil
 }
+
+func (r *repoPgx) SelectByProxy(rid id.ADT) (Root, error) {
+	query := `
+		WITH RECURSIVE parents AS (
+			SELECT
+				r.id, r.kind, r.from_id, r.fqn, r.pair, r.choices
+			FROM states r
+			WHERE id = (
+				SELECT st_id FROM channels WHERE id = $1
+			)
+			UNION ALL
+			SELECT
+				s1.id, s1.kind, s1.from_id, s1.fqn, s1.pair, s1.choices
+			FROM states s1, parents p
+			WHERE s1.from_id = p.id
+		)
+		SELECT * FROM sts`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query, rid.String())
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return nil, err
+	}
+	defer rows.Close()
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return nil, err
+	}
+	if len(dtos) == 0 {
+		return nil, fmt.Errorf("no rows selected")
+	}
+	r.log.Debug("state selection succeeded", slog.Any("dtos", dtos))
+	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
+	states := map[string]state{}
+	for _, dto := range dtos {
+		states[dto.ID] = dto
+	}
+	return statesToRoot(states, states[rid.String()])
+}
+
+func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
+	states, err := r.SelectMany(ids)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[ID]Root, len(states))
+	for _, st := range states {
+		env[st.RID()] = st
+	}
+	return env, nil
+}
+
+func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, rid := range ids {
+		batch.Queue(selectByID, rid.String())
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var roots []Root
+	for _, rid := range ids {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		if len(dtos) == 0 {
+			err = ErrDoesNotExist(rid)
+			r.log.Error("state selection failed",
+				slog.Any("reason", err),
+			)
+		}
+		root, err := dataToRoot2(&rootData2{rid.String(), dtos})
+		if err != nil {
+			r.log.Error("dto mapping failed",
+				slog.Any("reason", err),
+				slog.Any("dtos", dtos),
+			)
+		}
+		roots = append(roots, root)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "states selection succeeded", slog.Any("roots", roots))
+	return roots, err
+}
+
+const (
+	selectByID = `
+		WITH RECURSIVE state_tree AS (
+			SELECT
+				root.id, root.kind, root.from_id, root.fqn, root.pair, root.choices
+			FROM states root
+			WHERE id = $1
+			UNION ALL
+			SELECT
+				child.id, child.kind, child.from_id, child.fqn, child.pair, child.choices
+			FROM states child, state_tree parent
+			WHERE child.from_id = parent.id
+		)
+		SELECT * FROM state_tree
+	`
+)

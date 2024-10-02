@@ -23,13 +23,13 @@ func TestMain(m *testing.M) {
 
 func TestKinshipEstablishment(t *testing.T) {
 	// given
-	parSpec := role.RoleSpec{Name: "parent-role"}
+	parSpec := role.RoleSpec{FQN: "parent-role"}
 	parRoot, err := roleApi.Create(parSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	childSpec := role.RoleSpec{Name: "child-role", St: state.OneSpec{}}
+	childSpec := role.RoleSpec{FQN: "child-role", St: state.OneSpec{}}
 	childRoot, err := roleApi.Create(childSpec)
 	if err != nil {
 		t.Fatal(err)

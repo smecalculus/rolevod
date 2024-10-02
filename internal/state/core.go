@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 type ID = id.ADT
@@ -18,13 +19,12 @@ type OneSpec struct{}
 
 func (OneSpec) spec() {}
 
-// Mention aka TpName
-type MenSpec struct {
-	StID ID
-	Name string
+// aka TpName
+type LinkSpec struct {
+	FQN sym.ADT
 }
 
-func (MenSpec) spec() {}
+func (LinkSpec) spec() {}
 
 type TensorSpec struct {
 	B Spec
@@ -76,11 +76,11 @@ type OneRef struct {
 
 func (r OneRef) RID() ID { return r.ID }
 
-type MenRef struct {
+type LinkRef struct {
 	ID ID
 }
 
-func (r MenRef) RID() ID { return r.ID }
+func (r LinkRef) RID() ID { return r.ID }
 
 type PlusRef struct {
 	ID ID
@@ -132,15 +132,14 @@ type Sum interface {
 }
 
 // aka TpName
-type MenRoot struct {
-	ID   ID
-	StID ID
-	Name string
+type LinkRoot struct {
+	ID  ID
+	FQN sym.ADT
 }
 
-func (MenRoot) spec() {}
+func (LinkRoot) spec() {}
 
-func (r MenRoot) RID() ID { return r.ID }
+func (r LinkRoot) RID() ID { return r.ID }
 
 type OneRoot struct {
 	ID ID
@@ -212,6 +211,9 @@ type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
+	SelectByProxy(id.ADT) (Root, error)
+	SelectEnv([]ID) (map[ID]Root, error)
+	SelectMany([]ID) ([]Root, error)
 }
 
 func ConvertSpecToRoot(s Spec) Root {
@@ -223,8 +225,8 @@ func ConvertSpecToRoot(s Spec) Root {
 	case OneSpec:
 		// TODO генерировать zero id или не генерировать id вообще
 		return OneRoot{ID: newID}
-	case MenSpec:
-		return MenRoot{ID: newID, Name: spec.Name, StID: spec.StID}
+	case LinkSpec:
+		return LinkRoot{ID: newID, FQN: spec.FQN}
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,
@@ -275,4 +277,8 @@ func ErrUnexpectedRef(v Ref) error {
 
 func ErrUnexpectedRoot(v Root) error {
 	return fmt.Errorf("unexpected root %#v", v)
+}
+
+func ErrDoesNotExist(rid ID) error {
+	return fmt.Errorf("state doesn't exist: %v", rid)
 }

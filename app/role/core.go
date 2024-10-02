@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/state"
@@ -12,8 +13,9 @@ import (
 type ID = id.ADT
 
 type RoleSpec struct {
-	Name string
-	St   state.Spec
+	// Fully Qualified Name
+	FQN sym.ADT
+	St  state.Spec
 }
 
 type RoleRef struct {
@@ -60,8 +62,9 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
 	st := state.ConvertSpecToRoot(spec.St)
 	root := RoleRoot{
-		ID: id.New(),
-		St: st,
+		ID:   id.New(),
+		Name: spec.FQN.Name(),
+		St:   st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -75,7 +78,16 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	if err != nil {
 		s.log.Error("state insertion failed",
 			slog.Any("reason", err),
-			slog.Any("root", st),
+			slog.Any("state", st),
+		)
+		return root, err
+	}
+	al := alias.Root{Sym: spec.FQN, ID: root.ID}
+	err = s.aliases.Insert(al)
+	if err != nil {
+		s.log.Error("alias insertion failed",
+			slog.Any("reason", err),
+			slog.Any("alias", al),
 		)
 		return root, err
 	}
