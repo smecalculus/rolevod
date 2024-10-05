@@ -26,7 +26,6 @@ var Module = fx.Module("app/deal",
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		newPartHandlerEcho,
-		fx.Annotate(newPartRepoPgx, fx.As(new(partRepo))),
 		newStepHandlerEcho,
 	),
 	fx.Invoke(

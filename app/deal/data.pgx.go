@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/app/seat"
@@ -144,68 +143,4 @@ func (r *kinshipRepoPgx) Insert(root KinshipRoot) error {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)
-}
-
-// Adapter
-type partRepoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
-}
-
-func newPartRepoPgx(p *pgxpool.Pool, l *slog.Logger) *partRepoPgx {
-	name := slog.String("name", "partRepoPgx")
-	return &partRepoPgx{p, l.With(name)}
-}
-
-func (r *partRepoPgx) Insert(root PartRoot) error {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	dto := DataFromPartRoot(root)
-	query := `
-		INSERT INTO participations (
-			part_id, deal_id, seat_id, pak, cak
-		) values (
-			@part_id, @deal_id, @seat_id, @pak, @cak
-		)`
-	args := pgx.NamedArgs{
-		"part_id": dto.PartID,
-		"deal_id": dto.DealID,
-		"seat_id": dto.SeatID,
-		"pak":     dto.PAK,
-		"cak":     dto.CAK,
-	}
-	_, err = tx.Exec(ctx, query, args)
-	if err != nil {
-		r.log.Error("participation insertion failed",
-			slog.Any("reason", err),
-			slog.Any("part", args),
-		)
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
-}
-
-func (r *partRepoPgx) SelectByID(rid ID) (PartRoot, error) {
-	query := `
-		SELECT
-			part_id, deal_id, seat_id, pak, cak
-		FROM participations
-		WHERE part_id = $1`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
-	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return PartRoot{}, err
-	}
-	defer rows.Close()
-	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[partRootData])
-	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
-		return PartRoot{}, err
-	}
-	r.log.Log(ctx, core.LevelTrace, "participation selection succeeded", slog.Any("dto", dto))
-	return DataToPartRoot(dto)
 }

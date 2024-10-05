@@ -12,3 +12,7 @@ var Optional = []validation.Rule{
 }
 
 var Required = append(Optional, validation.Required)
+
+func ReqiredWhen(condition bool) []validation.Rule {
+	return append(Optional, validation.Required.When(condition))
+}

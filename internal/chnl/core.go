@@ -3,6 +3,7 @@ package chnl
 import (
 	"errors"
 	"fmt"
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/state"
@@ -63,9 +64,17 @@ var (
 )
 
 var (
-	ErrAlreadyClosed = errors.New("channel already closed")
+	ErrAlreadyConsumed = errors.New("channel already consumed")
 )
 
 func ErrDoesNotExist(rid ID) error {
 	return fmt.Errorf("channel doesn't exist: %v", rid)
+}
+
+func ErrAlreadyClosed(rid ID) error {
+	return fmt.Errorf("channel already closed: %v", rid)
+}
+
+func ErrNotAChnl(ph core.Placeholder) error {
+	return fmt.Errorf("not a channel: %v", ph)
 }

@@ -110,7 +110,7 @@ func (mto PartSpecMsg) Validate() error {
 }
 
 type PartRootMsg struct {
-	PartID string        `json:"part_id"`
+	ID     string        `json:"id"`
 	DealID string        `json:"deal_id"`
 	SeatID string        `json:"seat_id"`
 	PAK    string        `json:"pak"`
@@ -128,22 +128,20 @@ type PartRootMsg struct {
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)
-	MsgFromPartRoot func(PartRoot) PartRootMsg
-	MsgToPartRoot   func(PartRootMsg) (PartRoot, error)
 )
 
 type TranSpecMsg struct {
-	DealID  string       `json:"deal_id"`
-	PartID  string       `json:"part_id"`
-	AgentAK string       `json:"agent_ak"`
-	Term    step.TermMsg `json:"term"`
+	DID  string       `json:"did"`
+	PID  string       `json:"pid"`
+	Key  string       `json:"key"`
+	Term step.TermMsg `json:"term"`
 }
 
 func (mto TranSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.DealID, id.Required...),
-		validation.Field(&mto.PartID, id.Required...),
-		validation.Field(&mto.AgentAK, ak.Required...),
+		validation.Field(&mto.DID, id.Required...),
+		validation.Field(&mto.PID, id.Required...),
+		validation.Field(&mto.Key, ak.Required...),
 		validation.Field(&mto.Term, validation.Required),
 	)
 }

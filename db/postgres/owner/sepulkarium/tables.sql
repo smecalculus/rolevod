@@ -22,7 +22,7 @@ CREATE TABLE deals (
 );
 
 CREATE TABLE participations (
-	part_id varchar(20),
+	id varchar(20),
 	deal_id varchar(20),
 	seat_id varchar(20),
 	pak varchar(36),
@@ -49,8 +49,9 @@ CREATE TABLE channels (
 CREATE TABLE steps (
 	id varchar(20),
 	kind smallint,
-	via_id varchar(20),
-	payload jsonb
+	pid varchar(20),
+	vid varchar(20),
+	term jsonb
 );
 
 CREATE TABLE kinships (

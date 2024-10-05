@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
@@ -166,6 +167,9 @@ func (r *repoPgx) SelectCfg(ids []ID) (map[ID]Root, error) {
 }
 
 func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
+	if len(ids) == 0 {
+		return []Root{}, nil
+	}
 	query := `
 		SELECT
 			id, name, pre_id, st_id, state
@@ -178,6 +182,9 @@ func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
 	}
 	batch := pgx.Batch{}
 	for _, rid := range ids {
+		if rid.IsEmpty() {
+			return nil, id.ErrEmpty
+		}
 		batch.Queue(query, rid.String())
 	}
 	br := tx.SendBatch(ctx, &batch)

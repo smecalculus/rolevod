@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"smecalculus/rolevod/internal/step"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
@@ -140,11 +141,11 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("spec", mto))
 		return err
 	}
-	root, err := h.api.Involve(spec)
+	proc, err := h.api.Involve(spec)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromPartRoot(root))
+	return c.JSON(http.StatusCreated, step.MsgFromProcRoot(proc))
 }
 
 // Adapter

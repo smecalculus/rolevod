@@ -5,8 +5,10 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
@@ -34,23 +36,31 @@ type RootMsg struct {
 	K  StepKind `json:"kind"`
 }
 
+type ProcRootMsg struct {
+	ID   string        `json:"id"`
+	PID  string        `json:"pid"`
+	Ctx  []chnl.RefMsg `json:"ctx"`
+	Term *TermMsg      `json:"term"`
+}
+
 type TermKind string
 
 const (
 	Close = TermKind("close")
 	Wait  = TermKind("wait")
-	Rec   = TermKind("ref")
 	Send  = TermKind("send")
 	Recv  = TermKind("recv")
 	Lab   = TermKind("lab")
 	Case  = TermKind("case")
+	CTA   = TermKind("cta")
+	Link  = TermKind("link")
 	Spawn = TermKind("spawn")
 	Fwd   = TermKind("fwd")
 )
 
 var termKindRequired = []validation.Rule{
 	validation.Required,
-	validation.In(Close, Wait, Send, Recv, Lab, Case, Spawn),
+	validation.In(Close, Wait, Send, Recv, Lab, Case, Spawn, CTA),
 }
 
 type TermMsg struct {
@@ -62,6 +72,7 @@ type TermMsg struct {
 	Lab   *LabMsg   `json:"lab,omitempty"`
 	Case  *CaseMsg  `json:"case,omitempty"`
 	Spawn *SpawnMsg `json:"spawn,omitempty"`
+	CTA   *CTAMsg   `json:"cta,omitempty"`
 }
 
 func (mto TermMsg) Validate() error {
@@ -78,12 +89,12 @@ func (mto TermMsg) Validate() error {
 }
 
 type CloseMsg struct {
-	A string `json:"a"`
+	A core.PlaceholderDTO `json:"a"`
 }
 
 func (mto CloseMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.A, id.Required...),
+		validation.Field(&mto.A, validation.Required),
 	)
 }
 
@@ -154,19 +165,52 @@ func (mto CaseMsg) Validate() error {
 }
 
 type SpawnMsg struct {
-	DecID string        `json:"dec_id"`
-	C     string        `json:"c"`
-	Ctx   []chnl.RefMsg `json:"ctx"`
-	Cont  TermMsg       `json:"cont"`
+	Z      core.PlaceholderDTO `json:"z"`
+	Ctx    []chnl.RefMsg       `json:"ctx"`
+	Cont   TermMsg             `json:"cont"`
+	SeatID string              `json:"seat_id"`
 }
 
 func (mto SpawnMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.DecID, id.Required...),
-		validation.Field(&mto.C, id.Required...),
+		validation.Field(&mto.Z, validation.Required),
 		validation.Field(&mto.Ctx, core.CtxOptional...),
 		validation.Field(&mto.Cont, validation.Required),
+		validation.Field(&mto.SeatID, id.Required...),
 	)
+}
+
+type CTAMsg struct {
+	Seat string `json:"seat"`
+	Key  string `json:"key"`
+}
+
+func (mto CTAMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.Seat, sym.Required...),
+		validation.Field(&mto.Key, id.Required...),
+	)
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/internal/chnl:Msg.*
+// goverter:extend MsgFromTerm
+// goverter:extend MsgToTerm
+// goverter:extend MsgFromTermNilable
+// goverter:extend MsgToTermNilable
+var (
+	MsgFromProcRoot func(ProcRoot) ProcRootMsg
+	MsgToProcRoot   func(ProcRootMsg) (ProcRoot, error)
+)
+
+func MsgFromTermNilable(t Term) *TermMsg {
+	if t == nil {
+		return nil
+	}
+	term := MsgFromTerm(t)
+	return &term
 }
 
 func MsgFromTerm(t Term) TermMsg {
@@ -175,7 +219,7 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Close,
 			Close: &CloseMsg{
-				A: term.A.String(),
+				A: core.MsgFromPH(term.A),
 			},
 		}
 	case WaitSpec:
@@ -232,10 +276,18 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Spawn,
 			Spawn: &SpawnMsg{
-				DecID: term.DecID.String(),
-				C:     term.C.String(),
-				Ctx:   ctx,
-				Cont:  MsgFromTerm(term.Cont),
+				Z:      core.MsgFromPH(term.Z),
+				Ctx:    ctx,
+				Cont:   MsgFromTerm(term.Cont),
+				SeatID: term.SeatID.String(),
+			},
+		}
+	case CTASpec:
+		return TermMsg{
+			K: CTA,
+			CTA: &CTAMsg{
+				Seat: sym.StringFromSym(term.Seat),
+				Key:  ak.StringFromAK(term.Key),
 			},
 		}
 	default:
@@ -243,10 +295,17 @@ func MsgFromTerm(t Term) TermMsg {
 	}
 }
 
+func MsgToTermNilable(mto *TermMsg) (Term, error) {
+	if mto == nil {
+		return nil, nil
+	}
+	return MsgToTerm(*mto)
+}
+
 func MsgToTerm(mto TermMsg) (Term, error) {
 	switch mto.K {
 	case Close:
-		a, err := id.StringToID(mto.Close.A)
+		a, err := core.MsgToPH(mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
@@ -306,11 +365,11 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return CaseSpec{Z: z, Conts: conts}, nil
 	case Spawn:
-		decID, err := id.StringToID(mto.Spawn.DecID)
+		seatID, err := id.StringToID(mto.Spawn.SeatID)
 		if err != nil {
 			return nil, err
 		}
-		c, err := id.StringToID(mto.Spawn.C)
+		z, err := core.MsgToPH(mto.Spawn.Z)
 		if err != nil {
 			return nil, err
 		}
@@ -326,7 +385,14 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return SpawnSpec{DecID: decID, C: c, Ctx: ctx, Cont: cont}, nil
+		return SpawnSpec{Z: z, Ctx: ctx, Cont: cont, SeatID: seatID}, nil
+	case CTA:
+		seat := sym.StringToSym(mto.CTA.Seat)
+		key, err := ak.StringToAK(mto.CTA.Key)
+		if err != nil {
+			return nil, err
+		}
+		return CTASpec{Seat: seat, Key: key}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}

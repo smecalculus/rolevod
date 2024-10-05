@@ -1,10 +1,15 @@
 package step
 
 import (
+	"database/sql"
 	"fmt"
 
+	"smecalculus/rolevod/lib/ak"
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 )
 
@@ -14,10 +19,11 @@ type refData struct {
 }
 
 type rootData struct {
-	ID   string   `db:"id"`
-	K    stepKind `db:"kind"`
-	VID  string   `db:"via_id"`
-	Term termData `db:"payload"`
+	ID   string         `db:"id"`
+	K    stepKind       `db:"kind"`
+	PID  sql.NullString `db:"pid"`
+	VID  sql.NullString `db:"vid"`
+	Term termData       `db:"term"`
 }
 
 type stepKind int
@@ -36,11 +42,12 @@ type termData struct {
 	Send  *sendData  `json:"send,omitempty"`
 	Recv  *recvData  `json:"recv,omitempty"`
 	Lab   *labData   `json:"lab,omitempty"`
-	Case  *caseData  `json:"case,omitempty"`
+	Caze  *cazeData  `json:"case,omitempty"`
+	CTA   *ctaData   `json:"cta,omitempty"`
 }
 
 type closeData struct {
-	A string `json:"a"`
+	A core.PlaceholderDTO `json:"a"`
 }
 
 type waitData struct {
@@ -64,24 +71,30 @@ type labData struct {
 	Label string `json:"label"`
 }
 
-type caseData struct {
+type cazeData struct {
 	Z     string              `json:"z"`
 	Conts map[string]termData `json:"conts"`
+}
+
+type ctaData struct {
+	Seat string `json:"seat"`
+	Key  string `json:"key"`
 }
 
 type termKind int
 
 const (
 	nonterm = termKind(iota)
-	fwd
-	spawn
 	close
 	wait
-	rec
 	send
 	recv
 	lab
-	caseK
+	caze
+	cta
+	link
+	spawn
+	fwd
 )
 
 // goverter:variables
@@ -96,23 +109,35 @@ var (
 	DataFromConts  func([]Continuation) []termData
 )
 
-func dataFromRoot(r root) (*rootData, error) {
+func dataFromRoot(r Root) (*rootData, error) {
 	if r == nil {
 		return nil, nil
 	}
 	switch root := r.(type) {
+	case ProcRoot:
+		pid := sql.NullString{String: root.PID.String(), Valid: !root.PID.IsEmpty()}
+		return &rootData{
+			K:    proc,
+			ID:   root.ID.String(),
+			PID:  pid,
+			Term: dataFromTerm(root.Term),
+		}, nil
 	case MsgRoot:
+		vid := sql.NullString{String: root.VID.String(), Valid: !root.VID.IsEmpty()}
 		return &rootData{
 			K:    msg,
 			ID:   root.ID.String(),
-			VID:  root.VID.String(),
+			VID:  vid,
 			Term: dataFromValue(root.Val),
 		}, nil
 	case SrvRoot:
+		pid := sql.NullString{String: root.PID.String(), Valid: !root.PID.IsEmpty()}
+		vid := sql.NullString{String: root.VID.String(), Valid: !root.VID.IsEmpty()}
 		return &rootData{
 			K:    srv,
 			ID:   root.ID.String(),
-			VID:  root.VID.String(),
+			PID:  pid,
+			VID:  vid,
 			Term: dataFromCont(root.Cont),
 		}, nil
 	default:
@@ -120,31 +145,47 @@ func dataFromRoot(r root) (*rootData, error) {
 	}
 }
 
-func dataToRoot(dto *rootData) (root, error) {
+func dataToRoot(dto *rootData) (Root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rootID, err := id.StringToID(dto.ID)
+	rid, err := id.StringToID(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	viaID, err := id.StringToID(dto.VID)
-	if err != nil {
-		return nil, err
+	var pid chnl.ID
+	if dto.PID.Valid {
+		pid, err = id.StringToID(dto.PID.String)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var vid chnl.ID
+	if dto.VID.Valid {
+		vid, err = id.StringToID(dto.VID.String)
+		if err != nil {
+			return nil, err
+		}
 	}
 	switch dto.K {
+	case proc:
+		term, err := dataToTerm(dto.Term)
+		if err != nil {
+			return nil, err
+		}
+		return ProcRoot{ID: rid, PID: pid, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return MsgRoot{ID: rootID, VID: viaID, Val: val}, nil
+		return MsgRoot{ID: rid, VID: vid, Val: val}, nil
 	case srv:
 		cont, err := dataToCont(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return SrvRoot{ID: rootID, VID: viaID, Cont: cont}, nil
+		return SrvRoot{ID: rid, PID: pid, VID: vid, Cont: cont}, nil
 	default:
 		panic(errUnexpectedStepKind(dto.K))
 	}
@@ -164,6 +205,14 @@ func dataFromTerm(t Term) termData {
 		return dataFromValue(term)
 	case CaseSpec:
 		return dataFromCont(term)
+	case CTASpec:
+		return termData{
+			K: cta,
+			CTA: &ctaData{
+				Seat: term.Seat.Name(),
+				Key:  term.Key.String(),
+			},
+		}
 	default:
 		panic(ErrUnexpectedTerm(term))
 	}
@@ -181,8 +230,17 @@ func dataToTerm(dto termData) (Term, error) {
 		return dataToCont(dto)
 	case lab:
 		return dataToValue(dto)
-	case caseK:
+	case caze:
 		return dataToCont(dto)
+	case cta:
+		key, err := ak.StringToAK(dto.CTA.Key)
+		if err != nil {
+			return nil, err
+		}
+		return CTASpec{
+			Seat: sym.StringToSym(dto.CTA.Seat),
+			Key:  key,
+		}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
@@ -193,7 +251,7 @@ func dataFromValue(v Value) termData {
 	case CloseSpec:
 		return termData{
 			K:     close,
-			Close: &closeData{val.A.String()},
+			Close: &closeData{core.MsgFromPH(val.A)},
 		}
 	case SendSpec:
 		return termData{
@@ -213,7 +271,7 @@ func dataFromValue(v Value) termData {
 func dataToValue(dto termData) (Value, error) {
 	switch dto.K {
 	case close:
-		a, err := id.StringToID(dto.Close.A)
+		a, err := core.MsgToPH(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
@@ -264,8 +322,8 @@ func dataFromCont(c Continuation) termData {
 			conts[string(l)] = dataFromTerm(t)
 		}
 		return termData{
-			K: caseK,
-			Case: &caseData{
+			K: caze,
+			Caze: &cazeData{
 				Z:     cont.Z.String(),
 				Conts: conts,
 			},
@@ -301,13 +359,13 @@ func dataToCont(dto termData) (Continuation, error) {
 			return nil, err
 		}
 		return RecvSpec{X: x, Y: y, Cont: cont}, nil
-	case caseK:
-		z, err := id.StringToID(dto.Case.Z)
+	case caze:
+		z, err := id.StringToID(dto.Caze.Z)
 		if err != nil {
 			return nil, err
 		}
-		branches := make(map[state.Label]Term, len(dto.Case.Conts))
-		for l, t := range dto.Case.Conts {
+		branches := make(map[state.Label]Term, len(dto.Caze.Conts))
+		for l, t := range dto.Caze.Conts {
 			branch, err := dataToTerm(t)
 			if err != nil {
 				return nil, err

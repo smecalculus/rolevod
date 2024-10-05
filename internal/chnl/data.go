@@ -11,8 +11,8 @@ type SpecData struct {
 }
 
 type RefData struct {
-	ID   string `db:"id" json:"id"`
-	Name string `db:"name" json:"name"`
+	ID   string `db:"id" json:"id,omitempty"`
+	Name string `db:"name" json:"name,omitempty"`
 }
 
 type rootData struct {

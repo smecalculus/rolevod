@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
@@ -109,38 +110,34 @@ func TestTakeWaitClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	producerSpec := deal.PartSpec{
+	providerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	producerRoot, err := dealApi.Involve(producerSpec)
+	providerProc, err := dealApi.Involve(providerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	consumerSpec := deal.PartSpec{
+	clientSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
 		Ctx: map[chnl.Name]chnl.ID{
-			seatSpec1.Via.Name: producerRoot.PID,
+			seatSpec1.Via.Name: providerProc.PID,
 		},
 	}
-	consumerRoot, err := dealApi.Involve(consumerSpec)
+	clientProc, err := dealApi.Involve(clientSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	producerRootPID := consumerRoot.Ctx[seatSpec1.Via.Name]
+	providerProcPID := clientProc.Ctx[seatSpec1.Via.Name]
 	// and
 	waitSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  producerRoot.PartID,
-		AgentAK: producerRoot.PAK,
-		Term: step.WaitSpec{
-			X: producerRootPID,
-			Cont: step.CloseSpec{
-				A: consumerRoot.PID,
-			},
+		DID: dealRoot.ID,
+		PID: providerProc.PID,
+		Term: step.CloseSpec{
+			A: providerProcPID,
 		},
 	}
 	// when
@@ -150,11 +147,13 @@ func TestTakeWaitClose(t *testing.T) {
 	}
 	// and
 	closeSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  consumerRoot.PartID,
-		AgentAK: consumerRoot.CAK,
-		Term: step.CloseSpec{
-			A: producerRootPID,
+		DID: dealRoot.ID,
+		PID: clientProc.PID,
+		Term: step.WaitSpec{
+			X: providerProcPID,
+			Cont: step.CloseSpec{
+				A: clientProc.PID,
+			},
 		},
 	}
 	// and
@@ -226,38 +225,37 @@ func TestTakeRecvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	producerSpec := deal.PartSpec{
+	providerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	producerRoot, err := dealApi.Involve(producerSpec)
+	providerProc, err := dealApi.Involve(providerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	consumerSpec := deal.PartSpec{
+	clientSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
 		Ctx: map[chnl.Name]chnl.ID{
-			seatSpec1.Via.Name: producerRoot.PID,
+			seatSpec1.Via.Name: providerProc.PID,
 		},
 	}
-	consumerRoot, err := dealApi.Involve(consumerSpec)
+	clientProc, err := dealApi.Involve(clientSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	producerRootPID := consumerRoot.Ctx[seatSpec1.Via.Name]
+	providerProcPID := clientProc.Ctx[seatSpec1.Via.Name]
 	// and
 	recvSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  producerRoot.PartID,
-		AgentAK: producerRoot.PAK,
+		DID: dealRoot.ID,
+		PID: providerProc.PID,
 		Term: step.RecvSpec{
-			X: producerRootPID,
-			Y: consumerRoot.PID,
+			X: providerProcPID,
+			Y: clientProc.PID,
 			Cont: step.CloseSpec{
-				A: producerRootPID,
+				A: providerProcPID,
 			},
 		},
 	}
@@ -268,12 +266,11 @@ func TestTakeRecvSend(t *testing.T) {
 	}
 	// and
 	sendSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  consumerRoot.PartID,
-		AgentAK: consumerRoot.CAK,
+		DID: dealRoot.ID,
+		PID: clientProc.PID,
 		Term: step.SendSpec{
-			A: producerRootPID,
-			B: consumerRoot.PID,
+			A: providerProcPID,
+			B: clientProc.PID,
 		},
 	}
 	// and
@@ -315,6 +312,7 @@ func TestTakeCaseLab(t *testing.T) {
 		Name: "seat-1",
 		Via: chnl.Spec{
 			Name: "chnl-1",
+			StID: roleRoot1.St.RID(),
 			St:   roleRoot1.St,
 		},
 	}
@@ -327,6 +325,7 @@ func TestTakeCaseLab(t *testing.T) {
 		Name: "seat-2",
 		Via: chnl.Spec{
 			Name: "chnl-2",
+			StID: roleRoot2.St.RID(),
 			St:   roleRoot2.St,
 		},
 		Ctx: []chnl.Spec{
@@ -346,38 +345,37 @@ func TestTakeCaseLab(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	producerSpec := deal.PartSpec{
+	providerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	producerRoot, err := dealApi.Involve(producerSpec)
+	providerProc, err := dealApi.Involve(providerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	consumerSpec := deal.PartSpec{
+	clientSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot2.ID,
 		Ctx: map[chnl.Name]chnl.ID{
-			seatSpec1.Via.Name: producerRoot.PID,
+			seatSpec1.Via.Name: providerProc.PID,
 		},
 	}
-	consumerRoot, err := dealApi.Involve(consumerSpec)
+	clientProc, err := dealApi.Involve(clientSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	producerRootPID := consumerRoot.Ctx[seatSpec1.Via.Name]
+	providerProcPID := clientProc.Ctx[seatSpec1.Via.Name]
 	// and
 	caseSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  producerRoot.PartID,
-		AgentAK: producerRoot.PAK,
+		DID: dealRoot.ID,
+		PID: providerProc.PID,
 		Term: step.CaseSpec{
-			Z: producerRootPID,
+			Z: providerProcPID,
 			Conts: map[state.Label]step.Term{
 				label: step.CloseSpec{
-					A: producerRootPID,
+					A: providerProcPID,
 				},
 			},
 		},
@@ -389,11 +387,10 @@ func TestTakeCaseLab(t *testing.T) {
 	}
 	// and
 	labSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  consumerRoot.PartID,
-		AgentAK: consumerRoot.CAK,
+		DID: dealRoot.ID,
+		PID: clientProc.PID,
 		Term: step.LabSpec{
-			C: producerRootPID,
+			C: providerProcPID,
 			L: label,
 		},
 	}
@@ -430,6 +427,7 @@ func TestTakeSpawn(t *testing.T) {
 		Name: "seat-1",
 		Via: chnl.Spec{
 			Name: "chnl-1",
+			StID: roleRoot1.St.RID(),
 			St:   roleRoot1.St,
 		},
 	}
@@ -442,6 +440,7 @@ func TestTakeSpawn(t *testing.T) {
 		Name: "seat-2",
 		Via: chnl.Spec{
 			Name: "chnl-2",
+			StID: roleRoot2.St.RID(),
 			St:   roleRoot2.St,
 		},
 		Ctx: []chnl.Spec{
@@ -461,32 +460,36 @@ func TestTakeSpawn(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	producerSpec := deal.PartSpec{
+	providerSpec := deal.PartSpec{
 		DealID: dealRoot.ID,
 		SeatID: seatRoot1.ID,
 	}
-	producerRoot, err := dealApi.Involve(producerSpec)
+	providerProc, err := dealApi.Involve(providerSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	caseSpec := deal.TranSpec{
-		DealID:  dealRoot.ID,
-		PartID:  producerRoot.PartID,
-		AgentAK: producerRoot.PAK,
+	// z := chnl.Ref{Name: "foo"}
+	z := sym.New("foo")
+	// and
+	spawnSpec := deal.TranSpec{
+		DID: dealRoot.ID,
+		PID: providerProc.PID,
 		Term: step.SpawnSpec{
-			DecID: seatRoot2.ID,
-			C:     id.New(),
+			// Z:  z,
+			Z: z,
 			Ctx: map[chnl.Name]chnl.ID{
-				seatSpec1.Via.Name: producerRoot.PID,
+				seatSpec1.Via.Name: providerProc.PID,
 			},
 			Cont: step.CloseSpec{
-				A: producerRoot.PID,
+				// A2: z,
+				A: z,
 			},
+			SeatID: seatRoot2.ID,
 		},
 	}
 	// when
-	err = dealApi.Take(caseSpec)
+	err = dealApi.Take(spawnSpec)
 	if err != nil {
 		t.Fatal(err)
 	}

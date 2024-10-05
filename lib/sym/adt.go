@@ -6,6 +6,8 @@ import (
 
 type ADT string
 
+func (ADT) PH() {}
+
 func New(name string) ADT {
 	return ADT(name)
 }
