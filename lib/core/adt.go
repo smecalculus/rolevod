@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+type Label string
+
 type Placeholder interface {
 	PH()
 }

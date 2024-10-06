@@ -50,7 +50,7 @@ var CtxOptional = []validation.Rule{
 
 var CtxRequired = append(NameOptional, validation.Required)
 
-func MsgFromPH(ph Placeholder) PlaceholderDTO {
+func DTOFromPH(ph Placeholder) PlaceholderDTO {
 	switch val := ph.(type) {
 	case id.ADT:
 		return PlaceholderDTO{K: ID, ID: val.String()}
@@ -61,7 +61,7 @@ func MsgFromPH(ph Placeholder) PlaceholderDTO {
 	}
 }
 
-func MsgToPH(mto PlaceholderDTO) (Placeholder, error) {
+func DTOToPH(mto PlaceholderDTO) (Placeholder, error) {
 	switch mto.K {
 	case ID:
 		return id.StringToID(mto.ID)

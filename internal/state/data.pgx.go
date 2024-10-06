@@ -153,46 +153,6 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	// }
 }
 
-func (r *repoPgx) SelectByProxy(rid id.ADT) (Root, error) {
-	query := `
-		WITH RECURSIVE parents AS (
-			SELECT
-				r.id, r.kind, r.from_id, r.fqn, r.pair, r.choices
-			FROM states r
-			WHERE id = (
-				SELECT st_id FROM channels WHERE id = $1
-			)
-			UNION ALL
-			SELECT
-				s1.id, s1.kind, s1.from_id, s1.fqn, s1.pair, s1.choices
-			FROM states s1, parents p
-			WHERE s1.from_id = p.id
-		)
-		SELECT * FROM sts`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
-	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return nil, err
-	}
-	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
-	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
-		return nil, err
-	}
-	if len(dtos) == 0 {
-		return nil, fmt.Errorf("no rows selected")
-	}
-	r.log.Debug("state selection succeeded", slog.Any("dtos", dtos))
-	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	states := map[string]state{}
-	for _, dto := range dtos {
-		states[dto.ID] = dto
-	}
-	return statesToRoot(states, states[rid.String()])
-}
-
 func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	states, err := r.SelectMany(ids)
 	if err != nil {

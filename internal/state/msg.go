@@ -148,7 +148,7 @@ func MsgFromSpec(s Spec) SpecMsg {
 		}
 		return SpecMsg{K: Plus, Plus: &SumMsg{Choices: choices}}
 	default:
-		panic(ErrUnexpectedSpec(s))
+		panic(ErrUnexpectedSpecType(s))
 	}
 }
 
@@ -179,23 +179,23 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 		}
 		return LolliSpec{Y: v, Z: s}, nil
 	case Plus:
-		choices := make(map[Label]Spec, len(mto.Plus.Choices))
+		choices := make(map[core.Label]Spec, len(mto.Plus.Choices))
 		for _, ch := range mto.Plus.Choices {
 			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
 			}
-			choices[Label(ch.Label)] = choice
+			choices[core.Label(ch.Label)] = choice
 		}
 		return PlusSpec{Choices: choices}, nil
 	case With:
-		choices := make(map[Label]Spec, len(mto.With.Choices))
+		choices := make(map[core.Label]Spec, len(mto.With.Choices))
 		for _, ch := range mto.With.Choices {
 			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
 			}
-			choices[Label(ch.Label)] = choice
+			choices[core.Label(ch.Label)] = choice
 		}
 		return WithSpec{Choices: choices}, nil
 	default:
@@ -219,7 +219,7 @@ func MsgFromRef(ref Ref) RefMsg {
 	case WithRef, WithRoot:
 		return RefMsg{K: With, ID: id}
 	default:
-		panic(ErrUnexpectedRef(ref))
+		panic(ErrUnexpectedRefType(ref))
 	}
 }
 
@@ -248,4 +248,8 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 
 func ErrUnexpectedKind(k Kind) error {
 	return fmt.Errorf("unextected kind %q", k)
+}
+
+func ErrUnexpectedPolarity(p Polarity) error {
+	return fmt.Errorf("unextected polarity: %v", p)
 }

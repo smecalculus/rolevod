@@ -11,7 +11,6 @@ import (
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
-	"smecalculus/rolevod/internal/state"
 )
 
 type RefMsg struct {
@@ -60,7 +59,7 @@ const (
 
 var termKindRequired = []validation.Rule{
 	validation.Required,
-	validation.In(Close, Wait, Send, Recv, Lab, Case, Spawn, CTA),
+	validation.In(Close, Wait, Send, Recv, Lab, Case, Spawn, Fwd, CTA),
 }
 
 type TermMsg struct {
@@ -72,6 +71,7 @@ type TermMsg struct {
 	Lab   *LabMsg   `json:"lab,omitempty"`
 	Case  *CaseMsg  `json:"case,omitempty"`
 	Spawn *SpawnMsg `json:"spawn,omitempty"`
+	Fwd   *FwdMsg   `json:"fwd,omitempty"`
 	CTA   *CTAMsg   `json:"cta,omitempty"`
 }
 
@@ -85,6 +85,8 @@ func (mto TermMsg) Validate() error {
 		validation.Field(&mto.Lab, validation.Required.When(mto.K == Lab)),
 		validation.Field(&mto.Case, validation.Required.When(mto.K == Case)),
 		validation.Field(&mto.Spawn, validation.Required.When(mto.K == Spawn)),
+		validation.Field(&mto.Fwd, validation.Required.When(mto.K == Fwd)),
+		validation.Field(&mto.CTA, validation.Required.When(mto.K == CTA)),
 	)
 }
 
@@ -99,63 +101,63 @@ func (mto CloseMsg) Validate() error {
 }
 
 type WaitMsg struct {
-	X    string  `json:"x"`
-	Cont TermMsg `json:"cont"`
+	X    core.PlaceholderDTO `json:"x"`
+	Cont TermMsg             `json:"cont"`
 }
 
 func (mto WaitMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.X, id.Required...),
+		validation.Field(&mto.X, validation.Required),
 		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
 type SendMsg struct {
-	A string `json:"a"`
-	B string `json:"b"`
+	A core.PlaceholderDTO `json:"a"`
+	B core.PlaceholderDTO `json:"b"`
 }
 
 func (mto SendMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.A, id.Required...),
-		validation.Field(&mto.B, id.Required...),
+		validation.Field(&mto.A, validation.Required),
+		validation.Field(&mto.B, validation.Required),
 	)
 }
 
 type RecvMsg struct {
-	X    string  `json:"x"`
-	Y    string  `json:"y"`
-	Cont TermMsg `json:"cont"`
+	X    core.PlaceholderDTO `json:"x"`
+	Y    core.PlaceholderDTO `json:"y"`
+	Cont TermMsg             `json:"cont"`
 }
 
 func (mto RecvMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.X, id.Required...),
-		validation.Field(&mto.Y, id.Required...),
+		validation.Field(&mto.X, validation.Required),
+		validation.Field(&mto.Y, validation.Required),
 		validation.Field(&mto.Cont, validation.Required),
 	)
 }
 
 type LabMsg struct {
-	C     string `json:"c"`
-	Label string `json:"label"`
+	C     core.PlaceholderDTO `json:"c"`
+	Label string              `json:"label"`
 }
 
 func (mto LabMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.C, id.Required...),
+		validation.Field(&mto.C, validation.Required),
 		validation.Field(&mto.Label, core.NameRequired...),
 	)
 }
 
 type CaseMsg struct {
-	Z     string             `json:"z"`
-	Conts map[string]TermMsg `json:"conts"`
+	Z     core.PlaceholderDTO `json:"z"`
+	Conts map[string]TermMsg  `json:"conts"`
 }
 
 func (mto CaseMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Z, id.Required...),
+		validation.Field(&mto.Z, validation.Required),
 		validation.Field(&mto.Conts,
 			validation.Required,
 			validation.Length(1, 10),
@@ -177,6 +179,18 @@ func (mto SpawnMsg) Validate() error {
 		validation.Field(&mto.Ctx, core.CtxOptional...),
 		validation.Field(&mto.Cont, validation.Required),
 		validation.Field(&mto.SeatID, id.Required...),
+	)
+}
+
+type FwdMsg struct {
+	C core.PlaceholderDTO `json:"c"`
+	D core.PlaceholderDTO `json:"d"`
+}
+
+func (mto FwdMsg) Validate() error {
+	return validation.ValidateStruct(&mto,
+		validation.Field(&mto.C, validation.Required),
+		validation.Field(&mto.D, validation.Required),
 	)
 }
 
@@ -219,14 +233,14 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Close,
 			Close: &CloseMsg{
-				A: core.MsgFromPH(term.A),
+				A: core.DTOFromPH(term.A),
 			},
 		}
 	case WaitSpec:
 		return TermMsg{
 			K: Wait,
 			Wait: &WaitMsg{
-				X:    term.X.String(),
+				X:    core.DTOFromPH(term.X),
 				Cont: MsgFromTerm(term.Cont),
 			},
 		}
@@ -234,16 +248,16 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Send,
 			Send: &SendMsg{
-				A: term.A.String(),
-				B: term.B.String(),
+				A: core.DTOFromPH(term.A),
+				B: core.DTOFromPH(term.B),
 			},
 		}
 	case RecvSpec:
 		return TermMsg{
 			K: Recv,
 			Recv: &RecvMsg{
-				X:    term.X.String(),
-				Y:    term.Y.String(),
+				X:    core.DTOFromPH(term.X),
+				Y:    core.DTOFromPH(term.Y),
 				Cont: MsgFromTerm(term.Cont),
 			},
 		}
@@ -251,7 +265,7 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Lab,
 			Lab: &LabMsg{
-				C:     term.C.String(),
+				C:     core.DTOFromPH(term.C),
 				Label: string(term.L),
 			},
 		}
@@ -263,7 +277,7 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Case,
 			Case: &CaseMsg{
-				Z:     term.Z.String(),
+				Z:     core.DTOFromPH(term.Z),
 				Conts: conts,
 			},
 		}
@@ -276,22 +290,30 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Spawn,
 			Spawn: &SpawnMsg{
-				Z:      core.MsgFromPH(term.Z),
+				Z:      core.DTOFromPH(term.Z),
 				Ctx:    ctx,
 				Cont:   MsgFromTerm(term.Cont),
 				SeatID: term.SeatID.String(),
+			},
+		}
+	case FwdSpec:
+		return TermMsg{
+			K: Fwd,
+			Fwd: &FwdMsg{
+				C: core.DTOFromPH(term.C),
+				D: core.DTOFromPH(term.D),
 			},
 		}
 	case CTASpec:
 		return TermMsg{
 			K: CTA,
 			CTA: &CTAMsg{
-				Seat: sym.StringFromSym(term.Seat),
+				Seat: term.Seat.String(),
 				Key:  ak.StringFromAK(term.Key),
 			},
 		}
 	default:
-		panic(ErrUnexpectedTerm(term))
+		panic(ErrUnexpectedTermType(term))
 	}
 }
 
@@ -305,13 +327,13 @@ func MsgToTermNilable(mto *TermMsg) (Term, error) {
 func MsgToTerm(mto TermMsg) (Term, error) {
 	switch mto.K {
 	case Close:
-		a, err := core.MsgToPH(mto.Close.A)
+		a, err := core.DTOToPH(mto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case Wait:
-		x, err := id.StringToID(mto.Wait.X)
+		x, err := core.DTOToPH(mto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
@@ -321,21 +343,21 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case Send:
-		a, err := id.StringToID(mto.Send.A)
+		a, err := core.DTOToPH(mto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := id.StringToID(mto.Send.B)
+		b, err := core.DTOToPH(mto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case Recv:
-		x, err := id.StringToID(mto.Recv.X)
+		x, err := core.DTOToPH(mto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := id.StringToID(mto.Recv.Y)
+		y, err := core.DTOToPH(mto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -345,31 +367,27 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return RecvSpec{X: x, Y: y, Cont: cont}, nil
 	case Lab:
-		c, err := id.StringToID(mto.Lab.C)
+		c, err := core.DTOToPH(mto.Lab.C)
 		if err != nil {
 			return nil, err
 		}
-		return LabSpec{C: c, L: state.Label(mto.Lab.Label)}, nil
+		return LabSpec{C: c, L: core.Label(mto.Lab.Label)}, nil
 	case Case:
-		z, err := id.StringToID(mto.Case.Z)
+		z, err := core.DTOToPH(mto.Case.Z)
 		if err != nil {
 			return nil, err
 		}
-		conts := make(map[state.Label]Term, len(mto.Case.Conts))
+		conts := make(map[core.Label]Term, len(mto.Case.Conts))
 		for l, t := range mto.Case.Conts {
 			cont, err := MsgToTerm(t)
 			if err != nil {
 				return nil, err
 			}
-			conts[state.Label(l)] = cont
+			conts[core.Label(l)] = cont
 		}
 		return CaseSpec{Z: z, Conts: conts}, nil
 	case Spawn:
-		seatID, err := id.StringToID(mto.Spawn.SeatID)
-		if err != nil {
-			return nil, err
-		}
-		z, err := core.MsgToPH(mto.Spawn.Z)
+		z, err := core.DTOToPH(mto.Spawn.Z)
 		if err != nil {
 			return nil, err
 		}
@@ -385,23 +403,40 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
+		seatID, err := id.StringToID(mto.Spawn.SeatID)
+		if err != nil {
+			return nil, err
+		}
 		return SpawnSpec{Z: z, Ctx: ctx, Cont: cont, SeatID: seatID}, nil
+	case Fwd:
+		c, err := core.DTOToPH(mto.Fwd.C)
+		if err != nil {
+			return nil, err
+		}
+		d, err := core.DTOToPH(mto.Fwd.D)
+		if err != nil {
+			return nil, err
+		}
+		return FwdSpec{C: c, D: d}, nil
 	case CTA:
-		seat := sym.StringToSym(mto.CTA.Seat)
 		key, err := ak.StringToAK(mto.CTA.Key)
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{Seat: seat, Key: key}, nil
+		seatID, err := id.StringToID(mto.CTA.Seat)
+		if err != nil {
+			return nil, err
+		}
+		return CTASpec{Key: key, Seat: seatID}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}
 }
 
 func ErrUnexpectedTermKind(k TermKind) error {
-	return fmt.Errorf("unexpected term kind %v", k)
+	return fmt.Errorf("unexpected term kind: %v", k)
 }
 
 func ErrUnexpectedStepKind(k StepKind) error {
-	return fmt.Errorf("unexpected step kind %v", k)
+	return fmt.Errorf("unexpected step kind: %v", k)
 }

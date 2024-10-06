@@ -75,6 +75,6 @@ func ErrAlreadyClosed(rid ID) error {
 	return fmt.Errorf("channel already closed: %v", rid)
 }
 
-func ErrNotAChnl(ph core.Placeholder) error {
-	return fmt.Errorf("not a channel: %v", ph)
+func ErrNotAnID(ph core.Placeholder) error {
+	return fmt.Errorf("not a channel id: %v", ph)
 }

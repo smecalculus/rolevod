@@ -1,6 +1,8 @@
 package ak
 
 import (
+	"fmt"
+
 	"github.com/rs/xid"
 )
 
@@ -28,4 +30,8 @@ func StringFromAK(ak ADT) string {
 
 func (ak ADT) String() string {
 	return xid.ID(ak).String()
+}
+
+func ErrUnexpectedKey(k ADT) error {
+	return fmt.Errorf("unexpected access key: %v", k)
 }

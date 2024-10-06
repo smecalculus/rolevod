@@ -88,7 +88,7 @@ func (r *repoPgx[T]) SelectByID(rid ID) (*T, error) {
 	}
 	concrete, ok := generic.(T)
 	if !ok {
-		return nil, ErrUnexpectedStep(generic)
+		return nil, ErrUnexpectedRootType(generic)
 	}
 	return &concrete, nil
 }
@@ -117,11 +117,14 @@ func (r *repoPgx[T]) SelectByPID(pid chnl.ID) (*T, error) {
 	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
+		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return nil, err
 	}
 	concrete, ok := generic.(T)
 	if !ok {
-		return nil, ErrUnexpectedStep(generic)
+		err = ErrUnexpectedRootType(generic)
+		r.log.Error("step selection failed", slog.Any("reason", err))
+		return nil, err
 	}
 	return &concrete, nil
 }
@@ -147,14 +150,17 @@ func (r *repoPgx[T]) SelectByVID(vid chnl.ID) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("dto", dto))
 	generic, err := dataToRoot(&dto)
 	if err != nil {
+		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return nil, err
 	}
 	concrete, ok := generic.(T)
 	if !ok {
-		return nil, ErrUnexpectedStep(generic)
+		err = ErrUnexpectedRootType(generic)
+		r.log.Error("step selection failed", slog.Any("reason", err), slog.Any("dto", dto))
+		return nil, err
 	}
+	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("root", concrete))
 	return &concrete, nil
 }

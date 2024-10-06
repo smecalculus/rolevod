@@ -3,13 +3,12 @@ package state
 import (
 	"fmt"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/sym"
 )
 
 type ID = id.ADT
-
-type Label string
 
 type Spec interface {
 	spec()
@@ -42,14 +41,14 @@ func (LolliSpec) spec() {}
 
 // aka Internal Choice
 type PlusSpec struct {
-	Choices map[Label]Spec
+	Choices map[core.Label]Spec
 }
 
 func (PlusSpec) spec() {}
 
 // aka External Choice
 type WithSpec struct {
-	Choices map[Label]Spec
+	Choices map[core.Label]Spec
 }
 
 func (WithSpec) spec() {}
@@ -121,6 +120,7 @@ func (r DownRef) RID() ID { return r.ID }
 // aka Stype
 type Root interface {
 	Ref
+	Pol() Polarity
 }
 
 type Prod interface {
@@ -128,7 +128,7 @@ type Prod interface {
 }
 
 type Sum interface {
-	Next(Label) Ref
+	Next(core.Label) Ref
 }
 
 // aka TpName
@@ -141,6 +141,8 @@ func (LinkRoot) spec() {}
 
 func (r LinkRoot) RID() ID { return r.ID }
 
+func (r LinkRoot) Pol() Polarity { return Zero }
+
 type OneRoot struct {
 	ID ID
 }
@@ -149,25 +151,31 @@ func (OneRoot) spec() {}
 
 func (r OneRoot) RID() ID { return r.ID }
 
+func (r OneRoot) Pol() Polarity { return Pos }
+
 // aka Internal Choice
 type PlusRoot struct {
 	ID      ID
-	Choices map[Label]Root
+	Choices map[core.Label]Root
 }
 
 func (r PlusRoot) RID() ID { return r.ID }
 
-func (r PlusRoot) Next(l Label) Ref { return r.Choices[l] }
+func (r PlusRoot) Next(l core.Label) Ref { return r.Choices[l] }
+
+func (r PlusRoot) Pol() Polarity { return Pos }
 
 // aka External Choice
 type WithRoot struct {
 	ID      ID
-	Choices map[Label]Root
+	Choices map[core.Label]Root
 }
 
 func (r WithRoot) RID() ID { return r.ID }
 
-func (r WithRoot) Next(l Label) Ref { return r.Choices[l] }
+func (r WithRoot) Next(l core.Label) Ref { return r.Choices[l] }
+
+func (r WithRoot) Pol() Polarity { return Neg }
 
 type TensorRoot struct {
 	ID ID
@@ -179,6 +187,8 @@ func (r TensorRoot) RID() ID { return r.ID }
 
 func (r TensorRoot) Next() Ref { return r.C }
 
+func (r TensorRoot) Pol() Polarity { return Pos }
+
 type LolliRoot struct {
 	ID ID
 	Y  Root // value
@@ -189,6 +199,8 @@ func (r LolliRoot) RID() ID { return r.ID }
 
 func (r LolliRoot) Next() Ref { return r.Z }
 
+func (r LolliRoot) Pol() Polarity { return Neg }
+
 type UpRoot struct {
 	ID ID
 	A  Root
@@ -197,6 +209,8 @@ type UpRoot struct {
 func (UpRoot) spec() {}
 
 func (r UpRoot) RID() ID { return r.ID }
+
+func (r UpRoot) Pol() Polarity { return Zero }
 
 type DownRoot struct {
 	ID ID
@@ -207,11 +221,20 @@ func (DownRoot) spec() {}
 
 func (r DownRoot) RID() ID { return r.ID }
 
+func (r DownRoot) Pol() Polarity { return Zero }
+
+type Polarity int
+
+const (
+	Pos  = Polarity(+1)
+	Zero = Polarity(0)
+	Neg  = Polarity(-1)
+)
+
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
-	SelectByProxy(id.ADT) (Root, error)
 	SelectEnv([]ID) (map[ID]Root, error)
 	SelectMany([]ID) ([]Root, error)
 }
@@ -240,19 +263,19 @@ func ConvertSpecToRoot(s Spec) Root {
 			Z:  ConvertSpecToRoot(spec.Z),
 		}
 	case WithSpec:
-		choices := make(map[Label]Root, len(spec.Choices))
+		choices := make(map[core.Label]Root, len(spec.Choices))
 		for lab, st := range spec.Choices {
 			choices[lab] = ConvertSpecToRoot(st)
 		}
 		return WithRoot{ID: newID, Choices: choices}
 	case PlusSpec:
-		choices := make(map[Label]Root, len(spec.Choices))
+		choices := make(map[core.Label]Root, len(spec.Choices))
 		for lab, st := range spec.Choices {
 			choices[lab] = ConvertSpecToRoot(st)
 		}
 		return PlusRoot{ID: newID, Choices: choices}
 	default:
-		panic(ErrUnexpectedSpec(spec))
+		panic(ErrUnexpectedSpecType(spec))
 	}
 }
 
@@ -267,16 +290,16 @@ func ConvertRootToRef(r Root) Ref {
 	return r.(Ref)
 }
 
-func ErrUnexpectedSpec(v Spec) error {
-	return fmt.Errorf("unexpected spec %#v", v)
+func ErrUnexpectedSpecType(v Spec) error {
+	return fmt.Errorf("unexpected spec type: %T", v)
 }
 
-func ErrUnexpectedRef(v Ref) error {
-	return fmt.Errorf("unexpected ref %#v", v)
+func ErrUnexpectedRefType(v Ref) error {
+	return fmt.Errorf("unexpected ref type: %T", v)
 }
 
-func ErrUnexpectedRoot(v Root) error {
-	return fmt.Errorf("unexpected root %#v", v)
+func ErrUnexpectedRootType(v Root) error {
+	return fmt.Errorf("unexpected root type: %T", v)
 }
 
 func ErrDoesNotExist(rid ID) error {

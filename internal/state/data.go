@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/sym"
 )
@@ -86,7 +87,7 @@ func DataFromRef(ref Ref) *RefData {
 	case WithRef, WithRoot:
 		return &RefData{K: with, ID: rid}
 	default:
-		panic(ErrUnexpectedRef(ref))
+		panic(ErrUnexpectedRefType(ref))
 	}
 }
 
@@ -172,24 +173,24 @@ func statesToRoot(states map[string]state, st state) (Root, error) {
 		return LolliRoot{ID: stID, Y: x, Z: z}, nil
 	case plus:
 		dto := states[st.ID]
-		choices := make(map[Label]Root, len(dto.Choices))
+		choices := make(map[core.Label]Root, len(dto.Choices))
 		for _, ch := range dto.Choices {
 			choice, err := statesToRoot(states, states[ch.ToID])
 			if err != nil {
 				return nil, err
 			}
-			choices[Label(ch.OnPat)] = choice
+			choices[core.Label(ch.OnPat)] = choice
 		}
 		return PlusRoot{ID: stID, Choices: choices}, nil
 	case with:
 		dto := states[st.ID]
-		choices := make(map[Label]Root, len(dto.Choices))
+		choices := make(map[core.Label]Root, len(dto.Choices))
 		for _, ch := range dto.Choices {
 			choice, err := statesToRoot(states, states[ch.ToID])
 			if err != nil {
 				return nil, err
 			}
-			choices[Label(ch.OnPat)] = choice
+			choices[core.Label(ch.OnPat)] = choice
 		}
 		return WithRoot{ID: stID, Choices: choices}, nil
 	default:
@@ -282,7 +283,7 @@ func statesFromRoot(dto *rootData, r Root, from string) (string, error) {
 		dto.States[stID] = st
 		return stID, nil
 	default:
-		panic(ErrUnexpectedRoot(r))
+		panic(ErrUnexpectedRootType(r))
 	}
 }
 
