@@ -51,12 +51,19 @@ CREATE TABLE steps (
 	kind smallint,
 	pid varchar(20),
 	vid varchar(20),
+	ctx jsonb,
 	term jsonb
 );
 
 CREATE TABLE kinships (
 	parent_id varchar(20),
 	child_id varchar(20)
+);
+
+CREATE TABLE clientships (
+	pid varchar(20),
+	to_id varchar(20),
+	from_id varchar(20)
 );
 
 CREATE TABLE aliases (

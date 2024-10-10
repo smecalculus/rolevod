@@ -14,6 +14,10 @@ func New() ADT {
 	return ADT(xid.New())
 }
 
+func Empty() ADT {
+	return ADT(xid.NilID())
+}
+
 func (id ADT) IsEmpty() bool {
 	return xid.ID(id).IsZero()
 }

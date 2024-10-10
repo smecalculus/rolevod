@@ -11,16 +11,12 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-type refData struct {
-	K  stepKind `db:"kind" json:"kind,omitempty"`
-	ID string   `db:"id" json:"id,omitempty"`
-}
-
 type rootData struct {
 	ID   string         `db:"id"`
 	K    stepKind       `db:"kind"`
 	PID  sql.NullString `db:"pid"`
 	VID  sql.NullString `db:"vid"`
+	Ctx  []chnl.RefData `db:"ctx"`
 	Term termData       `db:"term"`
 }
 
@@ -81,8 +77,8 @@ type fwdData struct {
 }
 
 type ctaData struct {
-	Key  string `json:"key"`
-	Seat string `json:"seat"`
+	AK  string `json:"ak"`
+	SID string `json:"sid"`
 }
 
 type termKind int
@@ -128,6 +124,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 			K:    proc,
 			ID:   root.ID.String(),
 			PID:  pid,
+			Ctx:  chnl.DataFromRefMap(root.Ctx),
 			Term: term,
 		}, nil
 	case MsgRoot:
@@ -183,17 +180,21 @@ func dataToRoot(dto *rootData) (Root, error) {
 	}
 	switch dto.K {
 	case proc:
+		ctx, err := chnl.DataToRefMap(dto.Ctx)
+		if err != nil {
+			return nil, err
+		}
 		term, err := dataToTerm(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: rid, PID: pid, Term: term}, nil
+		return ProcRoot{ID: rid, PID: pid, Ctx: ctx, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return MsgRoot{ID: rid, VID: vid, Val: val}, nil
+		return MsgRoot{ID: rid, PID: pid, VID: vid, Val: val}, nil
 	case srv:
 		cont, err := dataToCont(dto.Term)
 		if err != nil {
@@ -225,8 +226,8 @@ func dataFromTerm(t Term) (termData, error) {
 		return termData{
 			K: cta,
 			CTA: &ctaData{
-				Seat: term.Seat.String(),
-				Key:  term.Key.String(),
+				SID: term.SID.String(),
+				AK:  term.AK.String(),
 			},
 		}, nil
 	default:
@@ -251,15 +252,15 @@ func dataToTerm(dto termData) (Term, error) {
 	case fwd:
 		return dataToValue(dto)
 	case cta:
-		key, err := ak.StringToAK(dto.CTA.Key)
+		key, err := ak.StringToAK(dto.CTA.AK)
 		if err != nil {
 			return nil, err
 		}
-		seat, err := id.StringToID(dto.CTA.Seat)
+		seat, err := id.StringToID(dto.CTA.SID)
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{Seat: seat, Key: key}, nil
+		return CTASpec{SID: seat, AK: key}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
@@ -291,7 +292,7 @@ func dataFromValue(v Value) termData {
 			},
 		}
 	default:
-		panic(ErrUnexpectedValueType(val))
+		panic(ErrUnexpectedValType(val))
 	}
 }
 

@@ -228,13 +228,11 @@ func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
 const (
 	selectByID = `
 		WITH RECURSIVE state_tree AS (
-			SELECT
-				root.id, root.kind, root.from_id, root.fqn, root.pair, root.choices
+			SELECT root.*
 			FROM states root
 			WHERE id = $1
 			UNION ALL
-			SELECT
-				child.id, child.kind, child.from_id, child.fqn, child.pair, child.choices
+			SELECT child.*
 			FROM states child, state_tree parent
 			WHERE child.from_id = parent.id
 		)

@@ -69,6 +69,15 @@ type SrvRoot struct {
 
 func (SrvRoot) step() {}
 
+type TbdRoot struct {
+	ID  ID
+	PID chnl.ID
+	VID chnl.ID
+	Act Action
+}
+
+func (TbdRoot) step() {}
+
 // aka Expression
 type Term interface {
 	Via() core.Placeholder
@@ -90,24 +99,22 @@ type Action interface {
 	act()
 }
 
-type LabSpec struct {
-	C core.Placeholder
-	L core.Label
-	// Cont Term
+type CloseSpec struct {
+	A core.Placeholder
 }
 
-func (LabSpec) val() {}
+func (CloseSpec) val() {}
 
-func (s LabSpec) Via() core.Placeholder { return s.C }
+func (s CloseSpec) Via() core.Placeholder { return s.A }
 
-type CaseSpec struct {
-	Z     core.Placeholder
-	Conts map[core.Label]Term
+type WaitSpec struct {
+	X    core.Placeholder
+	Cont Term
 }
 
-func (CaseSpec) cont() {}
+func (WaitSpec) cont() {}
 
-func (s CaseSpec) Via() core.Placeholder { return s.Z }
+func (s WaitSpec) Via() core.Placeholder { return s.X }
 
 type SendSpec struct {
 	A core.Placeholder // via
@@ -129,29 +136,34 @@ func (RecvSpec) cont() {}
 
 func (s RecvSpec) Via() core.Placeholder { return s.X }
 
-type CloseSpec struct {
-	A core.Placeholder
+type LabSpec struct {
+	C core.Placeholder
+	L core.Label
+	// Cont Term
 }
 
-func (CloseSpec) val() {}
+func (LabSpec) val() {}
 
-func (s CloseSpec) Via() core.Placeholder { return s.A }
+func (s LabSpec) Via() core.Placeholder { return s.C }
 
-type WaitSpec struct {
-	X    core.Placeholder
-	Cont Term
+type CaseSpec struct {
+	Z     core.Placeholder
+	Conts map[core.Label]Term
 }
 
-func (WaitSpec) cont() {}
+func (CaseSpec) cont() {}
 
-func (s WaitSpec) Via() core.Placeholder { return s.X }
+func (s CaseSpec) Via() core.Placeholder { return s.Z }
 
 type CTASpec struct {
-	Key  ak.ADT
-	Seat seat.ID
+	AK  ak.ADT
+	SID seat.ID
+	Ctx map[chnl.Name]chnl.ID
 }
 
-func (s CTASpec) Via() core.Placeholder { return id.New() }
+func (s CTASpec) act() {}
+
+func (s CTASpec) Via() core.Placeholder { return s.SID }
 
 // aka ExpName
 type RecurSpec struct {
@@ -194,68 +206,68 @@ type Repo[T Root] interface {
 func CollectChnlIDs(t Term, ids []chnl.ID) []chnl.ID {
 	switch term := t.(type) {
 	case CloseSpec:
-		id, ok := term.A.(chnl.ID)
+		a, ok := term.A.(chnl.ID)
 		if !ok {
 			return ids
 		}
-		return append(ids, id)
+		return append(ids, a)
 	case WaitSpec:
 		ids := CollectChnlIDs(term.Cont, ids)
-		id, ok := term.X.(chnl.ID)
+		x, ok := term.X.(chnl.ID)
 		if !ok {
 			return ids
 		}
-		return append(ids, id)
+		return append(ids, x)
 	case SendSpec:
-		aID, ok := term.A.(chnl.ID)
+		a, ok := term.A.(chnl.ID)
 		if ok {
-			ids = append(ids, aID)
+			ids = append(ids, a)
 		}
-		bID, ok := term.B.(chnl.ID)
+		b, ok := term.B.(chnl.ID)
 		if ok {
-			ids = append(ids, bID)
+			ids = append(ids, b)
 		}
 		return ids
 	case RecvSpec:
-		xID, ok := term.X.(chnl.ID)
+		x, ok := term.X.(chnl.ID)
 		if ok {
-			ids = append(ids, xID)
+			ids = append(ids, x)
 		}
-		yID, ok := term.Y.(chnl.ID)
+		y, ok := term.Y.(chnl.ID)
 		if ok {
-			ids = append(ids, yID)
+			ids = append(ids, y)
 		}
 		return CollectChnlIDs(term.Cont, ids)
 	case LabSpec:
-		id, ok := term.C.(chnl.ID)
+		c, ok := term.C.(chnl.ID)
 		if !ok {
 			return ids
 		}
-		return append(ids, id)
+		return append(ids, c)
 	case CaseSpec:
 		for _, cont := range term.Conts {
 			ids = CollectChnlIDs(cont, ids)
 		}
-		id, ok := term.Z.(chnl.ID)
+		z, ok := term.Z.(chnl.ID)
 		if !ok {
 			return ids
 		}
-		return append(ids, id)
+		return append(ids, z)
 	case SpawnSpec:
 		ids := CollectChnlIDs(term.Cont, ids)
-		id, ok := term.Z.(chnl.ID)
+		z, ok := term.Z.(chnl.ID)
 		if !ok {
 			return ids
 		}
-		return append(ids, id)
+		return append(ids, z)
 	case FwdSpec:
-		cID, ok := term.C.(chnl.ID)
+		c, ok := term.C.(chnl.ID)
 		if ok {
-			ids = append(ids, cID)
+			ids = append(ids, c)
 		}
-		dID, ok := term.D.(chnl.ID)
+		d, ok := term.D.(chnl.ID)
 		if ok {
-			ids = append(ids, dID)
+			ids = append(ids, d)
 		}
 		return ids
 	default:
@@ -296,7 +308,7 @@ func ErrTermMismatch(got, want Term) error {
 	return fmt.Errorf("term mismatch: want %T, got %T", want, got)
 }
 
-func ErrUnexpectedValueType(v Value) error {
+func ErrUnexpectedValType(v Value) error {
 	return fmt.Errorf("unexpected value type: %T", v)
 }
 
@@ -305,5 +317,5 @@ func ErrUnexpectedContType(c Continuation) error {
 }
 
 func ErrDoesNotExist(rid ID) error {
-	return fmt.Errorf("step doesn't exist: %v", rid)
+	return fmt.Errorf("step root doesn't exist: %v", rid)
 }

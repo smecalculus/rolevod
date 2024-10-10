@@ -1,10 +1,11 @@
 package chnl
 
 import (
-	"errors"
 	"fmt"
+
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/state"
 )
@@ -41,8 +42,10 @@ type Repo interface {
 	InsertCtx([]Root) ([]Root, error)
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
+	SelectCtx(ID, []ID) ([]Root, error)
 	SelectCfg([]ID) (map[ID]Root, error)
 	SelectMany([]ID) ([]Root, error)
+	TransferCtx(from ID, pids []ID, to ID) error
 }
 
 func CollectStIDs(roots []Root) []state.ID {
@@ -63,12 +66,12 @@ var (
 	ConvertRootToRef func(Root) Ref
 )
 
-var (
-	ErrAlreadyConsumed = errors.New("channel already consumed")
-)
-
 func ErrDoesNotExist(rid ID) error {
 	return fmt.Errorf("channel doesn't exist: %v", rid)
+}
+
+func ErrUnknownName(name sym.ADT) error {
+	return fmt.Errorf("unknown channel name: %v", name)
 }
 
 func ErrAlreadyClosed(rid ID) error {

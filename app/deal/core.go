@@ -7,7 +7,9 @@ import (
 	"golang.org/x/exp/maps"
 
 	"smecalculus/rolevod/lib/ak"
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
@@ -139,19 +141,19 @@ func (s *dealService) Involve(spec PartSpec) (step.ProcRoot, error) {
 	if err != nil {
 		s.log.Error("seat selection failed",
 			slog.Any("reason", err),
-			slog.Any("spec", spec),
+			slog.Any("id", spec.SeatID),
 		)
 		return step.ProcRoot{}, err
 	}
 	if len(seat.Ctx) != len(spec.Ctx) {
 		err = fmt.Errorf("ctx mismatch: want %v items, got %v items", len(seat.Ctx), len(spec.Ctx))
-		s.log.Error("transition taking failed",
+		s.log.Error("seat involvement failed",
 			slog.Any("reason", err),
 			slog.Any("spec", spec),
 		)
 		return step.ProcRoot{}, err
 	}
-	newCtx := make(map[chnl.Name]chnl.ID, len(spec.Ctx))
+	newPID := id.New()
 	if len(spec.Ctx) > 0 {
 		curCtx, err := s.chnls.SelectMany(maps.Values(spec.Ctx))
 		if err != nil {
@@ -173,28 +175,19 @@ func (s *dealService) Involve(spec PartSpec) (step.ProcRoot, error) {
 				return step.ProcRoot{}, err
 			}
 		}
-		var chnls []chnl.Root
-		for _, preID := range spec.Ctx {
-			ch := chnl.Root{
-				ID:    id.New(),
-				PreID: preID,
-			}
-			chnls = append(chnls, ch)
-		}
-		chnls, err = s.chnls.InsertCtx(chnls)
+		err = s.chnls.TransferCtx(id.Empty(), maps.Values(spec.Ctx), newPID)
 		if err != nil {
-			s.log.Error("ctx insertion failed",
+			s.log.Error("ctx transfer failed",
 				slog.Any("reason", err),
-				slog.Any("ctx", chnls),
+				slog.Any("from", id.Empty()),
+				slog.Any("pids", spec.Ctx),
+				slog.Any("to", newPID),
 			)
 			return step.ProcRoot{}, err
 		}
-		for _, ch := range chnls {
-			newCtx[ch.Name] = ch.ID
-		}
 	}
 	via := chnl.Root{
-		ID:   id.New(),
+		ID:   newPID,
 		Name: seat.Via.Name,
 		StID: seat.Via.StID,
 		St:   seat.Via.St,
@@ -210,10 +203,10 @@ func (s *dealService) Involve(spec PartSpec) (step.ProcRoot, error) {
 	proc := step.ProcRoot{
 		ID:  id.New(),
 		PID: via.ID,
-		Ctx: newCtx,
+		Ctx: spec.Ctx,
 		Term: step.CTASpec{
-			Key:  ak.New(),
-			Seat: spec.SeatID,
+			AK:  ak.New(),
+			SID: spec.SeatID,
 		},
 	}
 	err = s.procs.Insert(proc)
@@ -257,6 +250,22 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
+	zc, err := s.chnls.SelectByID(proc.PID)
+	if err != nil {
+		s.log.Error("zc selection failed",
+			slog.Any("reason", err),
+			slog.Any("id", proc.PID),
+		)
+		return err
+	}
+	chnls, err := s.chnls.SelectCtx(proc.PID, maps.Values(proc.Ctx))
+	if err != nil {
+		s.log.Error("context selection failed",
+			slog.Any("reason", err),
+			slog.Any("ctx", proc.Ctx),
+		)
+		return err
+	}
 	// if spec.Key != cta.Key {
 	// 	err = ak.ErrUnexpectedKey(spec.Key)
 	// 	s.log.Error("transition taking failed",
@@ -265,16 +274,7 @@ func (s *dealService) Take(spec TranSpec) error {
 	// 	return err
 	// }
 	// type checking
-	chIDs := step.CollectChnlIDs(spec.Term, []chnl.ID{})
-	cfg, err := s.chnls.SelectCfg(chIDs)
-	if err != nil {
-		s.log.Error("cfg selection failed",
-			slog.Any("reason", err),
-			slog.Any("ids", chIDs),
-		)
-		return err
-	}
-	stIDs := chnl.CollectStIDs(maps.Values(cfg))
+	stIDs := chnl.CollectStIDs(append(chnls, zc))
 	env, err := s.states.SelectEnv(stIDs)
 	if err != nil {
 		s.log.Error("env selection failed",
@@ -283,10 +283,12 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
+	ctx := convertToCtx(chnls)
+	cfg := convertToCfg(append(chnls, zc))
 	if spec.Term.Via() == spec.PID {
-		s.checkProvider(env, cfg, spec.Term)
+		s.checkProvider(env, ctx, cfg, spec.Term)
 	} else {
-		s.checkClient(env, cfg, spec.Term)
+		s.checkClient(env, ctx, cfg, spec.Term)
 	}
 	// step taking
 	proc.Term = spec.Term
@@ -300,7 +302,7 @@ func (s *dealService) takeProc(
 	viaID := proc.Term.Via().(chnl.ID)
 	cfg, err := s.chnls.SelectCfg([]chnl.ID{viaID})
 	if err != nil {
-		s.log.Error("channel selection failed",
+		s.log.Error("via selection failed",
 			slog.Any("reason", err),
 			slog.Any("id", viaID),
 		)
@@ -441,8 +443,9 @@ func (s *dealService) takeProcWith(
 			s.log.Debug("transition taking half done", slog.Any("srv", newSrv))
 			return nil
 		}
-		_, ok = msg.Val.(step.CloseSpec)
-		if ok {
+		var newProc step.ProcRoot
+		switch val := msg.Val.(type) {
+		case step.CloseSpec:
 			// consume and close channel
 			finVia := chnl.Root{
 				ID:    id.New(),
@@ -454,35 +457,27 @@ func (s *dealService) takeProcWith(
 			if err != nil {
 				s.log.Error("channel insertion failed",
 					slog.Any("reason", err),
-					slog.Any("chnl", finVia),
+					slog.Any("via", finVia),
 				)
 				return err
 			}
-			newProc := step.ProcRoot{
+			newProc = step.ProcRoot{
 				ID:   id.New(),
 				PID:  proc.PID,
 				Term: term.Cont,
 			}
-			s.log.Debug("transition taking succeeded")
-			return s.takeProc(newProc)
-		}
-		fwd, ok := msg.Val.(step.FwdSpec)
-		if ok {
-			newTerm := step.Subst(term, fwd.C, fwd.D.(chnl.ID))
-			newProc := step.ProcRoot{
+		case step.FwdSpec:
+			newTerm := step.Subst(term, val.C, val.D.(chnl.ID))
+			newProc = step.ProcRoot{
 				ID:   id.New(),
 				PID:  proc.PID,
 				Term: newTerm,
 			}
-			s.log.Debug("transition taking succeeded")
-			return s.takeProc(newProc)
+		default:
+			panic(step.ErrUnexpectedValType(msg.Val))
 		}
-		err = fmt.Errorf("unexpected val type: want %T, got %T", step.CloseSpec{}, msg.Val)
-		s.log.Error("transition taking failed",
-			slog.Any("reason", err),
-			slog.Any("val", msg.Val),
-		)
-		return err
+		s.log.Debug("transition taking succeeded")
+		return s.takeProc(newProc)
 	case step.SendSpec:
 		viaID, ok := term.A.(chnl.ID)
 		if !ok {
@@ -890,7 +885,6 @@ func (s *dealService) takeProcWith(
 		default:
 			panic(state.ErrUnexpectedPolarity(curSt.Pol()))
 		}
-		return nil
 	default:
 		panic(step.ErrUnexpectedTermType(proc.Term))
 	}
@@ -940,20 +934,21 @@ type TranSpec struct {
 // aka checkExp
 func (s *dealService) checkProvider(
 	env map[state.ID]state.Root,
+	ctx map[chnl.Name]chnl.Root,
 	cfg map[chnl.ID]chnl.Root,
 	t step.Term,
 ) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
 		// check via
-		gotA, err := findState(env, cfg, term.A.(chnl.ID))
+		gotA, err := findState(env, ctx, cfg, term.A)
 		if err != nil {
 			return err
 		}
 		return checkProvider(gotA, state.OneRoot{})
 	case step.WaitSpec:
 		// check via
-		gotX, err := findState(env, cfg, term.X.(chnl.ID))
+		gotX, err := findState(env, ctx, cfg, term.X)
 		if err != nil {
 			return err
 		}
@@ -962,10 +957,10 @@ func (s *dealService) checkProvider(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.OneRoot{}, gotX)
 		}
 		// check cont
-		return s.checkProvider(env, cfg, term.Cont)
+		return s.checkProvider(env, ctx, cfg, term.Cont)
 	case step.SendSpec:
 		// check via
-		gotA, err := findState(env, cfg, term.A.(chnl.ID))
+		gotA, err := findState(env, ctx, cfg, term.A)
 		if err != nil {
 			return err
 		}
@@ -974,7 +969,7 @@ func (s *dealService) checkProvider(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.TensorRoot{}, gotA)
 		}
 		// check value
-		gotB, err := findState(env, cfg, term.B.(chnl.ID))
+		gotB, err := findState(env, ctx, cfg, term.B)
 		if err != nil {
 			s.log.Error("type checking failed",
 				slog.Any("reason", err),
@@ -989,7 +984,7 @@ func (s *dealService) checkProvider(
 		return nil
 	case step.RecvSpec:
 		// check via
-		gotX, err := findState(env, cfg, term.X.(chnl.ID))
+		gotX, err := findState(env, ctx, cfg, term.X)
 		if err != nil {
 			return err
 		}
@@ -998,7 +993,7 @@ func (s *dealService) checkProvider(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.LolliRoot{}, gotX)
 		}
 		// check value
-		gotY, err := findState(env, cfg, term.Y.(chnl.ID))
+		gotY, err := findState(env, ctx, cfg, term.Y)
 		if err != nil {
 			return err
 		}
@@ -1007,10 +1002,10 @@ func (s *dealService) checkProvider(
 			return err
 		}
 		// check cont
-		return s.checkProvider(env, cfg, term.Cont)
+		return s.checkProvider(env, ctx, cfg, term.Cont)
 	case step.LabSpec:
 		// check via
-		gotC, err := findState(env, cfg, term.C.(chnl.ID))
+		gotC, err := findState(env, ctx, cfg, term.C)
 		if err != nil {
 			return err
 		}
@@ -1027,7 +1022,7 @@ func (s *dealService) checkProvider(
 		return nil
 	case step.CaseSpec:
 		// check via
-		gotZ, err := findState(env, cfg, term.Z.(chnl.ID))
+		gotZ, err := findState(env, ctx, cfg, term.Z)
 		if err != nil {
 			return err
 		}
@@ -1044,7 +1039,7 @@ func (s *dealService) checkProvider(
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := s.checkProvider(env, cfg, gotCont)
+			err := s.checkProvider(env, ctx, cfg, gotCont)
 			if err != nil {
 				return err
 			}
@@ -1053,6 +1048,17 @@ func (s *dealService) checkProvider(
 	case step.SpawnSpec:
 		return nil
 	case step.FwdSpec:
+		gotC, err := findState(env, ctx, cfg, term.C)
+		if err != nil {
+			return err
+		}
+		gotD, err := findState(env, ctx, cfg, term.D)
+		if err != nil {
+			return err
+		}
+		if gotC.Pol() != gotD.Pol() {
+			return fmt.Errorf("polarity mismatch: c=%v, d=%v", gotC.Pol(), gotD.Pol())
+		}
 		return nil
 	default:
 		panic(step.ErrUnexpectedTermType(t))
@@ -1061,20 +1067,21 @@ func (s *dealService) checkProvider(
 
 func (s *dealService) checkClient(
 	env map[state.ID]state.Root,
+	ctx map[chnl.Name]chnl.Root,
 	cfg map[chnl.ID]chnl.Root,
 	t step.Term,
 ) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
 		// check via
-		gotA, err := findState(env, cfg, term.A.(chnl.ID))
+		gotA, err := findState(env, ctx, cfg, term.A)
 		if err != nil {
 			return err
 		}
 		return checkClient(gotA, state.OneRoot{})
 	case step.WaitSpec:
 		// check via
-		gotX, err := findState(env, cfg, term.X.(chnl.ID))
+		gotX, err := findState(env, ctx, cfg, term.X)
 		if err != nil {
 			return err
 		}
@@ -1083,10 +1090,10 @@ func (s *dealService) checkClient(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.OneRoot{}, gotX)
 		}
 		// check cont
-		return s.checkClient(env, cfg, term.Cont)
+		return s.checkClient(env, ctx, cfg, term.Cont)
 	case step.SendSpec:
 		// check via
-		gotA, err := findState(env, cfg, term.A.(chnl.ID))
+		gotA, err := findState(env, ctx, cfg, term.A)
 		if err != nil {
 			return err
 		}
@@ -1095,7 +1102,7 @@ func (s *dealService) checkClient(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.LolliRoot{}, gotA)
 		}
 		// check value
-		gotB, err := findState(env, cfg, term.B.(chnl.ID))
+		gotB, err := findState(env, ctx, cfg, term.B)
 		if err != nil {
 			s.log.Error("type checking failed",
 				slog.Any("reason", err),
@@ -1110,7 +1117,7 @@ func (s *dealService) checkClient(
 		return nil
 	case step.RecvSpec:
 		// check via
-		gotX, err := findState(env, cfg, term.X.(chnl.ID))
+		gotX, err := findState(env, ctx, cfg, term.X)
 		if err != nil {
 			return err
 		}
@@ -1119,7 +1126,7 @@ func (s *dealService) checkClient(
 			return fmt.Errorf("state mismatch: want %T, got %T", state.TensorRoot{}, gotX)
 		}
 		// check value
-		gotY, err := findState(env, cfg, term.Y.(chnl.ID))
+		gotY, err := findState(env, ctx, cfg, term.Y)
 		if err != nil {
 			return err
 		}
@@ -1128,10 +1135,10 @@ func (s *dealService) checkClient(
 			return err
 		}
 		// check cont
-		return s.checkClient(env, cfg, term.Cont)
+		return s.checkClient(env, ctx, cfg, term.Cont)
 	case step.LabSpec:
 		// check via
-		gotC, err := findState(env, cfg, term.C.(chnl.ID))
+		gotC, err := findState(env, ctx, cfg, term.C)
 		if err != nil {
 			return err
 		}
@@ -1148,7 +1155,7 @@ func (s *dealService) checkClient(
 		return nil
 	case step.CaseSpec:
 		// check via
-		gotZ, err := findState(env, cfg, term.Z.(chnl.ID))
+		gotZ, err := findState(env, ctx, cfg, term.Z)
 		if err != nil {
 			return err
 		}
@@ -1165,7 +1172,7 @@ func (s *dealService) checkClient(
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := s.checkClient(env, cfg, gotCont)
+			err := s.checkClient(env, ctx, cfg, gotCont)
 			if err != nil {
 				return err
 			}
@@ -1332,19 +1339,47 @@ func checkClient(got, want state.Root) error {
 
 func findState(
 	env map[state.ID]state.Root,
+	ctx map[chnl.Name]chnl.Root,
 	cfg map[chnl.ID]chnl.Root,
-	chID chnl.ID,
+	ph core.Placeholder,
 ) (state.Root, error) {
-	gotCh, ok := cfg[chID]
-	if !ok {
-		return nil, chnl.ErrDoesNotExist(chID)
+	var gotCh chnl.Root
+	switch val := ph.(type) {
+	case chnl.ID:
+		got, ok := cfg[val]
+		if !ok {
+			return nil, chnl.ErrDoesNotExist(val)
+		}
+		gotCh = got
+	case sym.ADT:
+		got, ok := ctx[val.Name()]
+		if !ok {
+			return nil, chnl.ErrUnknownName(val)
+		}
+		gotCh = got
 	}
 	if gotCh.St == nil {
-		return nil, chnl.ErrAlreadyClosed(chID)
+		return nil, chnl.ErrAlreadyClosed(gotCh.ID)
 	}
 	gotSt, ok := env[gotCh.StID]
 	if !ok {
 		return nil, state.ErrDoesNotExist(gotCh.StID)
 	}
 	return gotSt, nil
+}
+
+func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
+	cfg := make(map[chnl.ID]chnl.Root, len(chnls))
+	for _, ch := range chnls {
+		cfg[ch.ID] = ch
+	}
+	return cfg
+}
+
+func convertToCtx(chnls []chnl.Root) map[chnl.Name]chnl.Root {
+	ctx := make(map[chnl.Name]chnl.Root, len(chnls))
+	for _, ch := range chnls {
+		ctx[ch.Name] = ch
+	}
+	return ctx
 }

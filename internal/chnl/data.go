@@ -1,6 +1,10 @@
 package chnl
 
 import (
+	"database/sql"
+	
+	"smecalculus/rolevod/lib/id"
+
 	"smecalculus/rolevod/internal/state"
 )
 
@@ -18,8 +22,8 @@ type RefData struct {
 type rootData struct {
 	ID    string         `db:"id"`
 	Name  string         `db:"name"`
-	PreID string         `db:"pre_id"` // TODO null string
-	StID  string         `db:"st_id"`  // TODO null string
+	PreID sql.NullString `db:"pre_id"`
+	StID  sql.NullString `db:"st_id"`
 	St    *state.RefData `db:"state"`
 }
 
@@ -27,6 +31,7 @@ type rootData struct {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
+// goverter:extend smecalculus/rolevod/lib/data:NullString.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToSpec    func(SpecData) (Spec, error)
@@ -42,3 +47,23 @@ var (
 	DataToRoots   func([]rootData) ([]Root, error)
 	DataFromRoots func([]Root) ([]rootData, error)
 )
+
+func DataFromRefMap(refs map[Name]ID) []RefData {
+	var dtos []RefData
+	for name, rid := range refs {
+		dtos = append(dtos, RefData{rid.String(), name})
+	}
+	return dtos
+}
+
+func DataToRefMap(dtos []RefData) (map[Name]ID, error) {
+	refs := make(map[Name]ID, len(dtos))
+	for _, mto := range dtos {
+		dtoID, err := id.StringToID(mto.ID)
+		if err != nil {
+			return nil, err
+		}
+		refs[mto.Name] = dtoID
+	}
+	return refs, nil
+}

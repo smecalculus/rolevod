@@ -8,7 +8,6 @@ import (
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
-	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 )
@@ -195,14 +194,14 @@ func (mto FwdMsg) Validate() error {
 }
 
 type CTAMsg struct {
-	Seat string `json:"seat"`
-	Key  string `json:"key"`
+	AK  string `json:"access_key"`
+	SID string `json:"seat_id"`
 }
 
 func (mto CTAMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Seat, sym.Required...),
-		validation.Field(&mto.Key, id.Required...),
+		validation.Field(&mto.AK, id.Required...),
+		validation.Field(&mto.SID, id.Required...),
 	)
 }
 
@@ -308,8 +307,8 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: CTA,
 			CTA: &CTAMsg{
-				Seat: term.Seat.String(),
-				Key:  ak.StringFromAK(term.Key),
+				SID: term.SID.String(),
+				AK:  ak.StringFromAK(term.AK),
 			},
 		}
 	default:
@@ -419,15 +418,15 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return FwdSpec{C: c, D: d}, nil
 	case CTA:
-		key, err := ak.StringToAK(mto.CTA.Key)
+		key, err := ak.StringToAK(mto.CTA.AK)
 		if err != nil {
 			return nil, err
 		}
-		seatID, err := id.StringToID(mto.CTA.Seat)
+		seatID, err := id.StringToID(mto.CTA.SID)
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{Key: key, Seat: seatID}, nil
+		return CTASpec{AK: key, SID: seatID}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}

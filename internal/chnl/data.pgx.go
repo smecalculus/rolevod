@@ -154,6 +154,82 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	return DataToRoot(dto)
 }
 
+func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
+	if len(ids) == 0 {
+		return []Root{}, nil
+	}
+	query := `
+		WITH RECURSIVE history AS (
+			SELECT seed.*
+			FROM channels seed
+			WHERE id = $1
+			UNION ALL
+			SELECT output.*
+			FROM channels output, history input
+			WHERE output.pre_id = input.id
+		)
+		SELECT h.*
+		FROM history h
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM history
+			WHERE pre_id = h.id
+		)
+		and not exists (
+			select 1
+			from clientships
+			where pid = h.id
+			and from_id = $2
+		)`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, rid := range ids {
+		if rid.IsEmpty() {
+			return nil, id.ErrEmpty
+		}
+		batch.Queue(query, rid.String(), pid.String())
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var dtos []rootData
+	for _, rid := range ids {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dtos = append(dtos, dto)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "ctx selection succeeded", slog.Any("dtos", dtos))
+	return DataToRoots(dtos)
+}
+
 func (r *repoPgx) SelectCfg(ids []ID) (map[ID]Root, error) {
 	chnls, err := r.SelectMany(ids)
 	if err != nil {
@@ -222,4 +298,53 @@ func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
 	return DataToRoots(dtos)
+}
+
+func (r *repoPgx) TransferCtx(from ID, pids []ID, to ID) (err error) {
+	query := `
+		INSERT INTO clientships (
+			from_id, to_id, pid
+		) VALUES (
+			@from_id, @to_id, @pid
+		)`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	batch := pgx.Batch{}
+	for _, pid := range pids {
+		args := pgx.NamedArgs{
+			"from_id": from.String(),
+			"to_id":   to.String(),
+			"pid":     pid.String(),
+		}
+		batch.Queue(query, args)
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	for _, pid := range pids {
+		_, err := br.Exec()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", pid),
+			)
+		}
+	}
+	if err != nil {
+		return errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "context transfer succeeded")
+	return nil
 }
