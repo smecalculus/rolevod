@@ -45,7 +45,7 @@ type Repo interface {
 	SelectCtx(ID, []ID) ([]Root, error)
 	SelectCfg([]ID) (map[ID]Root, error)
 	SelectMany([]ID) ([]Root, error)
-	TransferCtx(from ID, pids []ID, to ID) error
+	Transfer(from ID, to ID, pids []ID) error
 }
 
 func CollectStIDs(roots []Root) []state.ID {
@@ -55,6 +55,13 @@ func CollectStIDs(roots []Root) []state.ID {
 		stIDs = append(stIDs, r.StID)
 	}
 	return stIDs
+}
+
+func Subst(cur ID, pat ID, new ID) ID {
+	if cur == pat {
+		return new
+	}
+	return cur
 }
 
 // goverter:variables
@@ -70,8 +77,12 @@ func ErrDoesNotExist(rid ID) error {
 	return fmt.Errorf("channel doesn't exist: %v", rid)
 }
 
-func ErrUnknownName(name sym.ADT) error {
-	return fmt.Errorf("unknown channel name: %v", name)
+func ErrMissingInCfg(rid ID) error {
+	return fmt.Errorf("channel missing in cfg: %v", rid)
+}
+
+func ErrMissingInCtx(name sym.ADT) error {
+	return fmt.Errorf("channel missing in ctx: %v", name)
 }
 
 func ErrAlreadyClosed(rid ID) error {

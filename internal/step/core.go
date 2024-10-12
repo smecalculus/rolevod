@@ -202,6 +202,14 @@ type Repo[T Root] interface {
 	SelectByVID(chnl.ID) (*T, error)
 }
 
+type Repo2 interface {
+	Insert(Root) error
+	SelectAll() ([]Ref, error)
+	SelectByID(ID) (Root, error)
+	SelectByPID(chnl.ID) (Root, error)
+	SelectByVID(chnl.ID) (Root, error)
+}
+
 // TODO собирать в set, чтобы не было дублей
 func CollectChnlIDs(t Term, ids []chnl.ID) []chnl.ID {
 	switch term := t.(type) {

@@ -2,6 +2,7 @@ package chnl
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 
@@ -205,18 +206,20 @@ func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
 				slog.Any("reason", err),
 				slog.Any("id", rid),
 			)
+			return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 		}
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
 				slog.Any("id", rid),
 			)
+			return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 		}
 		dtos = append(dtos, dto)
-	}
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
 	err = br.Close()
 	if err != nil {
@@ -300,7 +303,7 @@ func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
 	return DataToRoots(dtos)
 }
 
-func (r *repoPgx) TransferCtx(from ID, pids []ID, to ID) (err error) {
+func (r *repoPgx) Transfer(from ID, to ID, pids []ID) (err error) {
 	query := `
 		INSERT INTO clientships (
 			from_id, to_id, pid
@@ -315,7 +318,7 @@ func (r *repoPgx) TransferCtx(from ID, pids []ID, to ID) (err error) {
 	batch := pgx.Batch{}
 	for _, pid := range pids {
 		args := pgx.NamedArgs{
-			"from_id": from.String(),
+			"from_id": sql.NullString{String: from.String(), Valid: !from.IsEmpty()},
 			"to_id":   to.String(),
 			"pid":     pid.String(),
 		}

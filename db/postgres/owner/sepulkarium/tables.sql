@@ -21,14 +21,6 @@ CREATE TABLE deals (
 	name varchar(64)
 );
 
-CREATE TABLE participations (
-	id varchar(20),
-	deal_id varchar(20),
-	seat_id varchar(20),
-	pak varchar(36),
-	cak varchar(36)
-);
-
 CREATE TABLE states (
 	id varchar(20),
 	kind smallint,
@@ -61,9 +53,9 @@ CREATE TABLE kinships (
 );
 
 CREATE TABLE clientships (
-	pid varchar(20),
+	from_id varchar(20),
 	to_id varchar(20),
-	from_id varchar(20)
+	pid varchar(20)
 );
 
 CREATE TABLE aliases (

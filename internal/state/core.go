@@ -305,3 +305,7 @@ func ErrUnexpectedRootType(v Root) error {
 func ErrDoesNotExist(rid ID) error {
 	return fmt.Errorf("state doesn't exist: %v", rid)
 }
+
+func ErrRootTypeMismatch(got, want Root) error {
+	return fmt.Errorf("state type mismatch: want %T, got %T", want, got)
+}
