@@ -13,22 +13,22 @@ import (
 )
 
 // Adapter
-type repoPgx[T Root] struct {
+type repoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newRepoPgx[T Root](p *pgxpool.Pool, l *slog.Logger) *repoPgx[T] {
-	name := slog.String("name", "stepRepoPgx[T]")
-	return &repoPgx[T]{p, l.With(name)}
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+	name := slog.String("name", "stepRepoPgx")
+	return &repoPgx{p, l.With(name)}
 }
 
 // for compilation purposes
-func newRepo[T Root]() Repo[T] {
-	return &repoPgx[T]{}
+func newRepo() Repo {
+	return &repoPgx{}
 }
 
-func (r *repoPgx[T]) Insert(root Root) error {
+func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -60,11 +60,11 @@ func (r *repoPgx[T]) Insert(root Root) error {
 	return tx.Commit(ctx)
 }
 
-func (r *repoPgx[T]) SelectAll() ([]Ref, error) {
+func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return nil, nil
 }
 
-func (r *repoPgx[T]) SelectByID(rid ID) (*T, error) {
+func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
 			id, kind, pid, vid, ctx term
@@ -73,7 +73,7 @@ func (r *repoPgx[T]) SelectByID(rid ID) (*T, error) {
 	return r.execute(query, rid.String())
 }
 
-func (r *repoPgx[T]) SelectByPID(pid chnl.ID) (*T, error) {
+func (r *repoPgx) SelectByPID(pid chnl.ID) (Root, error) {
 	query := `
 		SELECT
 			id, kind, pid, vid, ctx, term
@@ -82,7 +82,7 @@ func (r *repoPgx[T]) SelectByPID(pid chnl.ID) (*T, error) {
 	return r.execute(query, pid.String())
 }
 
-func (r *repoPgx[T]) SelectByVID(vid chnl.ID) (*T, error) {
+func (r *repoPgx) SelectByVID(vid chnl.ID) (Root, error) {
 	query := `
 		SELECT
 			id, kind, pid, vid, ctx, term
@@ -91,7 +91,7 @@ func (r *repoPgx[T]) SelectByVID(vid chnl.ID) (*T, error) {
 	return r.execute(query, vid.String())
 }
 
-func (r *repoPgx[T]) execute(query string, arg string) (*T, error) {
+func (r *repoPgx) execute(query string, arg string) (Root, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, arg)
 	if err != nil {
@@ -107,17 +107,11 @@ func (r *repoPgx[T]) execute(query string, arg string) (*T, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
-	generic, err := dataToRoot(&dto)
+	root, err := dataToRoot(&dto)
 	if err != nil {
 		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return nil, err
 	}
-	concrete, ok := generic.(T)
-	if !ok {
-		err = ErrUnexpectedRootType(generic)
-		r.log.Error("step selection failed", slog.Any("reason", err), slog.Any("dto", dto))
-		return nil, err
-	}
-	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("root", concrete))
-	return &concrete, nil
+	r.log.Log(ctx, core.LevelTrace, "step selection succeeded", slog.Any("root", root))
+	return root, nil
 }

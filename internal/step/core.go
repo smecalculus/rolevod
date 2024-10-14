@@ -3,13 +3,14 @@ package step
 import (
 	"fmt"
 
-	"smecalculus/rolevod/app/seat"
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
+
+	"smecalculus/rolevod/app/seat"
 )
 
 type ID = id.ADT
@@ -194,93 +195,12 @@ type SpawnSpec struct {
 
 func (s SpawnSpec) Via() core.Placeholder { return s.Z }
 
-type Repo[T Root] interface {
-	Insert(Root) error
-	SelectAll() ([]Ref, error)
-	SelectByID(ID) (*T, error)
-	SelectByPID(chnl.ID) (*T, error)
-	SelectByVID(chnl.ID) (*T, error)
-}
-
-type Repo2 interface {
+type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
 	SelectByPID(chnl.ID) (Root, error)
 	SelectByVID(chnl.ID) (Root, error)
-}
-
-// TODO собирать в set, чтобы не было дублей
-func CollectChnlIDs(t Term, ids []chnl.ID) []chnl.ID {
-	switch term := t.(type) {
-	case CloseSpec:
-		a, ok := term.A.(chnl.ID)
-		if !ok {
-			return ids
-		}
-		return append(ids, a)
-	case WaitSpec:
-		ids := CollectChnlIDs(term.Cont, ids)
-		x, ok := term.X.(chnl.ID)
-		if !ok {
-			return ids
-		}
-		return append(ids, x)
-	case SendSpec:
-		a, ok := term.A.(chnl.ID)
-		if ok {
-			ids = append(ids, a)
-		}
-		b, ok := term.B.(chnl.ID)
-		if ok {
-			ids = append(ids, b)
-		}
-		return ids
-	case RecvSpec:
-		x, ok := term.X.(chnl.ID)
-		if ok {
-			ids = append(ids, x)
-		}
-		y, ok := term.Y.(chnl.ID)
-		if ok {
-			ids = append(ids, y)
-		}
-		return CollectChnlIDs(term.Cont, ids)
-	case LabSpec:
-		c, ok := term.C.(chnl.ID)
-		if !ok {
-			return ids
-		}
-		return append(ids, c)
-	case CaseSpec:
-		for _, cont := range term.Conts {
-			ids = CollectChnlIDs(cont, ids)
-		}
-		z, ok := term.Z.(chnl.ID)
-		if !ok {
-			return ids
-		}
-		return append(ids, z)
-	case SpawnSpec:
-		ids := CollectChnlIDs(term.Cont, ids)
-		z, ok := term.Z.(chnl.ID)
-		if !ok {
-			return ids
-		}
-		return append(ids, z)
-	case FwdSpec:
-		c, ok := term.C.(chnl.ID)
-		if ok {
-			ids = append(ids, c)
-		}
-		d, ok := term.D.(chnl.ID)
-		if ok {
-			ids = append(ids, d)
-		}
-		return ids
-	default:
-		panic(ErrUnexpectedTermType(t))
-	}
 }
 
 func Subst(t Term, ph core.Placeholder, val chnl.ID) Term {
@@ -300,30 +220,38 @@ func Subst(t Term, ph core.Placeholder, val chnl.ID) Term {
 		term.Cont = Subst(term.Cont, ph, val)
 		return term
 	default:
-		panic(ErrUnexpectedTermType(t))
+		panic(ErrTermTypeUnexpected(t))
 	}
 }
 
-func ErrUnexpectedRootType(s Root) error {
-	return fmt.Errorf("unexpected root type: %T", s)
+func ErrDoesNotExist(want ID) error {
+	return fmt.Errorf("root doesn't exist: %v", want)
 }
 
-func ErrUnexpectedTermType(t Term) error {
-	return fmt.Errorf("unexpected term type: %T", t)
+func ErrRootTypeUnexpected(got Root) error {
+	return fmt.Errorf("root type unexpected: %T", got)
 }
 
-func ErrTermMismatch(got, want Term) error {
-	return fmt.Errorf("term mismatch: want %T, got %T", want, got)
+func ErrRootTypeMismatch(got, want Root) error {
+	return fmt.Errorf("root type mismatch: want %T, got %T", want, got)
 }
 
-func ErrUnexpectedValType(v Value) error {
-	return fmt.Errorf("unexpected value type: %T", v)
+func ErrTermTypeUnexpected(got Term) error {
+	return fmt.Errorf("term type unexpected: %T", got)
 }
 
-func ErrUnexpectedContType(c Continuation) error {
-	return fmt.Errorf("unexpected continuation type: %T", c)
+func ErrTermTypeMismatch(got, want Term) error {
+	return fmt.Errorf("term type mismatch: want %T, got %T", want, got)
 }
 
-func ErrDoesNotExist(rid ID) error {
-	return fmt.Errorf("step root doesn't exist: %v", rid)
+func ErrTermValueNil(pid chnl.ID) error {
+	return fmt.Errorf("proc %q term is nil", pid)
+}
+
+func ErrValTypeUnexpected(got Value) error {
+	return fmt.Errorf("value type unexpected: %T", got)
+}
+
+func ErrContTypeUnexpected(got Continuation) error {
+	return fmt.Errorf("continuation type unexpected: %T", got)
 }

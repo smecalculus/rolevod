@@ -279,33 +279,22 @@ func ConvertSpecToRoot(s Spec) Root {
 	}
 }
 
-func ConvertRefToRef(r Ref) Ref {
-	return r
+func ErrUnexpectedSpecType(got Spec) error {
+	return fmt.Errorf("spec type unexpected: %T", got)
 }
 
-func ConvertRootToRef(r Root) Ref {
-	if r == nil {
-		return nil
-	}
-	return r.(Ref)
+func ErrUnexpectedRefType(got Ref) error {
+	return fmt.Errorf("ref type unexpected: %T", got)
 }
 
-func ErrUnexpectedSpecType(v Spec) error {
-	return fmt.Errorf("unexpected spec type: %T", v)
+func ErrDoesNotExist(want ID) error {
+	return fmt.Errorf("root doesn't exist: %v", want)
 }
 
-func ErrUnexpectedRefType(v Ref) error {
-	return fmt.Errorf("unexpected ref type: %T", v)
-}
-
-func ErrUnexpectedRootType(v Root) error {
-	return fmt.Errorf("unexpected root type: %T", v)
-}
-
-func ErrDoesNotExist(rid ID) error {
-	return fmt.Errorf("state doesn't exist: %v", rid)
+func ErrRootTypeUnexpected(got Root) error {
+	return fmt.Errorf("root type unexpected: %T", got)
 }
 
 func ErrRootTypeMismatch(got, want Root) error {
-	return fmt.Errorf("state type mismatch: want %T, got %T", want, got)
+	return fmt.Errorf("root type mismatch: want %T, got %T", want, got)
 }

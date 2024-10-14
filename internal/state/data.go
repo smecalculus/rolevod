@@ -283,7 +283,7 @@ func statesFromRoot(dto *rootData, r Root, from string) (string, error) {
 		dto.States[stID] = st
 		return stID, nil
 	default:
-		panic(ErrUnexpectedRootType(r))
+		panic(ErrRootTypeUnexpected(r))
 	}
 }
 

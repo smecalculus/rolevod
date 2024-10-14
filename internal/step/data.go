@@ -152,7 +152,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 			Term: term,
 		}, nil
 	default:
-		panic(ErrUnexpectedRootType(root))
+		panic(ErrRootTypeUnexpected(root))
 	}
 }
 
@@ -231,7 +231,7 @@ func dataFromTerm(t Term) (termData, error) {
 			},
 		}, nil
 	default:
-		panic(ErrUnexpectedTermType(term))
+		panic(ErrTermTypeUnexpected(term))
 	}
 }
 
@@ -292,7 +292,7 @@ func dataFromValue(v Value) termData {
 			},
 		}
 	default:
-		panic(ErrUnexpectedValType(val))
+		panic(ErrValTypeUnexpected(val))
 	}
 }
 
@@ -387,7 +387,7 @@ func dataFromCont(c Continuation) (termData, error) {
 			},
 		}, nil
 	default:
-		panic(ErrUnexpectedContType(cont))
+		panic(ErrContTypeUnexpected(cont))
 	}
 }
 

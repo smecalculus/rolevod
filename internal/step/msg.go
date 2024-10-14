@@ -312,7 +312,7 @@ func MsgFromTerm(t Term) TermMsg {
 			},
 		}
 	default:
-		panic(ErrUnexpectedTermType(term))
+		panic(ErrTermTypeUnexpected(term))
 	}
 }
 
