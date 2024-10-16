@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+type Symbolizable interface {
+	Sym() ADT
+}
+
 type ADT string
 
 func (ADT) PH() {}

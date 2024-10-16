@@ -87,7 +87,7 @@ func DataFromRef(ref Ref) *RefData {
 	case WithRef, WithRoot:
 		return &RefData{K: with, ID: rid}
 	default:
-		panic(ErrUnexpectedRefType(ref))
+		panic(ErrRefTypeUnexpected(ref))
 	}
 }
 

@@ -6,6 +6,10 @@ import (
 	"github.com/rs/xid"
 )
 
+type Identifiable interface {
+	Ident() ADT
+}
+
 type ADT xid.ID
 
 func (ADT) PH() {}
@@ -41,6 +45,15 @@ func StringFromID(id ADT) string {
 func (id ADT) String() string {
 	return xid.ID(id).String()
 }
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend StringToID
+// goverter:extend StringFromID
+var (
+	StringsToIDs   func([]string) ([]ADT, error)
+	StringsFromIDs func([]ADT) []string
+)
 
 var (
 	ErrEmpty = errors.New("empty id")

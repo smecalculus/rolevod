@@ -2,16 +2,13 @@ package chnl
 
 import (
 	"database/sql"
-	
-	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/internal/state"
+	"smecalculus/rolevod/lib/id"
 )
 
 type SpecData struct {
-	Name string         `json:"name"`
-	StID string         `json:"st_id"`
-	St   *state.RefData `json:"state"`
+	Name string `json:"name"`
+	StID string `json:"st_id"`
 }
 
 type RefData struct {
@@ -24,7 +21,6 @@ type rootData struct {
 	Name  string         `db:"name"`
 	PreID sql.NullString `db:"pre_id"`
 	StID  sql.NullString `db:"st_id"`
-	St    *state.RefData `db:"state"`
 }
 
 // goverter:variables

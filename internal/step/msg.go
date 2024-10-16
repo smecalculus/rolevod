@@ -8,8 +8,6 @@ import (
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
-
-	"smecalculus/rolevod/internal/chnl"
 )
 
 type RefMsg struct {
@@ -35,10 +33,10 @@ type RootMsg struct {
 }
 
 type ProcRootMsg struct {
-	ID   string        `json:"id"`
-	PID  string        `json:"pid"`
-	Ctx  []chnl.RefMsg `json:"ctx"`
-	Term *TermMsg      `json:"term"`
+	ID   string   `json:"id"`
+	PID  string   `json:"pid"`
+	Ctx  []string `json:"ctx"`
+	Term *TermMsg `json:"term"`
 }
 
 type TermKind string
@@ -167,7 +165,7 @@ func (mto CaseMsg) Validate() error {
 
 type SpawnMsg struct {
 	Z      core.PlaceholderDTO `json:"z"`
-	Ctx    []chnl.RefMsg       `json:"ctx"`
+	Ctx    []string            `json:"ctx"`
 	Cont   TermMsg             `json:"cont"`
 	SeatID string              `json:"seat_id"`
 }
@@ -281,16 +279,11 @@ func MsgFromTerm(t Term) TermMsg {
 			},
 		}
 	case SpawnSpec:
-		// ctx := make([]chnl.RefMsg, len(term.Ctx))
-		var ctx []chnl.RefMsg
-		for name, chID := range term.Ctx {
-			ctx = append(ctx, chnl.RefMsg{ID: chID.String(), Name: name})
-		}
 		return TermMsg{
 			K: Spawn,
 			Spawn: &SpawnMsg{
 				Z:      core.DTOFromPH(term.Z),
-				Ctx:    ctx,
+				Ctx:    id.StringsFromIDs(term.Ctx),
 				Cont:   MsgFromTerm(term.Cont),
 				SeatID: term.SeatID.String(),
 			},
@@ -390,13 +383,9 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		ctx := make(map[chnl.Name]chnl.ID, len(mto.Spawn.Ctx))
-		for _, ref := range mto.Spawn.Ctx {
-			refID, err := id.StringToID(ref.ID)
-			if err != nil {
-				return nil, err
-			}
-			ctx[ref.Name] = refID
+		ctx, err := id.StringsToIDs(mto.Spawn.Ctx)
+		if err != nil {
+			return nil, err
 		}
 		cont, err := MsgToTerm(mto.Spawn.Cont)
 		if err != nil {

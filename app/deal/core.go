@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"golang.org/x/exp/maps"
-
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
-	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
@@ -131,77 +128,75 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *dealService) Involve(spec PartSpec) (step.ProcRoot, error) {
-	s.log.Debug("seat involvement started", slog.Any("spec", spec))
-	procSpec, err := s.seats.Retrieve(spec.SeatID)
+func (s *dealService) Involve(gotSpec PartSpec) (step.ProcRoot, error) {
+	s.log.Debug("seat involvement started", slog.Any("spec", gotSpec))
+	wantSpec, err := s.seats.Retrieve(gotSpec.SeatID)
 	if err != nil {
 		s.log.Error("seat selection failed",
 			slog.Any("reason", err),
-			slog.Any("id", spec.SeatID),
+			slog.Any("id", gotSpec.SeatID),
 		)
 		return step.ProcRoot{}, err
 	}
-	if len(spec.Ctx) != len(procSpec.Ctx) {
-		err := fmt.Errorf("context mismatch: want %v items, got %v items", len(procSpec.Ctx), len(spec.Ctx))
+	if len(gotSpec.Ctx) != len(wantSpec.Ctx) {
+		err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantSpec.Ctx), len(gotSpec.Ctx))
 		s.log.Error("seat involvement failed",
 			slog.Any("reason", err),
-			slog.Any("ctx", spec.Ctx),
+			slog.Any("ctx", gotSpec.Ctx),
 		)
 		return step.ProcRoot{}, err
 	}
-	procVia := chnl.Root{
+	newVia := chnl.Root{
 		ID:   id.New(),
-		Name: procSpec.Via.Name,
-		StID: procSpec.Via.StID,
-		St:   procSpec.Via.St,
+		Name: wantSpec.Via.Name,
+		StID: wantSpec.Via.StID,
 	}
-	err = s.chnls.Insert(procVia)
+	err = s.chnls.Insert(newVia)
 	if err != nil {
 		s.log.Error("via insertion failed",
 			slog.Any("reason", err),
-			slog.Any("via", procVia),
+			slog.Any("via", newVia),
 		)
 		return step.ProcRoot{}, err
 	}
-	if len(spec.Ctx) > 0 {
-		curCtx, err := s.chnls.SelectCtx(spec.OID, maps.Values(spec.Ctx))
+	if len(gotSpec.Ctx) > 0 {
+		gotCtx, err := s.chnls.SelectCtx(gotSpec.OID, gotSpec.Ctx)
 		if err != nil {
 			s.log.Error("context selection failed",
 				slog.Any("reason", err),
-				slog.Any("ctx", spec.Ctx),
+				slog.Any("ctx", gotSpec.Ctx),
 			)
 			return step.ProcRoot{}, err
 		}
-		for i, got := range curCtx {
+		for i, got := range gotCtx {
 			// TODO обеспечить порядок
 			// TODO проверять по значению, а не по ссылке
-			err = checkState(got.St, procSpec.Ctx[i].St)
+			err = state.CheckRef(got.StID, wantSpec.Ctx[i].StID)
 			if err != nil {
 				s.log.Error("type checking failed",
 					slog.Any("reason", err),
-					slog.Any("st", got.St),
 				)
 				return step.ProcRoot{}, err
 			}
 		}
-		err = s.chnls.Transfer(spec.OID, procVia.ID, maps.Values(spec.Ctx))
+		err = s.chnls.Transfer(gotSpec.OID, newVia.ID, gotSpec.Ctx)
 		if err != nil {
 			s.log.Error("context transfer failed",
 				slog.Any("reason", err),
-				slog.Any("from", spec.OID),
-				slog.Any("to", procVia.ID),
-				slog.Any("ctx", spec.Ctx),
+				slog.Any("from", gotSpec.OID),
+				slog.Any("to", newVia.ID),
+				slog.Any("ctx", gotSpec.Ctx),
 			)
 			return step.ProcRoot{}, err
 		}
 	}
 	newProc := step.ProcRoot{
 		ID:  id.New(),
-		PID: procVia.ID,
-		Ctx: spec.Ctx,
+		PID: newVia.ID,
+		Ctx: gotSpec.Ctx,
 		Term: step.CTASpec{
 			AK:  ak.New(),
-			SID: spec.SeatID,
+			SID: gotSpec.SeatID,
 		},
 	}
 	err = s.steps.Insert(newProc)
@@ -253,7 +248,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	zc, err := s.chnls.SelectByID(proc.PID)
+	providable, err := s.chnls.SelectByID(proc.PID)
 	if err != nil {
 		s.log.Error("zc selection failed",
 			slog.Any("reason", err),
@@ -261,17 +256,18 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	chnls, err := s.chnls.SelectCtx(proc.PID, maps.Values(proc.Ctx))
+	consumables, err := s.chnls.SelectCtx(proc.PID, proc.Ctx)
 	if err != nil {
 		s.log.Error("context selection failed",
 			slog.Any("reason", err),
+			slog.Any("pid", proc.PID),
 			slog.Any("ctx", proc.Ctx),
 		)
 		return err
 	}
 	// type checking
-	stIDs := chnl.CollectStIDs(append(chnls, zc))
-	env, err := s.states.SelectEnv(stIDs)
+	stIDs := chnl.CollectStIDs(append(consumables, providable))
+	states, err := s.states.SelectEnv(stIDs)
 	if err != nil {
 		s.log.Error("env selection failed",
 			slog.Any("reason", err),
@@ -279,16 +275,17 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	ctx := convertToCtx(chnls)
-	cfg := convertToCfg(append(chnls, zc))
-	if spec.Term.Via() == spec.PID {
-		s.checkProvider(env, ctx, cfg, spec.Term)
+	ctx := join(consumables, states)
+	zc := state.ZC{Z: providable.ID, C: states[providable.StID]}
+	if spec.PID == spec.Term.Via() {
+		s.checkProvider(ctx, zc, spec.Term)
 	} else {
-		s.checkClient(env, ctx, cfg, spec.Term)
+		s.checkClient(ctx, zc, spec.Term)
 	}
 	// step taking
+	cfg := convertToCfg(append(consumables, providable))
 	proc.Term = spec.Term
-	return s.takeProcWith(proc, cfg, env)
+	return s.takeProcWith(proc, cfg, states)
 }
 
 func (s *dealService) takeProc(
@@ -303,7 +300,7 @@ func (s *dealService) takeProc(
 		)
 		return err
 	}
-	ctx, err := s.chnls.SelectCtx(proc.PID, maps.Values(proc.Ctx))
+	ctx, err := s.chnls.SelectCtx(proc.PID, proc.Ctx)
 	if err != nil {
 		s.log.Error("context selection failed",
 			slog.Any("reason", err),
@@ -395,7 +392,7 @@ func (s *dealService) takeProcWith(
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			St:    nil,
+			StID:  id.Empty(),
 		}
 		err = s.chnls.Insert(finVia)
 		if err != nil {
@@ -471,7 +468,7 @@ func (s *dealService) takeProcWith(
 				ID:    id.New(),
 				Name:  curVia.Name,
 				PreID: curVia.ID,
-				St:    nil,
+				StID:  id.Empty(),
 			}
 			err = s.chnls.Insert(finVia)
 			if err != nil {
@@ -487,27 +484,27 @@ func (s *dealService) takeProcWith(
 				Term: term.Cont,
 			}
 		case step.FwdSpec:
-			c, ok := cfg[val.C.(chnl.ID)]
+			d, ok := val.D.(chnl.ID)
 			if !ok {
-				err = chnl.ErrMissingInCfg(c.ID)
+				err = chnl.ErrNotAnID(val.D)
 				s.log.Error("transition taking failed",
 					slog.Any("reason", err),
 				)
 				return err
 			}
-			err := s.chnls.Transfer(msg.PID, msg.PID, []chnl.ID{c.ID})
+			err := s.chnls.Transfer(msg.PID, proc.PID, []chnl.ID{d})
 			if err != nil {
 				s.log.Error("channel transfer failed",
 					slog.Any("reason", err),
-					slog.Any("id", c.ID),
+					slog.Any("id", d),
 				)
 				return err
 			}
 			newProc = step.ProcRoot{
 				ID:   id.New(),
 				PID:  proc.PID,
-				Ctx:  map[string]id.ADT{c.Name: c.ID},
-				Term: step.Subst(term, val.D, c.ID),
+				Ctx:  []chnl.ID{d},
+				Term: step.Subst(term, val.C, d),
 			}
 		default:
 			panic(step.ErrValTypeUnexpected(msg.Val))
@@ -580,7 +577,6 @@ func (s *dealService) takeProcWith(
 			Name:  curVia.Name,
 			PreID: curVia.ID,
 			StID:  st.(state.Prod).Next().RID(),
-			St:    st.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -612,7 +608,7 @@ func (s *dealService) takeProcWith(
 		newProc := step.ProcRoot{
 			ID:   id.New(),
 			PID:  chnl.Subst(srv.PID, curVia.ID, newVia.ID),
-			Ctx:  map[string]id.ADT{b.Name: b.ID},
+			Ctx:  []chnl.ID{b.ID},
 			Term: recv.Cont,
 		}
 		return s.takeProc(newProc)
@@ -682,7 +678,6 @@ func (s *dealService) takeProcWith(
 			Name:  curVia.Name,
 			PreID: curVia.ID,
 			StID:  curSt.(state.Prod).Next().RID(),
-			St:    curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -783,7 +778,6 @@ func (s *dealService) takeProcWith(
 			Name:  curVia.Name,
 			PreID: curVia.ID,
 			StID:  curSt.(state.Sum).Next(term.L).RID(),
-			St:    curSt.(state.Sum).Next(term.L),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -866,7 +860,6 @@ func (s *dealService) takeProcWith(
 			Name:  curVia.Name,
 			PreID: curVia.ID,
 			StID:  curSt.(state.Sum).Next(val.L).RID(),
-			St:    curSt.(state.Sum).Next(val.L),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -919,7 +912,7 @@ func (s *dealService) takeProcWith(
 		}
 		curSt, ok := env[viaCh.StID]
 		if !ok {
-			err = state.ErrDoesNotExist(viaCh.StID)
+			err = state.ErrMissingInEnv(viaCh.StID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -956,7 +949,7 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  map[string]chnl.ID{c.Name: c.ID},
+					Ctx:  []chnl.ID{c.ID},
 					Term: step.Subst(sem.Cont, term.D, c.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -981,7 +974,7 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  map[string]chnl.ID{d.Name: d.ID},
+					Ctx:  []chnl.ID{d.ID},
 					Term: step.Subst(sem.Val, term.C, d.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -1028,7 +1021,7 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  map[string]chnl.ID{d.Name: d.ID},
+					Ctx:  []chnl.ID{d.ID},
 					Term: step.Subst(sem.Cont, term.C, d.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -1053,7 +1046,7 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  map[string]chnl.ID{c.Name: c.ID},
+					Ctx:  []chnl.ID{c.ID},
 					Term: step.Subst(sem.Val, term.D, c.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -1079,7 +1072,7 @@ func (s *dealService) takeProcWith(
 				panic(step.ErrRootTypeUnexpected(curSem))
 			}
 		default:
-			panic(state.ErrUnexpectedPolarity(curSt.Pol()))
+			panic(state.ErrPolarityUnexpected(curSt))
 		}
 	default:
 		panic(step.ErrTermTypeUnexpected(proc.Term))
@@ -1115,7 +1108,7 @@ type PartSpec struct {
 	SeatID seat.ID
 	// Owner ID
 	OID chnl.ID
-	Ctx map[chnl.Name]chnl.ID
+	Ctx []chnl.ID
 }
 
 // Transition
@@ -1129,52 +1122,40 @@ type TranSpec struct {
 	Term step.Term
 }
 
+// func (s *dealService) retrieveCtx() state.Context {
+// }
+
 // aka checkExp
 func (s *dealService) checkProvider(
-	env map[state.ID]state.Root,
-	ctx map[chnl.Name]chnl.Root,
-	cfg map[chnl.ID]chnl.Root,
+	ctx state.Context,
+	zc state.ZC,
 	t step.Term,
 ) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
-		// check via
-		gotA, err := findState(env, ctx, cfg, term.A)
-		if err != nil {
-			return err
+		if len(ctx.Linear) > 0 {
+			return fmt.Errorf("context mismatch: want 0 items, got %v items", len(ctx.Linear))
 		}
-		return checkProvider(gotA, state.OneRoot{})
+		// check via
+		return state.CheckRoot(zc.C, state.OneRoot{})
 	case step.WaitSpec:
-		// check via
-		gotX, err := findState(env, ctx, cfg, term.X)
-		if err != nil {
-			return err
-		}
-		_, ok := gotX.(state.OneRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(gotX, state.OneRoot{})
-		}
-		// check cont
-		return s.checkProvider(env, ctx, cfg, term.Cont)
+		return step.ErrTermTypeMismatch(t, step.CloseSpec{})
 	case step.SendSpec:
 		// check via
-		gotA, err := findState(env, ctx, cfg, term.A)
-		if err != nil {
-			return err
-		}
-		want, ok := gotA.(state.TensorRoot)
+		want, ok := zc.C.(state.TensorRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotA, state.TensorRoot{})
+			return state.ErrRootTypeMismatch(zc.C, want)
 		}
 		// check value
-		gotB, err := findState(env, ctx, cfg, term.B)
-		if err != nil {
+		gotB, ok := ctx.Linear[term.B]
+		if !ok {
+			err := chnl.ErrMissingInCtx(term.B)
 			s.log.Error("type checking failed",
 				slog.Any("reason", err),
 			)
 			return err
 		}
-		err = checkProvider(gotB, want.B)
+		err := state.CheckRoot(gotB, want.B)
 		if err != nil {
 			return err
 		}
@@ -1182,34 +1163,26 @@ func (s *dealService) checkProvider(
 		return nil
 	case step.RecvSpec:
 		// check via
-		gotX, err := findState(env, ctx, cfg, term.X)
-		if err != nil {
-			return err
-		}
-		want, ok := gotX.(state.LolliRoot)
+		want, ok := zc.C.(state.LolliRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotX, state.LolliRoot{})
+			return state.ErrRootTypeMismatch(zc.C, want)
 		}
 		// check value
-		gotY, err := findState(env, ctx, cfg, term.Y)
-		if err != nil {
-			return err
+		gotY, ok := ctx.Linear[term.Y]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.Y)
 		}
-		err = checkProvider(gotY, want.Y)
+		err := state.CheckRoot(gotY, want.Y)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkProvider(env, ctx, cfg, term.Cont)
+		return s.checkProvider(ctx, zc, term.Cont)
 	case step.LabSpec:
 		// check via
-		gotC, err := findState(env, ctx, cfg, term.C)
-		if err != nil {
-			return err
-		}
-		want, ok := gotC.(state.PlusRoot)
+		want, ok := zc.C.(state.PlusRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotC, state.PlusRoot{})
+			return state.ErrRootTypeMismatch(zc.C, want)
 		}
 		// check label
 		_, ok = want.Choices[term.L]
@@ -1220,13 +1193,9 @@ func (s *dealService) checkProvider(
 		return nil
 	case step.CaseSpec:
 		// check via
-		gotZ, err := findState(env, ctx, cfg, term.Z)
-		if err != nil {
-			return err
-		}
-		want, ok := gotZ.(state.WithRoot)
+		want, ok := zc.C.(state.WithRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotZ, state.WithRoot{})
+			return state.ErrRootTypeMismatch(zc.C, want)
 		}
 		// check conts
 		if len(term.Conts) != len(want.Choices) {
@@ -1237,25 +1206,22 @@ func (s *dealService) checkProvider(
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := s.checkProvider(env, ctx, cfg, gotCont)
+			err := s.checkProvider(ctx, zc, gotCont)
 			if err != nil {
 				return err
 			}
 		}
 		return nil
-	case step.SpawnSpec:
-		return nil
 	case step.FwdSpec:
-		gotC, err := findState(env, ctx, cfg, term.C)
-		if err != nil {
-			return err
+		if len(ctx.Linear) != 1 {
+			return fmt.Errorf("context mismatch: want 1 item, got %v items", len(ctx.Linear))
 		}
-		gotD, err := findState(env, ctx, cfg, term.D)
-		if err != nil {
-			return err
+		gotD, ok := ctx.Linear[term.D]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.D)
 		}
-		if gotC.Pol() != gotD.Pol() {
-			return fmt.Errorf("polarity mismatch: want C==D, got %v!=%v", gotC.Pol(), gotD.Pol())
+		if zc.C.Pol() != gotD.Pol() {
+			return state.ErrPolarityMismatch(zc.C, gotD)
 		}
 		return nil
 	default:
@@ -1264,50 +1230,41 @@ func (s *dealService) checkProvider(
 }
 
 func (s *dealService) checkClient(
-	env map[state.ID]state.Root,
-	ctx map[chnl.Name]chnl.Root,
-	cfg map[chnl.ID]chnl.Root,
+	ctx state.Context,
+	zc state.ZC,
 	t step.Term,
 ) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
-		// check via
-		gotA, err := findState(env, ctx, cfg, term.A)
-		if err != nil {
-			return err
-		}
-		return checkClient(gotA, state.OneRoot{})
+		return step.ErrTermTypeMismatch(t, step.WaitSpec{})
 	case step.WaitSpec:
 		// check via
-		gotX, err := findState(env, ctx, cfg, term.X)
-		if err != nil {
-			return err
-		}
-		_, ok := gotX.(state.OneRoot)
+		gotX, ok := ctx.Linear[term.X]
 		if !ok {
-			return state.ErrRootTypeMismatch(gotX, state.OneRoot{})
+			return chnl.ErrMissingInCtx(term.X)
+		}
+		want, ok := gotX.(state.OneRoot)
+		if !ok {
+			return state.ErrRootTypeMismatch(gotX, want)
 		}
 		// check cont
-		return s.checkClient(env, ctx, cfg, term.Cont)
+		return s.checkClient(ctx, zc, term.Cont)
 	case step.SendSpec:
 		// check via
-		gotA, err := findState(env, ctx, cfg, term.A)
-		if err != nil {
-			return err
+		gotA, ok := ctx.Linear[term.A]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.A)
 		}
 		want, ok := gotA.(state.LolliRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotA, state.LolliRoot{})
+			return state.ErrRootTypeMismatch(gotA, want)
 		}
 		// check value
-		gotB, err := findState(env, ctx, cfg, term.B)
-		if err != nil {
-			s.log.Error("type checking failed",
-				slog.Any("reason", err),
-			)
-			return err
+		gotB, ok := ctx.Linear[term.B]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.B)
 		}
-		err = checkProvider(gotB, want.Y)
+		err := state.CheckRoot(gotB, want.Y)
 		if err != nil {
 			return err
 		}
@@ -1315,34 +1272,34 @@ func (s *dealService) checkClient(
 		return nil
 	case step.RecvSpec:
 		// check via
-		gotX, err := findState(env, ctx, cfg, term.X)
-		if err != nil {
-			return err
+		gotX, ok := ctx.Linear[term.X]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.X)
 		}
 		want, ok := gotX.(state.TensorRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotX, state.TensorRoot{})
+			return state.ErrRootTypeMismatch(gotX, want)
 		}
 		// check value
-		gotY, err := findState(env, ctx, cfg, term.Y)
-		if err != nil {
-			return err
+		gotY, ok := ctx.Linear[term.Y]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.Y)
 		}
-		err = checkProvider(gotY, want.B)
+		err := state.CheckRoot(gotY, want.B)
 		if err != nil {
 			return err
 		}
 		// check cont
-		return s.checkClient(env, ctx, cfg, term.Cont)
+		return s.checkClient(ctx, zc, term.Cont)
 	case step.LabSpec:
 		// check via
-		gotC, err := findState(env, ctx, cfg, term.C)
-		if err != nil {
-			return err
+		gotC, ok := ctx.Linear[term.C]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.C)
 		}
 		want, ok := gotC.(state.WithRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotC, state.WithRoot{})
+			return state.ErrRootTypeMismatch(gotC, want)
 		}
 		// check label
 		_, ok = want.Choices[term.L]
@@ -1353,13 +1310,13 @@ func (s *dealService) checkClient(
 		return nil
 	case step.CaseSpec:
 		// check via
-		gotZ, err := findState(env, ctx, cfg, term.Z)
-		if err != nil {
-			return err
+		gotZ, ok := ctx.Linear[term.Z]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.Z)
 		}
 		want, ok := gotZ.(state.PlusRoot)
 		if !ok {
-			return state.ErrRootTypeMismatch(gotZ, state.PlusRoot{})
+			return state.ErrRootTypeMismatch(gotZ, want)
 		}
 		// check conts
 		if len(term.Conts) != len(want.Choices) {
@@ -1370,7 +1327,7 @@ func (s *dealService) checkClient(
 			if !ok {
 				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
 			}
-			err := s.checkClient(env, ctx, cfg, gotCont)
+			err := s.checkClient(ctx, zc, gotCont)
 			if err != nil {
 				return err
 			}
@@ -1379,191 +1336,20 @@ func (s *dealService) checkClient(
 	case step.SpawnSpec:
 		return nil
 	case step.FwdSpec:
+		if len(ctx.Linear) != 1 {
+			return fmt.Errorf("context mismatch: want 1 item, got %v items", len(ctx.Linear))
+		}
+		gotC, ok := ctx.Linear[term.C]
+		if !ok {
+			return chnl.ErrMissingInCtx(term.C)
+		}
+		if gotC.Pol() != zc.C.Pol() {
+			return state.ErrPolarityMismatch(gotC, zc.C)
+		}
 		return nil
 	default:
 		panic(step.ErrTermTypeUnexpected(t))
 	}
-}
-
-func checkState(got, want state.Ref) error {
-	if got != want {
-		return fmt.Errorf("state mismatch: want %+v, got %+v", want, got)
-	}
-	return nil
-}
-
-// aka eqtp
-func checkProvider(got, want state.Root) error {
-	switch wantSt := want.(type) {
-	case state.OneRoot:
-		_, ok := got.(state.OneRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		return nil
-	case state.TensorRoot:
-		gotSt, ok := got.(state.TensorRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		err := checkProvider(gotSt.B, wantSt.B)
-		if err != nil {
-			return err
-		}
-		return checkProvider(gotSt.C, wantSt.C)
-	case state.LolliRoot:
-		gotSt, ok := got.(state.LolliRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		err := checkProvider(gotSt.Y, wantSt.Y)
-		if err != nil {
-			return err
-		}
-		return checkProvider(gotSt.Z, wantSt.Z)
-	case state.PlusRoot:
-		gotSt, ok := got.(state.PlusRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		if len(gotSt.Choices) != len(wantSt.Choices) {
-			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
-		}
-		for wantLab, wantChoice := range wantSt.Choices {
-			gotChoice, ok := gotSt.Choices[wantLab]
-			if !ok {
-				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
-			}
-			err := checkProvider(gotChoice, wantChoice)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	case state.WithRoot:
-		gotSt, ok := got.(state.WithRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		if len(gotSt.Choices) != len(wantSt.Choices) {
-			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
-		}
-		for wantLab, wantChoice := range wantSt.Choices {
-			gotChoice, ok := gotSt.Choices[wantLab]
-			if !ok {
-				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
-			}
-			err := checkProvider(gotChoice, wantChoice)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	default:
-		panic(state.ErrRootTypeUnexpected(want))
-	}
-}
-
-func checkClient(got, want state.Root) error {
-	switch wantSt := want.(type) {
-	case state.OneRoot:
-		_, ok := got.(state.OneRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		return nil
-	case state.TensorRoot:
-		gotSt, ok := got.(state.LolliRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		err := checkClient(gotSt.Y, wantSt.B)
-		if err != nil {
-			return err
-		}
-		return checkClient(gotSt.Z, wantSt.C)
-	case state.LolliRoot:
-		gotSt, ok := got.(state.TensorRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		err := checkClient(gotSt.B, wantSt.Y)
-		if err != nil {
-			return err
-		}
-		return checkClient(gotSt.C, wantSt.Z)
-	case state.PlusRoot:
-		gotSt, ok := got.(state.WithRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		if len(gotSt.Choices) != len(wantSt.Choices) {
-			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
-		}
-		for wantLab, wantChoice := range wantSt.Choices {
-			gotChoice, ok := gotSt.Choices[wantLab]
-			if !ok {
-				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
-			}
-			err := checkClient(gotChoice, wantChoice)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	case state.WithRoot:
-		gotSt, ok := got.(state.PlusRoot)
-		if !ok {
-			return state.ErrRootTypeMismatch(got, want)
-		}
-		if len(gotSt.Choices) != len(wantSt.Choices) {
-			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
-		}
-		for wantLab, wantChoice := range wantSt.Choices {
-			gotChoice, ok := gotSt.Choices[wantLab]
-			if !ok {
-				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
-			}
-			err := checkClient(gotChoice, wantChoice)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	default:
-		panic(state.ErrRootTypeUnexpected(want))
-	}
-}
-
-func findState(
-	env map[state.ID]state.Root,
-	ctx map[chnl.Name]chnl.Root,
-	cfg map[chnl.ID]chnl.Root,
-	ph core.Placeholder,
-) (state.Root, error) {
-	var gotCh chnl.Root
-	switch val := ph.(type) {
-	case chnl.ID:
-		got, ok := cfg[val]
-		if !ok {
-			return nil, chnl.ErrMissingInCfg(val)
-		}
-		gotCh = got
-	case sym.ADT:
-		got, ok := ctx[val.Name()]
-		if !ok {
-			return nil, chnl.ErrMissingInCtx(val)
-		}
-		gotCh = got
-	}
-	if gotCh.St == nil {
-		return nil, chnl.ErrAlreadyClosed(gotCh.ID)
-	}
-	gotSt, ok := env[gotCh.StID]
-	if !ok {
-		return nil, state.ErrDoesNotExist(gotCh.StID)
-	}
-	return gotSt, nil
 }
 
 func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
@@ -1574,10 +1360,10 @@ func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
 	return cfg
 }
 
-func convertToCtx(chnls []chnl.Root) map[chnl.Name]chnl.Root {
-	ctx := make(map[chnl.Name]chnl.Root, len(chnls))
+func join(chnls []chnl.Root, states map[state.ID]state.Root) state.Context {
+	linear := make(map[core.Placeholder]state.Root, len(chnls))
 	for _, ch := range chnls {
-		ctx[ch.Name] = ch
+		linear[ch.ID] = states[ch.StID]
 	}
-	return ctx
+	return state.Context{Linear: linear}
 }

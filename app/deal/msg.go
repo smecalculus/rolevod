@@ -96,10 +96,10 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string        `json:"deal_id" param:"id"`
-	SeatID string        `json:"seat_id"`
-	OID    string        `json:"oid"`
-	Ctx    []chnl.RefMsg `json:"ctx"`
+	DealID string   `json:"deal_id" param:"id"`
+	SeatID string   `json:"seat_id"`
+	OID    string   `json:"oid"`
+	Ctx    []string `json:"ctx"`
 }
 
 func (mto PartSpecMsg) Validate() error {

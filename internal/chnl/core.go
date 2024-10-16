@@ -5,7 +5,6 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
-	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/state"
 )
@@ -17,7 +16,6 @@ type ID = id.ADT
 type Spec struct {
 	Name Name
 	StID state.ID
-	St   state.Ref
 }
 
 // aka Z
@@ -33,8 +31,6 @@ type Root struct {
 	PreID ID
 	// Channel State ID
 	StID state.ID
-	// State
-	St state.Ref
 }
 
 type Repo interface {
@@ -73,22 +69,22 @@ var (
 	ConvertRootToRef func(Root) Ref
 )
 
-func ErrDoesNotExist(rid ID) error {
-	return fmt.Errorf("channel doesn't exist: %v", rid)
+func ErrDoesNotExist(want ID) error {
+	return fmt.Errorf("channel doesn't exist: %v", want)
 }
 
-func ErrMissingInCfg(rid ID) error {
-	return fmt.Errorf("channel missing in cfg: %v", rid)
+func ErrMissingInCfg(want core.Placeholder) error {
+	return fmt.Errorf("channel missing in cfg: %v", want)
 }
 
-func ErrMissingInCtx(name sym.ADT) error {
-	return fmt.Errorf("channel missing in ctx: %v", name)
+func ErrMissingInCtx(want core.Placeholder) error {
+	return fmt.Errorf("channel missing in ctx: %v", want)
 }
 
-func ErrAlreadyClosed(rid ID) error {
-	return fmt.Errorf("channel already closed: %v", rid)
+func ErrAlreadyClosed(got ID) error {
+	return fmt.Errorf("channel already closed: %v", got)
 }
 
-func ErrNotAnID(ph core.Placeholder) error {
-	return fmt.Errorf("not a channel id: %v", ph)
+func ErrNotAnID(got core.Placeholder) error {
+	return fmt.Errorf("not a channel id: %v", got)
 }

@@ -148,7 +148,7 @@ func MsgFromSpec(s Spec) SpecMsg {
 		}
 		return SpecMsg{K: Plus, Plus: &SumMsg{Choices: choices}}
 	default:
-		panic(ErrUnexpectedSpecType(s))
+		panic(ErrSpecTypeUnexpected(s))
 	}
 }
 
@@ -199,7 +199,7 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 		}
 		return WithSpec{Choices: choices}, nil
 	default:
-		panic(ErrUnexpectedKind(mto.K))
+		panic(errKindUnexpected(mto.K))
 	}
 }
 
@@ -219,7 +219,7 @@ func MsgFromRef(ref Ref) RefMsg {
 	case WithRef, WithRoot:
 		return RefMsg{K: With, ID: id}
 	default:
-		panic(ErrUnexpectedRefType(ref))
+		panic(ErrRefTypeUnexpected(ref))
 	}
 }
 
@@ -242,14 +242,17 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 	case With:
 		return WithRef{rid}, nil
 	default:
-		panic(ErrUnexpectedKind(mto.K))
+		panic(errKindUnexpected(mto.K))
 	}
 }
-
-func ErrUnexpectedKind(k Kind) error {
-	return fmt.Errorf("unextected kind %q", k)
+func ErrPolarityUnexpected(got Root) error {
+	return fmt.Errorf("root polarity unexpected: %v", got.Pol())
 }
 
-func ErrUnexpectedPolarity(p Polarity) error {
-	return fmt.Errorf("unextected polarity: %v", p)
+func ErrPolarityMismatch(a, b Root) error {
+	return fmt.Errorf("root polarity mismatch: %v!=%v", a.Pol(), b.Pol())
+}
+
+func errKindUnexpected(got Kind) error {
+	return fmt.Errorf("kind unexpected: %v", got)
 }

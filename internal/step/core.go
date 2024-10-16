@@ -45,7 +45,7 @@ type Root interface {
 type ProcRoot struct {
 	ID   ID
 	PID  chnl.ID
-	Ctx  map[chnl.Name]chnl.ID
+	Ctx  []chnl.ID
 	Term Term
 }
 
@@ -188,7 +188,7 @@ func (s FwdSpec) Via() core.Placeholder { return s.C }
 
 type SpawnSpec struct {
 	Z      core.Placeholder
-	Ctx    map[chnl.Name]chnl.ID
+	Ctx    []chnl.ID
 	Cont   Term
 	SeatID id.ADT
 }

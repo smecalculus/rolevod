@@ -79,7 +79,6 @@ func TestTakeWaitClose(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-1",
 			StID: oneRole.St.RID(),
-			St:   oneRole.St,
 		},
 	}
 	oneSeat1, err := seatApi.Create(oneSeatSpec1)
@@ -92,7 +91,6 @@ func TestTakeWaitClose(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-2",
 			StID: oneRole.St.RID(),
-			St:   oneRole.St,
 		},
 		Ctx: []chnl.Spec{
 			oneSeat1.Via,
@@ -123,8 +121,8 @@ func TestTakeWaitClose(t *testing.T) {
 	waiterSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat2.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			oneSeat1.Via.Name: closer.PID,
+		Ctx: []chnl.ID{
+			closer.PID,
 		},
 	}
 	waiter, err := dealApi.Involve(waiterSpec)
@@ -192,7 +190,6 @@ func TestTakeRecvSend(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-1",
 			StID: lolliRole.St.RID(),
-			St:   lolliRole.St,
 		},
 	}
 	lolliSeat, err := seatApi.Create(lolliSeatSpec)
@@ -205,7 +202,6 @@ func TestTakeRecvSend(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-2",
 			StID: oneRole.St.RID(),
-			St:   oneRole.St,
 		},
 	}
 	oneSeat1, err := seatApi.Create(oneSeatSpec1)
@@ -218,7 +214,6 @@ func TestTakeRecvSend(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-3",
 			StID: oneRole.St.RID(),
-			St:   oneRole.St,
 		},
 		Ctx: []chnl.Spec{
 			lolliSeatSpec.Via,
@@ -259,9 +254,9 @@ func TestTakeRecvSend(t *testing.T) {
 	senderSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat2.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			lolliSeat.Via.Name: receiver.PID,
-			oneSeat1.Via.Name:  message.PID,
+		Ctx: []chnl.ID{
+			receiver.PID,
+			message.PID,
 		},
 	}
 	sender, err := dealApi.Involve(senderSpec)
@@ -335,7 +330,6 @@ func TestTakeCaseLab(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-1",
 			StID: withRole.St.RID(),
-			St:   withRole.St,
 		},
 	}
 	withSeat, err := seatApi.Create(withSeatSpec)
@@ -348,7 +342,6 @@ func TestTakeCaseLab(t *testing.T) {
 		Via: chnl.Spec{
 			Name: "chnl-2",
 			StID: oneRole.St.RID(),
-			St:   oneRole.St,
 		},
 		Ctx: []chnl.Spec{
 			withSeat.Via,
@@ -379,8 +372,8 @@ func TestTakeCaseLab(t *testing.T) {
 	deciderSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			withSeat.Via.Name: follower.PID,
+		Ctx: []chnl.ID{
+			follower.PID,
 		},
 	}
 	decider, err := dealApi.Involve(deciderSpec)
@@ -441,7 +434,6 @@ func TestTakeSpawn(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-1",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 		},
 	)
@@ -455,7 +447,6 @@ func TestTakeSpawn(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-2",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 			Ctx: []chnl.Spec{
 				oneSeat1.Via,
@@ -472,7 +463,6 @@ func TestTakeSpawn(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-3",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 			Ctx: []chnl.Spec{
 				oneSeat1.Via,
@@ -505,8 +495,8 @@ func TestTakeSpawn(t *testing.T) {
 	spawnerSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat2.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			oneSeat1.Via.Name: injectee.PID,
+		Ctx: []chnl.ID{
+			injectee.PID,
 		},
 	}
 	spawner, err := dealApi.Involve(spawnerSpec)
@@ -519,8 +509,8 @@ func TestTakeSpawn(t *testing.T) {
 		PID: spawner.PID,
 		Term: step.SpawnSpec{
 			Z: sym.New("z"),
-			Ctx: map[chnl.Name]chnl.ID{
-				oneSeat1.Via.Name: injectee.PID,
+			Ctx: []chnl.ID{
+				injectee.PID,
 			},
 			Cont: step.CloseSpec{
 				A: spawner.PID,
@@ -555,7 +545,6 @@ func TestTakeFwd(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-1",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 		},
 	)
@@ -569,7 +558,6 @@ func TestTakeFwd(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-2",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 			Ctx: []chnl.Spec{
 				oneSeat1.Via,
@@ -586,7 +574,6 @@ func TestTakeFwd(t *testing.T) {
 			Via: chnl.Spec{
 				Name: "chnl-3",
 				StID: oneRole.St.RID(),
-				St:   oneRole.St,
 			},
 			Ctx: []chnl.Spec{
 				oneSeat1.Via,
@@ -618,8 +605,8 @@ func TestTakeFwd(t *testing.T) {
 	forwarderSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat2.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			oneSeat1.Via.Name: closer.PID,
+		Ctx: []chnl.ID{
+			closer.PID,
 		},
 	}
 	forwarder, err := dealApi.Involve(forwarderSpec)
@@ -630,8 +617,8 @@ func TestTakeFwd(t *testing.T) {
 	waiterSpec := deal.PartSpec{
 		DealID: bigDeal.ID,
 		SeatID: oneSeat3.ID,
-		Ctx: map[chnl.Name]chnl.ID{
-			oneSeat1.Via.Name: forwarder.PID,
+		Ctx: []chnl.ID{
+			forwarder.PID,
 		},
 	}
 	waiter, err := dealApi.Involve(waiterSpec)
@@ -656,8 +643,8 @@ func TestTakeFwd(t *testing.T) {
 		// канал пересыльщика должен закрыться?
 		PID: forwarder.PID,
 		Term: step.FwdSpec{
-			C: closer.PID,
-			D: forwarder.PID,
+			C: forwarder.PID,
+			D: closer.PID,
 		},
 	}
 	err = dealApi.Take(fwdSpec)

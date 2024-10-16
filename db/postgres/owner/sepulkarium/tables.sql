@@ -34,8 +34,7 @@ CREATE TABLE channels (
 	id varchar(20),
 	name varchar(64),
 	pre_id varchar(20),
-	st_id varchar(20),
-	state jsonb
+	st_id varchar(20)
 );
 
 CREATE TABLE steps (

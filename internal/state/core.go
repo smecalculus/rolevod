@@ -231,6 +231,15 @@ const (
 	Neg  = Polarity(-1)
 )
 
+type Context struct {
+	Linear map[core.Placeholder]Root
+}
+
+type ZC struct {
+	Z core.Placeholder
+	C Root
+}
+
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
@@ -275,20 +284,103 @@ func ConvertSpecToRoot(s Spec) Root {
 		}
 		return PlusRoot{ID: newID, Choices: choices}
 	default:
-		panic(ErrUnexpectedSpecType(spec))
+		panic(ErrSpecTypeUnexpected(spec))
 	}
 }
 
-func ErrUnexpectedSpecType(got Spec) error {
+func CheckRef(got, want ID) error {
+	if got != want {
+		return fmt.Errorf("state mismatch: want %+v, got %+v", want, got)
+	}
+	return nil
+}
+
+// aka eqtp
+func CheckRoot(got, want Root) error {
+	switch wantSt := want.(type) {
+	case OneRoot:
+		_, ok := got.(OneRoot)
+		if !ok {
+			return ErrRootTypeMismatch(got, want)
+		}
+		return nil
+	case TensorRoot:
+		gotSt, ok := got.(TensorRoot)
+		if !ok {
+			return ErrRootTypeMismatch(got, want)
+		}
+		err := CheckRoot(gotSt.B, wantSt.B)
+		if err != nil {
+			return err
+		}
+		return CheckRoot(gotSt.C, wantSt.C)
+	case LolliRoot:
+		gotSt, ok := got.(LolliRoot)
+		if !ok {
+			return ErrRootTypeMismatch(got, want)
+		}
+		err := CheckRoot(gotSt.Y, wantSt.Y)
+		if err != nil {
+			return err
+		}
+		return CheckRoot(gotSt.Z, wantSt.Z)
+	case PlusRoot:
+		gotSt, ok := got.(PlusRoot)
+		if !ok {
+			return ErrRootTypeMismatch(got, want)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
+			if !ok {
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
+			}
+			err := CheckRoot(gotChoice, wantChoice)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case WithRoot:
+		gotSt, ok := got.(WithRoot)
+		if !ok {
+			return ErrRootTypeMismatch(got, want)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
+			if !ok {
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
+			}
+			err := CheckRoot(gotChoice, wantChoice)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		panic(ErrRootTypeUnexpected(want))
+	}
+}
+
+func ErrSpecTypeUnexpected(got Spec) error {
 	return fmt.Errorf("spec type unexpected: %T", got)
 }
 
-func ErrUnexpectedRefType(got Ref) error {
+func ErrRefTypeUnexpected(got Ref) error {
 	return fmt.Errorf("ref type unexpected: %T", got)
 }
 
 func ErrDoesNotExist(want ID) error {
 	return fmt.Errorf("root doesn't exist: %v", want)
+}
+
+func ErrMissingInEnv(want ID) error {
+	return fmt.Errorf("root missing in env: %v", want)
 }
 
 func ErrRootTypeUnexpected(got Root) error {
