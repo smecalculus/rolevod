@@ -299,7 +299,7 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: CTA,
 			CTA: &CTAMsg{
-				SID: term.SID.String(),
+				SID: term.Seat.String(),
 				AK:  ak.StringFromAK(term.AK),
 			},
 		}
@@ -414,7 +414,7 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{AK: key, SID: seatID}, nil
+		return CTASpec{AK: key, Seat: seatID}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}

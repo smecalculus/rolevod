@@ -234,8 +234,8 @@ func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		ID:  id.New(),
 		PID: newPE.ID,
 		Term: step.CTASpec{
-			AK:  ak.New(),
-			SID: gotSpec.Decl,
+			AK:   ak.New(),
+			Seat: gotSpec.Decl,
 		},
 	}
 	err = s.steps.Insert(newProc)
@@ -553,6 +553,8 @@ func (s *dealService) takeProcWith(
 			if err != nil {
 				s.log.Error("channel transfer failed",
 					slog.Any("reason", err),
+					slog.Any("from", msg.PID),
+					slog.Any("to", proc.PID),
 					slog.Any("id", d),
 				)
 				return err
@@ -670,6 +672,8 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
+				slog.Any("from", proc.PID),
+				slog.Any("to", srv.PID),
 				slog.Any("id", b.ID),
 			)
 			return err
@@ -786,6 +790,8 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
+				slog.Any("from", msg.PID),
+				slog.Any("to", proc.PID),
 				slog.Any("id", b.ID),
 			)
 			return err
@@ -988,6 +994,8 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
+				slog.Any("from", id.Empty()),
+				slog.Any("to", proc.PID),
 				slog.Any("id", newPE.ID),
 			)
 			return err
@@ -996,7 +1004,7 @@ func (s *dealService) takeProcWith(
 		cfg.Add(newPE)
 		cfg.Remove(term.CEs...)
 		proc.Term = step.Subst(term.Cont, term.PE, newPE.ID)
-		return s.takeProc(proc)
+		return s.takeProcWith(proc, cfg)
 	case step.FwdSpec:
 		viaID, ok := term.C.(chnl.ID)
 		if !ok {
@@ -1026,7 +1034,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("step selection failed",
 				slog.Any("reason", err),
-				slog.Any("vud", curVia.ID),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -1050,6 +1058,8 @@ func (s *dealService) takeProcWith(
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
+						slog.Any("from", proc.PID),
+						slog.Any("to", sem.PID),
 						slog.Any("id", c.ID),
 					)
 					return err
@@ -1078,6 +1088,8 @@ func (s *dealService) takeProcWith(
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
+						slog.Any("from", proc.PID),
+						slog.Any("to", sem.PID),
 						slog.Any("id", d.ID),
 					)
 					return err
@@ -1128,6 +1140,8 @@ func (s *dealService) takeProcWith(
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
+						slog.Any("from", proc.PID),
+						slog.Any("to", sem.PID),
 						slog.Any("id", d.ID),
 					)
 					return err
@@ -1156,6 +1170,8 @@ func (s *dealService) takeProcWith(
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
+						slog.Any("from", proc.PID),
+						slog.Any("to", sem.PID),
 						slog.Any("id", c.ID),
 					)
 					return err

@@ -9,8 +9,6 @@ import (
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
-
-	"smecalculus/rolevod/app/seat"
 )
 
 type ID = id.ADT
@@ -156,13 +154,13 @@ func (CaseSpec) cont() {}
 func (s CaseSpec) Via() core.Placeholder { return s.Z }
 
 type CTASpec struct {
-	AK  ak.ADT
-	SID seat.ID
+	AK   ak.ADT
+	Seat id.ADT
 }
 
 func (s CTASpec) act() {}
 
-func (s CTASpec) Via() core.Placeholder { return s.SID }
+func (s CTASpec) Via() core.Placeholder { return s.Seat }
 
 // aka ExpName
 type LinkSpec struct {

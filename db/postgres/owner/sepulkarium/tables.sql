@@ -27,7 +27,8 @@ CREATE TABLE states (
 	from_id varchar(20),
 	fqn varchar(512),
 	pair jsonb,
-	choices jsonb
+	choices jsonb,
+	type jsonb
 );
 
 CREATE TABLE channels (
@@ -42,7 +43,6 @@ CREATE TABLE steps (
 	kind smallint,
 	pid varchar(20),
 	vid varchar(20),
-	ctx jsonb,
 	term jsonb
 );
 

@@ -76,8 +76,8 @@ type fwdData struct {
 }
 
 type ctaData struct {
-	AK  string `json:"ak"`
-	SID string `json:"sid"`
+	AK   string `json:"ak"`
+	Seat string `json:"seat_id"`
 }
 
 type termKind int
@@ -220,8 +220,8 @@ func dataFromTerm(t Term) (termData, error) {
 		return termData{
 			K: cta,
 			CTA: &ctaData{
-				SID: term.SID.String(),
-				AK:  term.AK.String(),
+				Seat: term.Seat.String(),
+				AK:   term.AK.String(),
 			},
 		}, nil
 	default:
@@ -250,11 +250,11 @@ func dataToTerm(dto termData) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		seat, err := id.StringToID(dto.CTA.SID)
+		seat, err := id.StringToID(dto.CTA.Seat)
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{SID: seat, AK: key}, nil
+		return CTASpec{Seat: seat, AK: key}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}

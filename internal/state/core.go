@@ -133,8 +133,8 @@ type Sum interface {
 
 // aka TpName
 type LinkRoot struct {
-	ID  ID
-	FQN sym.ADT
+	ID   ID
+	Role sym.ADT
 }
 
 func (LinkRoot) spec() {}
@@ -259,7 +259,7 @@ func ConvertSpecToRoot(s Spec) Root {
 		// TODO генерировать zero id или не генерировать id вообще
 		return OneRoot{ID: newID}
 	case LinkSpec:
-		return LinkRoot{ID: newID, FQN: spec.Role}
+		return LinkRoot{ID: newID, Role: spec.Role}
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,

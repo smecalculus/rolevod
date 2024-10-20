@@ -35,12 +35,12 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoot(root)
+	dto := dataFromRoot2(root)
 	query := `
 		INSERT INTO states (
-			id, kind, from_id, fqn, pair, choices
+			id, kind, from_id, fqn, pair, choices, type
 		) VALUES (
-			@id, @kind, @from_id, @fqn, @pair, @choices
+			@id, @kind, @from_id, @fqn, @pair, @choices, @type
 		)`
 	batch := pgx.Batch{}
 	for _, st := range dto.States {
@@ -51,6 +51,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 			"from_id": st.FromID,
 			"pair":    st.Pair,
 			"choices": st.Choices,
+			"type":    st.Type,
 		}
 		batch.Queue(query, sa)
 	}
@@ -96,12 +97,12 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	query := `
 		WITH RECURSIVE top_states AS (
 			SELECT
-				rs.id, rs.kind, rs.from_id, rs.fqn, rs.pair, rs.choices
+				rs.*
 			FROM states rs
 			WHERE id = $1
 			UNION ALL
 			SELECT
-				bs.id, bs.kind, bs.from_id, bs.fqn, bs.pair, bs.choices
+				bs.*
 			FROM states bs, top_states ts
 			WHERE bs.from_id = ts.id
 		)
@@ -128,7 +129,7 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	for _, dto := range dtos {
 		states[dto.ID] = dto
 	}
-	return statesToRoot(states, states[rid.String()])
+	return statesToRoot2(states, states[rid.String()])
 }
 
 func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
@@ -179,7 +180,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 				slog.Any("reason", err),
 			)
 		}
-		root, err := dataToRoot2(&rootData2{rid.String(), dtos})
+		root, err := dataToRoot(&rootData2{rid.String(), dtos})
 		if err != nil {
 			r.log.Error("dto mapping failed",
 				slog.Any("reason", err),
