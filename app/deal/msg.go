@@ -96,16 +96,16 @@ var (
 )
 
 type PartSpecMsg struct {
-	DealID string   `json:"deal_id" param:"id"`
-	SeatID string   `json:"seat_id"`
-	OID    string   `json:"oid"`
-	Ctx    []string `json:"ctx"`
+	Deal  string   `json:"deal_id" param:"id"`
+	Decl  string   `json:"seat_id"`
+	Owner string   `json:"owner_id"`
+	Ctx   []string `json:"ctx"`
 }
 
 func (mto PartSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.DealID, id.Required...),
-		validation.Field(&mto.SeatID, id.Required...),
+		validation.Field(&mto.Deal, id.Required...),
+		validation.Field(&mto.Decl, id.Required...),
 		validation.Field(&mto.Ctx, core.CtxOptional...),
 	)
 }

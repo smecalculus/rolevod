@@ -5,21 +5,22 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 )
 
 type SeatSpecMsg struct {
-	Name string         `json:"name"`
-	Via  chnl.SpecMsg   `json:"via"`
-	Ctx  []chnl.SpecMsg `json:"ctx"`
+	FQN string         `json:"name"`
+	PE  chnl.SpecMsg   `json:"pe"`
+	CEs []chnl.SpecMsg `json:"ces"`
 }
 
 func (mto SeatSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Name, core.NameRequired...),
-		validation.Field(&mto.Via, validation.Required),
-		validation.Field(&mto.Ctx, core.CtxOptional...),
+		validation.Field(&mto.FQN, sym.Required...),
+		validation.Field(&mto.PE, validation.Required),
+		validation.Field(&mto.CEs, core.CtxOptional...),
 	)
 }
 
@@ -41,8 +42,8 @@ type SeatRefMsg struct {
 type SeatRootMsg struct {
 	ID       string         `json:"id"`
 	Name     string         `json:"name"`
-	Via      chnl.SpecMsg   `json:"via"`
-	Ctx      []chnl.SpecMsg `json:"ctx"`
+	PE       chnl.SpecMsg   `json:"pe"`
+	CEs      []chnl.SpecMsg `json:"ces"`
 	Children []SeatRefMsg   `json:"children"`
 }
 

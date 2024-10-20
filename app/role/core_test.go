@@ -50,7 +50,7 @@ func (r *stateRepoFixture) SelectByID(sid id.ADT) (state.Root, error) {
 func (r *stateRepoFixture) SelectEnv(ids []id.ADT) (map[state.ID]state.Root, error) {
 	return nil, nil
 }
-func (r *stateRepoFixture) SelectMany(ids []id.ADT) ([]state.Root, error) {
+func (r *stateRepoFixture) SelectByIDs(ids []id.ADT) ([]state.Root, error) {
 	return nil, nil
 }
 

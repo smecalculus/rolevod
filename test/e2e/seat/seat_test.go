@@ -21,13 +21,13 @@ func TestMain(m *testing.M) {
 
 func TestEstablish(t *testing.T) {
 	// given
-	ps := seat.SeatSpec{Name: "parent-seat"}
+	ps := seat.SeatSpec{FQN: "parent-seat"}
 	pr, err := seatApi.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	cs := seat.SeatSpec{Name: "child-seat"}
+	cs := seat.SeatSpec{FQN: "child-seat"}
 	cr, err := seatApi.Create(cs)
 	if err != nil {
 		t.Fatal(err)

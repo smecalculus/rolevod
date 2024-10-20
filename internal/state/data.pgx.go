@@ -77,8 +77,7 @@ func (r *repoPgx) Insert(root Root) (err error) {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
-			kind,
-			id
+			kind, id
 		FROM states`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
@@ -120,41 +119,20 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, err
 	}
 	if len(dtos) == 0 {
-		return nil, fmt.Errorf("no rows selected")
+		err := fmt.Errorf("no rows selected")
+		r.log.Error("state selection failed", slog.Any("reason", err))
+		return nil, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	states := map[string]state{}
+	states := make(map[string]state, len(dtos))
 	for _, dto := range dtos {
 		states[dto.ID] = dto
 	}
 	return statesToRoot(states, states[rid.String()])
-
-	// fooId := id.New()
-	// queue := &WithRoot{
-	// 	ID: id.New(),
-	// 	Choices: map[Label]Root{
-	// 		"enq": &TensorRoot{
-	// 			ID: id.New(),
-	// 			A:  &RecurRoot{ID: fooId, Name: "Foo"},
-	// 			C:  &RecurRoot{ID: sid, Name: "Queue"},
-	// 		},
-	// 		"deq": &PlusRoot{
-	// 			ID: id.New(),
-	// 			Choices: map[Label]Root{
-	// 				"some": &LolliRoot{
-	// 					ID: id.New(),
-	// 					X:  &RecurRoot{ID: fooId, Name: "Foo"},
-	// 					Z:  &RecurRoot{ID: sid, Name: "Queue"},
-	// 				},
-	// 				"none": &OneRoot{ID: id.New()},
-	// 			},
-	// 		},
-	// 	},
-	// }
 }
 
 func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
-	states, err := r.SelectMany(ids)
+	states, err := r.SelectByIDs(ids)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +143,7 @@ func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	return env, nil
 }
 
-func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
+func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

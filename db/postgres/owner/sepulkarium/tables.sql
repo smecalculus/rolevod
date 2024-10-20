@@ -7,8 +7,8 @@ CREATE TABLE roles (
 CREATE TABLE seats (
 	id varchar(20),
 	name varchar(64),
-	via jsonb,
-	ctx jsonb
+	pe jsonb,
+	ces jsonb
 );
 
 CREATE TABLE agents (

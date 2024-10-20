@@ -4,7 +4,7 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-type SeatRefData struct {
+type seatRefData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
 }
@@ -12,9 +12,9 @@ type SeatRefData struct {
 type seatRootData struct {
 	ID       string          `db:"id"`
 	Name     string          `db:"name"`
-	Via      chnl.SpecData   `db:"via"`
-	Ctx      []chnl.SpecData `db:"ctx"`
-	Children []SeatRefData   `db:"-"`
+	PE       chnl.SpecData   `db:"pe"`
+	CEs      []chnl.SpecData `db:"ces"`
+	Children []seatRefData   `db:"-"`
 }
 
 // goverter:variables
@@ -22,17 +22,19 @@ type seatRootData struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
-	DataToSeatRef    func(SeatRefData) (SeatRef, error)
-	DataFromSeatRef  func(SeatRef) SeatRefData
-	DataToSeatRefs   func([]SeatRefData) ([]SeatRef, error)
-	DataFromSeatRefs func([]SeatRef) []SeatRefData
-	DataToSeatRoot   func(seatRootData) (SeatRoot, error)
-	DataFromSeatRoot func(SeatRoot) (seatRootData, error)
+	DataToSeatRef     func(seatRefData) (SeatRef, error)
+	DataFromSeatRef   func(SeatRef) seatRefData
+	DataToSeatRefs    func([]seatRefData) ([]SeatRef, error)
+	DataFromSeatRefs  func([]SeatRef) []seatRefData
+	DataToSeatRoot    func(seatRootData) (SeatRoot, error)
+	DataFromSeatRoot  func(SeatRoot) (seatRootData, error)
+	DataToSeatRoots   func([]seatRootData) ([]SeatRoot, error)
+	DataFromSeatRoots func([]SeatRoot) ([]seatRootData, error)
 )
 
 type kinshipRootData struct {
-	Parent   SeatRefData
-	Children []SeatRefData
+	Parent   seatRefData
+	Children []seatRefData
 }
 
 // goverter:variables

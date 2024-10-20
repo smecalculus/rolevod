@@ -1,40 +1,47 @@
 package seat
 
 import (
+	"fmt"
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
 )
 
-type Name = string
 type ID = id.ADT
+type FQN = sym.ADT
+type Name = string
 
 type SeatSpec struct {
-	Name Name
-	Via  chnl.Spec
-	Ctx  []chnl.Spec
+	// Fully Qualified Name
+	FQN sym.ADT
+	// Providable Endpoint Spec
+	PE chnl.Spec
+	// Consumable Endpoint Specs
+	CEs []chnl.Spec
 }
 
 type SeatRef struct {
-	ID   ID
+	ID ID
+	// Short Name
 	Name string
 }
 
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       ID
-	Name     Name
-	Via      chnl.Spec
-	Ctx      []chnl.Spec
+	Name     string
+	PE       chnl.Spec
+	CEs      []chnl.Spec
 	Children []SeatRef
 }
 
 type SeatApi interface {
 	Create(SeatSpec) (SeatRoot, error)
-	Retrieve(id.ADT) (SeatRoot, error)
+	Retrieve(ID) (SeatRoot, error)
 	Establish(KinshipSpec) error
 	RetreiveAll() ([]SeatRef, error)
 }
@@ -55,9 +62,9 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	s.log.Debug("seat creation started", slog.Any("spec", spec))
 	root := SeatRoot{
 		ID:   id.New(),
-		Name: spec.Name,
-		Via:  spec.Via,
-		Ctx:  spec.Ctx,
+		Name: spec.FQN.Name(),
+		PE:   spec.PE,
+		CEs:  spec.CEs,
 	}
 	err := s.seats.Insert(root)
 	if err != nil {
@@ -71,7 +78,7 @@ func (s *seatService) Create(spec SeatSpec) (SeatRoot, error) {
 	return root, nil
 }
 
-func (s *seatService) Retrieve(rid id.ADT) (SeatRoot, error) {
+func (s *seatService) Retrieve(rid ID) (SeatRoot, error) {
 	root, err := s.seats.SelectByID(rid)
 	if err != nil {
 		return SeatRoot{}, err
@@ -107,14 +114,27 @@ func (s *seatService) RetreiveAll() ([]SeatRef, error) {
 type SeatRepo interface {
 	Insert(SeatRoot) error
 	SelectAll() ([]SeatRef, error)
-	SelectByID(id.ADT) (SeatRoot, error)
-	SelectChildren(id.ADT) ([]SeatRef, error)
+	SelectByID(ID) (SeatRoot, error)
+	SelectByIDs([]ID) ([]SeatRoot, error)
+	SelectEnv([]ID) (map[ID]SeatRoot, error)
+	SelectChildren(ID) ([]SeatRef, error)
+}
+
+func CollectStIDs(seats []SeatRoot) []state.ID {
+	stateIDs := []state.ID{}
+	for _, s := range seats {
+		stateIDs = append(stateIDs, s.PE.StID)
+		for _, v := range s.CEs {
+			stateIDs = append(stateIDs, v.StID)
+		}
+	}
+	return stateIDs
 }
 
 // Kinship Relation
 type KinshipSpec struct {
-	ParentID id.ADT
-	ChildIDs []id.ADT
+	ParentID ID
+	ChildIDs []ID
 }
 
 type KinshipRoot struct {
@@ -132,3 +152,7 @@ type kinshipRepo interface {
 var (
 	ConvertRootToRef func(SeatRoot) SeatRef
 )
+
+func ErrRootMissingInEnv(rid ID) error {
+	return fmt.Errorf("root missing in env: %v", rid)
+}

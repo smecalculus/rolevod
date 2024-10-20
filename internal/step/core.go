@@ -203,6 +203,86 @@ type Repo interface {
 	SelectByVID(chnl.ID) (Root, error)
 }
 
+func CollectEnv(t Term) []id.ADT {
+	return collectEnvRec(t, []id.ADT{})
+}
+
+func collectEnvRec(t Term, env []id.ADT) []id.ADT {
+	switch term := t.(type) {
+	case RecvSpec:
+		return collectEnvRec(term.Cont, env)
+	case CaseSpec:
+		for _, cont := range term.Conts {
+			env = collectEnvRec(cont, env)
+		}
+		return env
+	case SpawnSpec:
+		return collectEnvRec(term.Cont, append(env, term.SeatID))
+	default:
+		return env
+	}
+}
+
+func CollectCtx(pid chnl.ID, t Term) []chnl.ID {
+	return collectCtxRec(pid, t, nil)
+}
+
+func collectCtxRec(pid chnl.ID, t Term, ctx []chnl.ID) []chnl.ID {
+	switch term := t.(type) {
+	case WaitSpec:
+		x, ok := term.X.(chnl.ID)
+		if ok && x != pid {
+			ctx = append(ctx, x)
+		}
+		return collectCtxRec(pid, term.Cont, ctx)
+	case SendSpec:
+		a, ok := term.A.(chnl.ID)
+		if ok && a != pid {
+			ctx = append(ctx, a)
+		}
+		b, ok := term.B.(chnl.ID)
+		if ok {
+			ctx = append(ctx, b)
+		}
+		return ctx
+	case RecvSpec:
+		x, ok := term.X.(chnl.ID)
+		if ok && x != pid {
+			ctx = append(ctx, x)
+		}
+		y, ok := term.Y.(chnl.ID)
+		if ok {
+			ctx = append(ctx, y)
+		}
+		return collectCtxRec(pid, term.Cont, ctx)
+	case LabSpec:
+		c, ok := term.C.(chnl.ID)
+		if ok && c != pid {
+			ctx = append(ctx, c)
+		}
+		return ctx
+	case CaseSpec:
+		z, ok := term.Z.(chnl.ID)
+		if ok && z != pid {
+			ctx = append(ctx, z)
+		}
+		for _, cont := range term.Conts {
+			ctx = collectCtxRec(pid, cont, ctx)
+		}
+		return ctx
+	case FwdSpec:
+		d, ok := term.D.(chnl.ID)
+		if ok {
+			ctx = append(ctx, d)
+		}
+		return ctx
+	case SpawnSpec:
+		return collectCtxRec(pid, term.Cont, append(ctx, term.Ctx...))
+	default:
+		return ctx
+	}
+}
+
 func Subst(t Term, ph core.Placeholder, val chnl.ID) Term {
 	if t == nil {
 		return nil
@@ -218,6 +298,14 @@ func Subst(t Term, ph core.Placeholder, val chnl.ID) Term {
 			term.X = val
 		}
 		term.Cont = Subst(term.Cont, ph, val)
+		return term
+	case SendSpec:
+		if ph == term.A {
+			term.A = val
+		}
+		if ph == term.B {
+			term.B = val
+		}
 		return term
 	default:
 		panic(ErrTermTypeUnexpected(t))

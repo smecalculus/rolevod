@@ -235,7 +235,8 @@ type Context struct {
 	Linear map[core.Placeholder]Root
 }
 
-type ZC struct {
+// Providable Endpoint aka ChanTp
+type PE struct {
 	Z core.Placeholder
 	C Root
 }
@@ -244,8 +245,8 @@ type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
+	SelectByIDs([]ID) ([]Root, error)
 	SelectEnv([]ID) (map[ID]Root, error)
-	SelectMany([]ID) ([]Root, error)
 }
 
 func ConvertSpecToRoot(s Spec) Root {

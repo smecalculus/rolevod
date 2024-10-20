@@ -3,7 +3,6 @@ package seat
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -36,15 +35,15 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	}
 	query := `
 		INSERT INTO seats (
-			id, name, via, ctx
+			id, name, pe, ces
 		) VALUES (
-			@id, @name, @via, @ctx
+			@id, @name, @pe, @ces
 		)`
 	args := pgx.NamedArgs{
 		"id":   dto.ID,
 		"name": dto.Name,
-		"via":  dto.Via,
-		"ctx":  dto.Ctx,
+		"pe":  dto.PE,
+		"ces":  dto.CEs,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
@@ -53,12 +52,12 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectByID(rid id.ADT) (SeatRoot, error) {
+func (r *seatRepoPgx) SelectByID(rid ID) (SeatRoot, error) {
 	query := `
 		SELECT
-			id, name, via, ctx
+			id, name, pe, ces
 		FROM seats
-		WHERE id=$1`
+		WHERE id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
@@ -75,7 +74,77 @@ func (r *seatRepoPgx) SelectByID(rid id.ADT) (SeatRoot, error) {
 	return DataToSeatRoot(dto)
 }
 
-func (r *seatRepoPgx) SelectChildren(id id.ADT) ([]SeatRef, error) {
+func (r *seatRepoPgx) SelectEnv(ids []ID) (map[ID]SeatRoot, error) {
+	seats, err := r.SelectByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[ID]SeatRoot, len(seats))
+	for _, s := range seats {
+		env[s.ID] = s
+	}
+	return env, nil
+}
+
+func (r *seatRepoPgx) SelectByIDs(ids []ID) ([]SeatRoot, error) {
+	if len(ids) == 0 {
+		return []SeatRoot{}, nil
+	}
+	query := `
+		SELECT
+			id, name, pe, ces
+		FROM seats
+		WHERE id = $1`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, rid := range ids {
+		if rid.IsEmpty() {
+			return nil, id.ErrEmpty
+		}
+		batch.Queue(query, rid.String())
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var dtos []seatRootData
+	for _, rid := range ids {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[seatRootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dtos = append(dtos, dto)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "seats selection succeeded", slog.Any("dtos", dtos))
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	return DataToSeatRoots(dtos)
+}
+
+func (r *seatRepoPgx) SelectChildren(id ID) ([]SeatRef, error) {
 	query := `
 		SELECT
 			s.id,
@@ -90,7 +159,7 @@ func (r *seatRepoPgx) SelectChildren(id id.ADT) ([]SeatRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[SeatRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[seatRefData])
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +167,7 @@ func (r *seatRepoPgx) SelectChildren(id id.ADT) ([]SeatRef, error) {
 }
 
 func (r *seatRepoPgx) SelectAll() ([]SeatRef, error) {
-	roots := make([]SeatRef, 5)
-	for i := range 5 {
-		roots[i] = SeatRef{ID: id.New(), Name: fmt.Sprintf("SeatRoot%v", i)}
-	}
-	return roots, nil
+	return []SeatRef{}, nil
 }
 
 // Adapter

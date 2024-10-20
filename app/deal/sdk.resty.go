@@ -80,7 +80,7 @@ func (c *dealClient) Involve(spec PartSpec) (step.ProcRoot, error) {
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetBody(&req).
-		SetPathParam("id", req.DealID).
+		SetPathParam("id", req.Deal).
 		Post("/deals/{id}/parts")
 	if err != nil {
 		return step.ProcRoot{}, err
