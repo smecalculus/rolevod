@@ -7,8 +7,8 @@ import (
 	"golang.org/x/exp/maps"
 
 	"smecalculus/rolevod/lib/ak"
-	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -50,14 +50,14 @@ func (e Environment) Contains(id seat.ID) bool {
 
 func (e Environment) LookupPE(id seat.ID) state.EP {
 	decl := e.seats[id]
-	return state.EP{Z: sym.New(decl.PE.Name), C: e.states[decl.PE.StID]}
+	return state.EP{Z: sym.New(decl.PE.Name), St: e.states[decl.PE.StID]}
 }
 
 func (e Environment) LookupCEs(id seat.ID) []state.EP {
 	decl := e.seats[id]
 	ces := []state.EP{}
 	for _, ce := range decl.CEs {
-		ces = append(ces, state.EP{Z: sym.New(ce.Name), C: e.states[ce.StID]})
+		ces = append(ces, state.EP{Z: sym.New(ce.Name), St: e.states[ce.StID]})
 	}
 	return ces
 }
@@ -331,7 +331,7 @@ func (s *dealService) Take(spec TranSpec) error {
 	}
 	env := Environment{seats, states}
 	ctx := convertToCtx(ces, states)
-	zc := state.EP{Z: pe.ID, C: states[pe.StID]}
+	zc := state.EP{Z: pe.ID, St: states[pe.StID]}
 	// type checking
 	err = s.checkState(env, ctx, zc, spec.Term)
 	if err != nil {
@@ -806,9 +806,9 @@ func (s *dealService) takeProcWith(
 		}
 		return s.takeProc(newProc)
 	case step.LabSpec:
-		viaID, ok := term.C.(chnl.ID)
+		viaID, ok := term.A.(chnl.ID)
 		if !ok {
-			err := chnl.ErrNotAnID(term.C)
+			err := chnl.ErrNotAnID(term.A)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -892,13 +892,13 @@ func (s *dealService) takeProcWith(
 		newProc := step.ProcRoot{
 			ID:   id.New(),
 			PID:  chnl.Subst(srv.PID, curVia.ID, newVia.ID),
-			Term: step.Subst(cont.Conts[term.L], cont.Z, newVia.ID),
+			Term: step.Subst(cont.Conts[term.L], cont.X, newVia.ID),
 		}
 		return s.takeProc(newProc)
 	case step.CaseSpec:
-		viaID, ok := term.Z.(chnl.ID)
+		viaID, ok := term.X.(chnl.ID)
 		if !ok {
-			err := chnl.ErrNotAnID(term.Z)
+			err := chnl.ErrNotAnID(term.X)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -982,7 +982,7 @@ func (s *dealService) takeProcWith(
 		newProc := step.ProcRoot{
 			ID:   id.New(),
 			PID:  chnl.Subst(proc.PID, curVia.ID, newVia.ID),
-			Term: step.Subst(term.Conts[val.L], term.Z, newVia.ID),
+			Term: step.Subst(term.Conts[val.L], term.X, newVia.ID),
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
@@ -1281,16 +1281,16 @@ func (s *dealService) checkProvider(
 			return err
 		}
 		// check via
-		return state.CheckRoot(pe.C, state.OneRoot{})
+		return state.CheckRoot(pe.St, state.OneRoot{})
 	case step.WaitSpec:
 		err := step.ErrTermTypeMismatch(t, step.CloseSpec{})
 		s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 		return err
 	case step.SendSpec:
 		// check via
-		want, ok := pe.C.(state.TensorRoot)
+		wantSt, ok := pe.St.(state.TensorRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.C, want)
+			err := state.ErrRootTypeMismatch(pe.St, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1301,19 +1301,19 @@ func (s *dealService) checkProvider(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		err := state.CheckRoot(gotB, want.B)
+		err := state.CheckRoot(gotB, wantSt.B)
 		if err != nil {
 			return err
 		}
 		// no cont to check
 		delete(ctx.Linear, term.B)
-		pe.C = want.C
+		pe.St = wantSt.C
 		return nil
 	case step.RecvSpec:
 		// check via
-		want, ok := pe.C.(state.LolliRoot)
+		wantSt, ok := pe.St.(state.LolliRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.C, want)
+			err := state.ErrRootTypeMismatch(pe.St, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1324,55 +1324,55 @@ func (s *dealService) checkProvider(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		err := state.CheckRoot(gotY, want.Y)
+		err := state.CheckRoot(gotY, wantSt.Y)
 		if err != nil {
 			return err
 		}
 		// check cont
-		ctx.Linear[term.Y] = want.Y
-		pe.C = want.Z
+		ctx.Linear[term.Y] = wantSt.Y
+		pe.St = wantSt.Z
 		return s.checkState(env, ctx, pe, term.Cont)
 	case step.LabSpec:
 		// check via
-		want, ok := pe.C.(state.PlusRoot)
+		wantSt, ok := pe.St.(state.PlusRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.C, want)
+			err := state.ErrRootTypeMismatch(pe.St, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// check label
-		c, ok := want.Choices[term.L]
+		choice, ok := wantSt.Choices[term.L]
 		if !ok {
 			err := fmt.Errorf("label mismatch: want %q, got nothing", term.L)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// no cont to check
-		pe.C = c
+		pe.St = choice
 		return nil
 	case step.CaseSpec:
 		// check via
-		want, ok := pe.C.(state.WithRoot)
+		wantSt, ok := pe.St.(state.WithRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.C, want)
+			err := state.ErrRootTypeMismatch(pe.St, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// check conts
-		if len(term.Conts) != len(want.Choices) {
-			err := fmt.Errorf("state mismatch: want %v choices, got %v conts", len(want.Choices), len(term.Conts))
+		if len(term.Conts) != len(wantSt.Choices) {
+			err := fmt.Errorf("state mismatch: want %v choices, got %v conts", len(wantSt.Choices), len(term.Conts))
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		for wantL, wantC := range want.Choices {
-			gotC, ok := term.Conts[wantL]
+		for wantL, wantChoice := range wantSt.Choices {
+			gotCont, ok := term.Conts[wantL]
 			if !ok {
 				err := fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 				s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 				return err
 			}
-			pe.C = wantC
-			err := s.checkState(env, ctx, pe, gotC)
+			pe.St = wantChoice
+			err := s.checkState(env, ctx, pe, gotCont)
 			if err != nil {
 				return err
 			}
@@ -1390,12 +1390,12 @@ func (s *dealService) checkProvider(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		if gotD.Pol() != pe.C.Pol() {
-			err := state.ErrPolarityMismatch(gotD, pe.C)
+		if gotD.Pol() != pe.St.Pol() {
+			err := state.ErrPolarityMismatch(gotD, pe.St)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		return state.CheckRoot(gotD, pe.C)
+		return state.CheckRoot(gotD, pe.St)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))
 	}
@@ -1420,9 +1420,9 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		want, ok := gotX.(state.OneRoot)
+		wantSt, ok := gotX.(state.OneRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(gotX, want)
+			err := state.ErrRootTypeMismatch(gotX, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1437,9 +1437,9 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		want, ok := gotA.(state.LolliRoot)
+		wantSt, ok := gotA.(state.LolliRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(gotA, want)
+			err := state.ErrRootTypeMismatch(gotA, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1450,13 +1450,13 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		err := state.CheckRoot(gotB, want.Y)
+		err := state.CheckRoot(gotB, wantSt.Y)
 		if err != nil {
 			return err
 		}
 		// no cont to check
 		delete(ctx.Linear, got.B)
-		ctx.Linear[got.A] = want.Z
+		ctx.Linear[got.A] = wantSt.Z
 		return nil
 	case step.RecvSpec:
 		// check via
@@ -1466,9 +1466,9 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		want, ok := gotX.(state.TensorRoot)
+		wantSt, ok := gotX.(state.TensorRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(gotX, want)
+			err := state.ErrRootTypeMismatch(gotX, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1479,67 +1479,67 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		err := state.CheckRoot(gotY, want.B)
+		err := state.CheckRoot(gotY, wantSt.B)
 		if err != nil {
 			return err
 		}
 		// check cont
-		ctx.Linear[got.Y] = want.B
-		pe.C = want.C
+		ctx.Linear[got.Y] = wantSt.B
+		pe.St = wantSt.C
 		return s.checkState(env, ctx, pe, got.Cont)
 	case step.LabSpec:
 		// check via
-		gotC, ok := ctx.Linear[got.C]
+		gotA, ok := ctx.Linear[got.A]
 		if !ok {
-			err := chnl.ErrMissingInCtx(got.C)
+			err := chnl.ErrMissingInCtx(got.A)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		want, ok := gotC.(state.WithRoot)
+		wantSt, ok := gotA.(state.WithRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(gotC, want)
+			err := state.ErrRootTypeMismatch(gotA, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// check label
-		c, ok := want.Choices[got.L]
+		choice, ok := wantSt.Choices[got.L]
 		if !ok {
 			err := fmt.Errorf("label mismatch: want %q, got nothing", got.L)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// no cont to check
-		ctx.Linear[got.C] = c
+		ctx.Linear[got.A] = choice
 		return nil
 	case step.CaseSpec:
 		// check via
-		gotZ, ok := ctx.Linear[got.Z]
+		gotX, ok := ctx.Linear[got.X]
 		if !ok {
-			err := chnl.ErrMissingInCtx(got.Z)
+			err := chnl.ErrMissingInCtx(got.X)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		want, ok := gotZ.(state.PlusRoot)
+		wantSt, ok := gotX.(state.PlusRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(gotZ, want)
+			err := state.ErrRootTypeMismatch(gotX, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// check conts
-		if len(got.Conts) != len(want.Choices) {
-			err := fmt.Errorf("state mismatch: want %v choices, got %v conts", len(want.Choices), len(got.Conts))
+		if len(got.Conts) != len(wantSt.Choices) {
+			err := fmt.Errorf("state mismatch: want %v choices, got %v conts", len(wantSt.Choices), len(got.Conts))
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		for wantL, wantC := range want.Choices {
-			gotC, ok := got.Conts[wantL]
+		for wantL, wantChoice := range wantSt.Choices {
+			gotCont, ok := got.Conts[wantL]
 			if !ok {
 				err := fmt.Errorf("label mismatch: want %q, got nothing", wantL)
 				s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 				return err
 			}
-			ctx.Linear[got.Z] = wantC
-			err := s.checkState(env, ctx, pe, gotC)
+			ctx.Linear[got.X] = wantChoice
+			err := s.checkState(env, ctx, pe, gotCont)
 			if err != nil {
 				return err
 			}
@@ -1551,13 +1551,13 @@ func (s *dealService) checkClient(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		wantCtx := env.LookupCEs(got.Seat)
-		if len(got.CEs) != len(wantCtx) {
-			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCtx), len(got.CEs))
+		wantCEs := env.LookupCEs(got.Seat)
+		if len(got.CEs) != len(wantCEs) {
+			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCEs), len(got.CEs))
 			s.log.Error("type checking failed",
 				slog.Any("reason", err),
 				slog.Any("via", t.Via()),
-				slog.Any("want", wantCtx),
+				slog.Any("want", wantCEs),
 				slog.Any("got", got.CEs),
 			)
 			return err
@@ -1565,21 +1565,21 @@ func (s *dealService) checkClient(
 		if len(got.CEs) == 0 {
 			return nil
 		}
-		for i, gotID := range got.CEs {
-			gotSt := ctx.Linear[gotID]
-			err := state.CheckRoot(gotSt, wantCtx[i].C)
+		for i, gotCE := range got.CEs {
+			gotSt := ctx.Linear[gotCE]
+			err := state.CheckRoot(gotSt, wantCEs[i].St)
 			if err != nil {
 				s.log.Error("type checking failed",
 					slog.Any("reason", err),
 					slog.Any("via", t.Via()),
-					slog.Any("want", wantCtx[i]),
-					slog.Any("got", gotID),
+					slog.Any("want", wantCEs[i]),
+					slog.Any("got", gotCE),
 				)
 				return err
 			}
-			delete(ctx.Linear, gotID)
+			delete(ctx.Linear, gotCE)
 		}
-		ctx.Linear[got.PE] = env.LookupPE(got.Seat).C
+		ctx.Linear[got.PE] = env.LookupPE(got.Seat).St
 		return s.checkState(env, ctx, pe, got.Cont)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))
@@ -1595,7 +1595,7 @@ func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
 }
 
 func convertToCtx(chnls []chnl.Root, states map[state.ID]state.Root) state.Context {
-	linear := make(map[core.Placeholder]state.Root, len(chnls))
+	linear := make(map[ph.ADT]state.Root, len(chnls))
 	for _, ch := range chnls {
 		linear[ch.ID] = states[ch.StID]
 	}

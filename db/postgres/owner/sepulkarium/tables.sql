@@ -25,10 +25,7 @@ CREATE TABLE states (
 	id varchar(20),
 	kind smallint,
 	from_id varchar(20),
-	fqn varchar(512),
-	pair jsonb,
-	choices jsonb,
-	type jsonb
+	spec jsonb
 );
 
 CREATE TABLE channels (
@@ -43,7 +40,7 @@ CREATE TABLE steps (
 	kind smallint,
 	pid varchar(20),
 	vid varchar(20),
-	term jsonb
+	spec jsonb
 );
 
 CREATE TABLE kinships (
@@ -59,6 +56,7 @@ CREATE TABLE clientships (
 
 CREATE TABLE aliases (
 	sym ltree UNIQUE,
+	kind smallint,
 	id varchar(20)
 );
 

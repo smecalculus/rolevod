@@ -35,23 +35,20 @@ func (r *repoPgx) Insert(root Root) (err error) {
 	if err != nil {
 		return err
 	}
-	dto := dataFromRoot2(root)
+	dto := dataFromRoot(root)
 	query := `
 		INSERT INTO states (
-			id, kind, from_id, fqn, pair, choices, type
+			id, kind, from_id, spec
 		) VALUES (
-			@id, @kind, @from_id, @fqn, @pair, @choices, @type
+			@id, @kind, @from_id, @spec
 		)`
 	batch := pgx.Batch{}
 	for _, st := range dto.States {
 		sa := pgx.NamedArgs{
 			"id":      st.ID,
 			"kind":    st.K,
-			"fqn":     st.FQN,
 			"from_id": st.FromID,
-			"pair":    st.Pair,
-			"choices": st.Choices,
-			"type":    st.Type,
+			"spec":    st.Spec,
 		}
 		batch.Queue(query, sa)
 	}
@@ -114,7 +111,7 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[stateData])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
@@ -125,11 +122,11 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 		return nil, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
-	states := make(map[string]state, len(dtos))
+	states := make(map[string]stateData, len(dtos))
 	for _, dto := range dtos {
 		states[dto.ID] = dto
 	}
-	return statesToRoot2(states, states[rid.String()])
+	return statesToRoot(states, states[rid.String()])
 }
 
 func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
@@ -167,7 +164,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 				slog.Any("id", rid),
 			)
 		}
-		dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[state])
+		dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[stateData])
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
@@ -180,7 +177,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 				slog.Any("reason", err),
 			)
 		}
-		root, err := dataToRoot(&rootData2{rid.String(), dtos})
+		root, err := dataToRoot(&rootData{rid.String(), dtos})
 		if err != nil {
 			r.log.Error("dto mapping failed",
 				slog.Any("reason", err),

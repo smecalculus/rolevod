@@ -6,6 +6,7 @@ import (
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -78,7 +79,7 @@ func (TbdRoot) step() {}
 
 // aka Expression
 type Term interface {
-	Via() core.Placeholder
+	Via() ph.ADT
 }
 
 // aka ast.Msg
@@ -98,60 +99,60 @@ type Action interface {
 }
 
 type CloseSpec struct {
-	A core.Placeholder
+	A ph.ADT
 }
 
 func (CloseSpec) val() {}
 
-func (s CloseSpec) Via() core.Placeholder { return s.A }
+func (s CloseSpec) Via() ph.ADT { return s.A }
 
 type WaitSpec struct {
-	X    core.Placeholder
+	X    ph.ADT
 	Cont Term
 }
 
 func (WaitSpec) cont() {}
 
-func (s WaitSpec) Via() core.Placeholder { return s.X }
+func (s WaitSpec) Via() ph.ADT { return s.X }
 
 type SendSpec struct {
-	A core.Placeholder // via
-	B core.Placeholder // value
+	A ph.ADT // via
+	B ph.ADT // value
 	// Cont  Term
 }
 
 func (SendSpec) val() {}
 
-func (s SendSpec) Via() core.Placeholder { return s.A }
+func (s SendSpec) Via() ph.ADT { return s.A }
 
 type RecvSpec struct {
-	X    core.Placeholder // via
-	Y    core.Placeholder // value
+	X    ph.ADT // via
+	Y    ph.ADT // value
 	Cont Term
 }
 
 func (RecvSpec) cont() {}
 
-func (s RecvSpec) Via() core.Placeholder { return s.X }
+func (s RecvSpec) Via() ph.ADT { return s.X }
 
 type LabSpec struct {
-	C core.Placeholder
+	A ph.ADT
 	L core.Label
 	// Cont Term
 }
 
 func (LabSpec) val() {}
 
-func (s LabSpec) Via() core.Placeholder { return s.C }
+func (s LabSpec) Via() ph.ADT { return s.A }
 
 type CaseSpec struct {
-	Z     core.Placeholder
+	X     ph.ADT
 	Conts map[core.Label]Term
 }
 
 func (CaseSpec) cont() {}
 
-func (s CaseSpec) Via() core.Placeholder { return s.Z }
+func (s CaseSpec) Via() ph.ADT { return s.X }
 
 type CTASpec struct {
 	AK   ak.ADT
@@ -160,7 +161,7 @@ type CTASpec struct {
 
 func (s CTASpec) act() {}
 
-func (s CTASpec) Via() core.Placeholder { return s.Seat }
+func (s CTASpec) Via() ph.ADT { return s.Seat }
 
 // aka ExpName
 type LinkSpec struct {
@@ -169,27 +170,27 @@ type LinkSpec struct {
 	Seat sym.ADT
 }
 
-func (s LinkSpec) Via() core.Placeholder { return s.PE }
+func (s LinkSpec) Via() ph.ADT { return s.PE }
 
 type FwdSpec struct {
-	C core.Placeholder // from
-	D core.Placeholder // to
+	C ph.ADT // from
+	D ph.ADT // to
 }
 
 func (FwdSpec) val() {}
 
 func (FwdSpec) cont() {}
 
-func (s FwdSpec) Via() core.Placeholder { return s.C }
+func (s FwdSpec) Via() ph.ADT { return s.C }
 
 type SpawnSpec struct {
-	PE   core.Placeholder
+	PE   ph.ADT
 	CEs  []chnl.ID
 	Cont Term
 	Seat id.ADT
 }
 
-func (s SpawnSpec) Via() core.Placeholder { return s.PE }
+func (s SpawnSpec) Via() ph.ADT { return s.PE }
 
 type Repo interface {
 	Insert(Root) error
@@ -252,15 +253,15 @@ func collectCEsRec(pe chnl.ID, t Term, ces []chnl.ID) []chnl.ID {
 		}
 		return collectCEsRec(pe, term.Cont, ces)
 	case LabSpec:
-		c, ok := term.C.(chnl.ID)
-		if ok && c != pe {
-			ces = append(ces, c)
+		a, ok := term.A.(chnl.ID)
+		if ok && a != pe {
+			ces = append(ces, a)
 		}
 		return ces
 	case CaseSpec:
-		z, ok := term.Z.(chnl.ID)
-		if ok && z != pe {
-			ces = append(ces, z)
+		x, ok := term.X.(chnl.ID)
+		if ok && x != pe {
+			ces = append(ces, x)
 		}
 		for _, cont := range term.Conts {
 			ces = collectCEsRec(pe, cont, ces)
@@ -279,7 +280,7 @@ func collectCEsRec(pe chnl.ID, t Term, ces []chnl.ID) []chnl.ID {
 	}
 }
 
-func Subst(t Term, ph core.Placeholder, val chnl.ID) Term {
+func Subst(t Term, ph ph.ADT, val chnl.ID) Term {
 	if t == nil {
 		return nil
 	}

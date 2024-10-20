@@ -3,8 +3,8 @@ package chnl
 import (
 	"fmt"
 
-	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/ph"
 
 	"smecalculus/rolevod/internal/state"
 )
@@ -73,11 +73,11 @@ func ErrDoesNotExist(want ID) error {
 	return fmt.Errorf("channel doesn't exist: %v", want)
 }
 
-func ErrMissingInCfg(want core.Placeholder) error {
+func ErrMissingInCfg(want ph.ADT) error {
 	return fmt.Errorf("channel missing in cfg: %v", want)
 }
 
-func ErrMissingInCtx(want core.Placeholder) error {
+func ErrMissingInCtx(want ph.ADT) error {
 	return fmt.Errorf("channel missing in ctx: %v", want)
 }
 
@@ -85,6 +85,6 @@ func ErrAlreadyClosed(got ID) error {
 	return fmt.Errorf("channel already closed: %v", got)
 }
 
-func ErrNotAnID(got core.Placeholder) error {
+func ErrNotAnID(got ph.ADT) error {
 	return fmt.Errorf("not a channel id: %v", got)
 }

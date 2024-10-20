@@ -5,6 +5,7 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/sym"
 )
 
@@ -232,13 +233,13 @@ const (
 )
 
 type Context struct {
-	Linear map[core.Placeholder]Root
+	Linear map[ph.ADT]Root
 }
 
 // Endpoint aka ChanTp
 type EP struct {
-	Z core.Placeholder
-	C Root
+	Z  ph.ADT
+	St Root
 }
 
 type Repo interface {

@@ -387,7 +387,7 @@ func TestTakeCaseLab(t *testing.T) {
 		DID: bigDeal.ID,
 		PID: follower.ID,
 		Term: step.CaseSpec{
-			Z: follower.ID,
+			X: follower.ID,
 			Conts: map[core.Label]step.Term{
 				label: step.CloseSpec{
 					A: follower.ID,
@@ -405,7 +405,7 @@ func TestTakeCaseLab(t *testing.T) {
 		DID: bigDeal.ID,
 		PID: decider.ID,
 		Term: step.LabSpec{
-			C: follower.ID,
+			A: follower.ID,
 			L: label,
 		},
 	}
