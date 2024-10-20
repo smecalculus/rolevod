@@ -11,22 +11,24 @@ import (
 )
 
 type ID = id.ADT
+type FQN = sym.ADT
+type Name = string
 
 type RoleSpec struct {
 	// Fully Qualified Name
-	FQN sym.ADT
+	FQN FQN
 	St  state.Spec
 }
 
 type RoleRef struct {
 	ID   ID
-	Name string
+	Name Name
 }
 
 // aka TpDef
 type RoleRoot struct {
 	ID       ID
-	Name     string
+	Name     Name
 	St       state.Ref
 	Children []RoleRef
 }

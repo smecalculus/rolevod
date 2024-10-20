@@ -20,7 +20,7 @@ func (OneSpec) spec() {}
 
 // aka TpName
 type LinkSpec struct {
-	FQN sym.ADT
+	Role sym.ADT
 }
 
 func (LinkSpec) spec() {}
@@ -124,11 +124,11 @@ type Root interface {
 }
 
 type Prod interface {
-	Next() Ref
+	Next() ID
 }
 
 type Sum interface {
-	Next(core.Label) Ref
+	Next(core.Label) ID
 }
 
 // aka TpName
@@ -161,7 +161,7 @@ type PlusRoot struct {
 
 func (r PlusRoot) RID() ID { return r.ID }
 
-func (r PlusRoot) Next(l core.Label) Ref { return r.Choices[l] }
+func (r PlusRoot) Next(l core.Label) ID { return r.Choices[l].RID() }
 
 func (r PlusRoot) Pol() Polarity { return Pos }
 
@@ -173,7 +173,7 @@ type WithRoot struct {
 
 func (r WithRoot) RID() ID { return r.ID }
 
-func (r WithRoot) Next(l core.Label) Ref { return r.Choices[l] }
+func (r WithRoot) Next(l core.Label) ID { return r.Choices[l].RID() }
 
 func (r WithRoot) Pol() Polarity { return Neg }
 
@@ -185,7 +185,7 @@ type TensorRoot struct {
 
 func (r TensorRoot) RID() ID { return r.ID }
 
-func (r TensorRoot) Next() Ref { return r.C }
+func (r TensorRoot) Next() ID { return r.C.RID() }
 
 func (r TensorRoot) Pol() Polarity { return Pos }
 
@@ -197,7 +197,7 @@ type LolliRoot struct {
 
 func (r LolliRoot) RID() ID { return r.ID }
 
-func (r LolliRoot) Next() Ref { return r.Z }
+func (r LolliRoot) Next() ID { return r.Z.RID() }
 
 func (r LolliRoot) Pol() Polarity { return Neg }
 
@@ -235,8 +235,8 @@ type Context struct {
 	Linear map[core.Placeholder]Root
 }
 
-// Providable Endpoint aka ChanTp
-type PE struct {
+// Endpoint aka ChanTp
+type EP struct {
 	Z core.Placeholder
 	C Root
 }
@@ -259,7 +259,7 @@ func ConvertSpecToRoot(s Spec) Root {
 		// TODO генерировать zero id или не генерировать id вообще
 		return OneRoot{ID: newID}
 	case LinkSpec:
-		return LinkRoot{ID: newID, FQN: spec.FQN}
+		return LinkRoot{ID: newID, FQN: spec.Role}
 	case TensorSpec:
 		return TensorRoot{
 			ID: newID,
@@ -382,6 +382,10 @@ func ErrDoesNotExist(want ID) error {
 
 func ErrMissingInEnv(want ID) error {
 	return fmt.Errorf("root missing in env: %v", want)
+}
+
+func ErrMissingInCfg(want ID) error {
+	return fmt.Errorf("root missing in cfg: %v", want)
 }
 
 func ErrRootTypeUnexpected(got Root) error {

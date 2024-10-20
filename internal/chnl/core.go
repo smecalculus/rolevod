@@ -38,9 +38,9 @@ type Repo interface {
 	InsertCtx([]Root) ([]Root, error)
 	SelectAll() ([]Ref, error)
 	SelectByID(ID) (Root, error)
+	SelectByIDs([]ID) ([]Root, error)
 	SelectCtx(ID, []ID) ([]Root, error)
 	SelectCfg([]ID) (map[ID]Root, error)
-	SelectMany([]ID) ([]Root, error)
 	Transfer(from ID, to ID, pids []ID) error
 }
 

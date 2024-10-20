@@ -43,23 +43,58 @@ type Environment struct {
 	states map[state.ID]state.Root
 }
 
-func (e Environment) Contains(sid seat.ID) bool {
-	_, ok := e.seats[sid]
+func (e Environment) Contains(id seat.ID) bool {
+	_, ok := e.seats[id]
 	return ok
 }
 
-func (e Environment) LookupPE(sid seat.ID) state.PE {
-	decl := e.seats[sid]
-	return state.PE{Z: sym.New(decl.PE.Name), C: e.states[decl.PE.StID]}
+func (e Environment) LookupPE(id seat.ID) state.EP {
+	decl := e.seats[id]
+	return state.EP{Z: sym.New(decl.PE.Name), C: e.states[decl.PE.StID]}
 }
 
-func (e Environment) LookupCEs(sid seat.ID) []state.PE {
-	decl := e.seats[sid]
-	ctx := []state.PE{}
-	for _, spec := range decl.CEs {
-		ctx = append(ctx, state.PE{Z: sym.New(spec.Name), C: e.states[spec.StID]})
+func (e Environment) LookupCEs(id seat.ID) []state.EP {
+	decl := e.seats[id]
+	ces := []state.EP{}
+	for _, ce := range decl.CEs {
+		ces = append(ces, state.EP{Z: sym.New(ce.Name), C: e.states[ce.StID]})
 	}
-	return ctx
+	return ces
+}
+
+type Configuration struct {
+	chnls  map[chnl.ID]chnl.Root
+	states map[state.ID]state.Root
+}
+
+func (c *Configuration) LookupCh(id chnl.ID) (chnl.Root, bool) {
+	ch, ok := c.chnls[id]
+	if !ok {
+		return chnl.Root{}, false
+	}
+	return ch, true
+}
+
+func (c *Configuration) LookupSt(id chnl.ID) (state.Root, bool) {
+	ch, ok := c.chnls[id]
+	if !ok {
+		return nil, false
+	}
+	st, ok := c.states[ch.StID]
+	if !ok {
+		panic(state.ErrMissingInCfg(ch.StID))
+	}
+	return st, true
+}
+
+func (c *Configuration) Add(ch chnl.Root) {
+	c.chnls[ch.ID] = ch
+}
+
+func (c *Configuration) Remove(ids ...chnl.ID) {
+	for _, id := range ids {
+		delete(c.chnls, id)
+	}
 }
 
 // goverter:variables
@@ -74,7 +109,7 @@ type DealApi interface {
 	Retrieve(ID) (DealRoot, error)
 	RetreiveAll() ([]DealRef, error)
 	Establish(KinshipSpec) error
-	Involve(PartSpec) (step.ProcRoot, error)
+	Involve(PartSpec) (chnl.Root, error)
 	Take(TranSpec) error
 }
 
@@ -86,6 +121,11 @@ type dealService struct {
 	states   state.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
+}
+
+// for compilation purposes
+func newDealApi() DealApi {
+	return &dealService{}
 }
 
 func newDealService(
@@ -121,7 +161,7 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 	return root, nil
 }
 
-func (s *dealService) Retrieve(id id.ADT) (DealRoot, error) {
+func (s *dealService) Retrieve(id ID) (DealRoot, error) {
 	root, err := s.deals.SelectByID(id)
 	if err != nil {
 		return DealRoot{}, err
@@ -155,7 +195,7 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *dealService) Involve(gotSpec PartSpec) (step.ProcRoot, error) {
+func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
 	s.log.Debug("seat involvement started", slog.Any("spec", gotSpec))
 	wantSpec, err := s.seats.SelectByID(gotSpec.Decl)
 	if err != nil {
@@ -163,7 +203,7 @@ func (s *dealService) Involve(gotSpec PartSpec) (step.ProcRoot, error) {
 			slog.Any("reason", err),
 			slog.Any("id", gotSpec.Decl),
 		)
-		return step.ProcRoot{}, err
+		return chnl.Root{}, err
 	}
 	newPE := chnl.Root{
 		ID:   id.New(),
@@ -176,24 +216,23 @@ func (s *dealService) Involve(gotSpec PartSpec) (step.ProcRoot, error) {
 			slog.Any("reason", err),
 			slog.Any("pe", newPE),
 		)
-		return step.ProcRoot{}, err
+		return chnl.Root{}, err
 	}
-	if len(gotSpec.Ctx) > 0 {
-		err = s.chnls.Transfer(gotSpec.Owner, newPE.ID, gotSpec.Ctx)
+	if len(gotSpec.TEs) > 0 {
+		err = s.chnls.Transfer(gotSpec.Owner, newPE.ID, gotSpec.TEs)
 		if err != nil {
 			s.log.Error("context transfer failed",
 				slog.Any("reason", err),
 				slog.Any("from", gotSpec.Owner),
 				slog.Any("to", newPE.ID),
-				slog.Any("ctx", gotSpec.Ctx),
+				slog.Any("tes", gotSpec.TEs),
 			)
-			return step.ProcRoot{}, err
+			return chnl.Root{}, err
 		}
 	}
 	newProc := step.ProcRoot{
 		ID:  id.New(),
 		PID: newPE.ID,
-		Ctx: gotSpec.Ctx,
 		Term: step.CTASpec{
 			AK:  ak.New(),
 			SID: gotSpec.Decl,
@@ -205,10 +244,10 @@ func (s *dealService) Involve(gotSpec PartSpec) (step.ProcRoot, error) {
 			slog.Any("reason", err),
 			slog.Any("proc", newProc),
 		)
-		return step.ProcRoot{}, err
+		return chnl.Root{}, err
 	}
 	s.log.Debug("seat involvement succeeded", slog.Any("proc", newProc))
-	return newProc, nil
+	return newPE, nil
 }
 
 func (s *dealService) Take(spec TranSpec) error {
@@ -233,7 +272,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	curProc, ok := curStep.(step.ProcRoot)
+	proc, ok := curStep.(step.ProcRoot)
 	if !ok {
 		err = step.ErrRootTypeMismatch(curStep, step.ProcRoot{})
 		s.log.Error("transition taking failed",
@@ -242,12 +281,12 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	_, ok = curProc.Term.(step.CTASpec)
+	_, ok = proc.Term.(step.CTASpec)
 	if !ok {
 		err = step.ErrTermTypeMismatch(spec.Term, step.CTASpec{})
 		s.log.Error("transition taking failed",
 			slog.Any("reason", err),
-			slog.Any("pid", curProc.PID),
+			slog.Any("pid", proc.PID),
 		)
 		return err
 	}
@@ -256,25 +295,25 @@ func (s *dealService) Take(spec TranSpec) error {
 	if err != nil {
 		s.log.Error("seats selection failed",
 			slog.Any("reason", err),
-			slog.Any("pid", curProc.PID),
+			slog.Any("pid", proc.PID),
 			slog.Any("ids", seatIDs),
 		)
 		return err
 	}
-	pe, err := s.chnls.SelectByID(curProc.PID)
+	pe, err := s.chnls.SelectByID(proc.PID)
 	if err != nil {
 		s.log.Error("providable endpoint selection failed",
 			slog.Any("reason", err),
-			slog.Any("pid", curProc.PID),
+			slog.Any("id", proc.PID),
 		)
 		return err
 	}
-	ceIDs := step.CollectCtx(curProc.PID, spec.Term)
-	ces, err := s.chnls.SelectCtx(curProc.PID, ceIDs)
+	ceIDs := step.CollectCEs(proc.PID, spec.Term)
+	ces, err := s.chnls.SelectCtx(proc.PID, ceIDs)
 	if err != nil {
 		s.log.Error("consumable endpoints selection failed",
 			slog.Any("reason", err),
-			slog.Any("pid", curProc.PID),
+			slog.Any("pid", proc.PID),
 			slog.Any("ids", ceIDs),
 		)
 		return err
@@ -292,7 +331,7 @@ func (s *dealService) Take(spec TranSpec) error {
 	}
 	env := Environment{seats, states}
 	ctx := convertToCtx(ces, states)
-	zc := state.PE{Z: pe.ID, C: states[pe.StID]}
+	zc := state.EP{Z: pe.ID, C: states[pe.StID]}
 	// type checking
 	err = s.checkState(env, ctx, zc, spec.Term)
 	if err != nil {
@@ -300,9 +339,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		return err
 	}
 	// step taking
-	cfg := convertToCfg(append(ces, pe))
-	curProc.Term = spec.Term
-	return s.takeProcWith(curProc, cfg, states)
+	cfg := Configuration{chnls: convertToCfg(append(ces, pe)), states: states}
+	proc.Term = spec.Term
+	return s.takeProcWith(proc, cfg)
 }
 
 func (s *dealService) takeProc(
@@ -313,35 +352,35 @@ func (s *dealService) takeProc(
 	if err != nil {
 		s.log.Error("providable endpoint selection failed",
 			slog.Any("reason", err),
-			slog.Any("pid", proc.PID),
+			slog.Any("id", proc.PID),
 		)
 		return err
 	}
-	ces, err := s.chnls.SelectCtx(proc.PID, proc.Ctx)
+	ceIDs := step.CollectCEs(proc.PID, proc.Term)
+	ces, err := s.chnls.SelectCtx(proc.PID, ceIDs)
 	if err != nil {
 		s.log.Error("consumable endpoints selection failed",
 			slog.Any("reason", err),
-			slog.Any("ctx", proc.Ctx),
+			slog.Any("ids", ceIDs),
 		)
 		return err
 	}
 	stIDs := chnl.CollectStIDs(append(ces, pe))
-	env, err := s.states.SelectEnv(stIDs)
+	states, err := s.states.SelectEnv(stIDs)
 	if err != nil {
-		s.log.Error("env selection failed",
+		s.log.Error("states selection failed",
 			slog.Any("reason", err),
 			slog.Any("ids", stIDs),
 		)
 		return err
 	}
-	cfg := convertToCfg(append(ces, pe))
-	return s.takeProcWith(proc, cfg, env)
+	cfg := Configuration{chnls: convertToCfg(append(ces, pe)), states: states}
+	return s.takeProcWith(proc, cfg)
 }
 
 func (s *dealService) takeProcWith(
 	proc step.ProcRoot,
-	cfg map[chnl.ID]chnl.Root,
-	env map[state.ID]state.Root,
+	cfg Configuration,
 ) (err error) {
 	switch term := proc.Term.(type) {
 	case step.CloseSpec:
@@ -353,7 +392,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err := chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -365,7 +404,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("service selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -435,7 +474,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -447,7 +486,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("message selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -474,6 +513,7 @@ func (s *dealService) takeProcWith(
 			err = step.ErrRootTypeMismatch(curSem, step.MsgRoot{})
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
+				// TODO log some ID
 			)
 			return err
 		}
@@ -520,7 +560,6 @@ func (s *dealService) takeProcWith(
 			newProc = step.ProcRoot{
 				ID:   id.New(),
 				PID:  proc.PID,
-				Ctx:  []chnl.ID{d},
 				Term: step.Subst(term, val.C, d),
 			}
 		default:
@@ -537,7 +576,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -549,7 +588,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("service selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -576,24 +615,32 @@ func (s *dealService) takeProcWith(
 			err = step.ErrRootTypeMismatch(curSem, step.SrvRoot{})
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
+				// TODO log some ID
 			)
 			return err
 		}
 		recv, ok := srv.Cont.(step.RecvSpec)
 		if !ok {
-			err = fmt.Errorf("unexpected cont type: want %T, got %T", step.RecvSpec{}, srv.Cont)
+			err = fmt.Errorf("cont type mismatch: want %T, got %T", step.RecvSpec{}, srv.Cont)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("cont", srv.Cont),
 			)
 			return err
 		}
-		st := env[curVia.StID]
+		curSt, ok := cfg.LookupSt(curVia.ID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(curVia.ID)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			StID:  st.(state.Prod).Next().RID(),
+			StID:  curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -603,9 +650,17 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		b, ok := cfg[term.B.(chnl.ID)]
+		valID, ok := term.B.(chnl.ID)
 		if !ok {
-			err = chnl.ErrMissingInCfg(b.ID)
+			err := chnl.ErrNotAnID(term.B)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
+		b, ok := cfg.LookupCh(valID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(valID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -625,7 +680,6 @@ func (s *dealService) takeProcWith(
 		newProc := step.ProcRoot{
 			ID:   id.New(),
 			PID:  chnl.Subst(srv.PID, curVia.ID, newVia.ID),
-			Ctx:  []chnl.ID{b.ID},
 			Term: recv.Cont,
 		}
 		return s.takeProc(newProc)
@@ -638,7 +692,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -650,7 +704,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("message selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -677,24 +731,32 @@ func (s *dealService) takeProcWith(
 			err = step.ErrRootTypeMismatch(curSem, step.MsgRoot{})
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
+				// TODO log some ID
 			)
 			return err
 		}
 		val, ok := msg.Val.(step.SendSpec)
 		if !ok {
-			err = fmt.Errorf("unexpected val type: want %T, got %T", step.SendSpec{}, msg.Val)
+			err = fmt.Errorf("val type mismatch: want %T, got %T", step.SendSpec{}, msg.Val)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("val", msg.Val),
 			)
 			return err
 		}
-		curSt := env[curVia.StID]
+		curSt, ok := cfg.LookupSt(curVia.ID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(curVia.ID)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			StID:  curSt.(state.Prod).Next().RID(),
+			StID:  curSt.(state.Prod).Next(),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -704,9 +766,17 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		b, ok := cfg[val.B.(chnl.ID)]
+		valID, ok := val.B.(chnl.ID)
 		if !ok {
-			err = chnl.ErrMissingInCfg(b.ID)
+			err := chnl.ErrNotAnID(val.B)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
+		b, ok := cfg.LookupCh(valID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(valID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -738,7 +808,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -750,7 +820,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("service selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -777,6 +847,7 @@ func (s *dealService) takeProcWith(
 			err = step.ErrRootTypeMismatch(curSem, step.SrvRoot{})
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
+				// TODO log some ID
 			)
 			return err
 		}
@@ -789,12 +860,19 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curSt := env[curVia.StID]
+		curSt, ok := cfg.LookupSt(curVia.ID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(curVia.ID)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			StID:  curSt.(state.Sum).Next(term.L).RID(),
+			StID:  curSt.(state.Sum).Next(term.L),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -820,7 +898,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curVia, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -832,7 +910,7 @@ func (s *dealService) takeProcWith(
 		if err != nil {
 			s.log.Error("message selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", curVia),
+				slog.Any("vid", curVia.ID),
 			)
 			return err
 		}
@@ -859,6 +937,7 @@ func (s *dealService) takeProcWith(
 			err = step.ErrRootTypeMismatch(curSem, step.MsgRoot{})
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
+				// TODO log some ID
 			)
 			return err
 		}
@@ -871,12 +950,19 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curSt := env[curVia.StID]
+		curSt, ok := cfg.LookupSt(curVia.ID)
+		if !ok {
+			err = chnl.ErrMissingInCfg(curVia.ID)
+			s.log.Error("transition taking failed",
+				slog.Any("reason", err),
+			)
+			return err
+		}
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			StID:  curSt.(state.Sum).Next(val.L).RID(),
+			StID:  curSt.(state.Sum).Next(val.L),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -894,21 +980,22 @@ func (s *dealService) takeProcWith(
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
-		newProc, err := s.Involve(PartSpec{Decl: term.SeatID, Owner: proc.PID, Ctx: term.Ctx})
+		newPE, err := s.Involve(PartSpec{Decl: term.Seat, Owner: proc.PID, TEs: term.CEs})
 		if err != nil {
 			return err
 		}
-		err = s.chnls.Transfer(id.Empty(), proc.PID, []chnl.ID{newProc.PID})
+		err = s.chnls.Transfer(id.Empty(), proc.PID, []chnl.ID{newPE.ID})
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
-				slog.Any("id", newProc.PID),
+				slog.Any("id", newPE.ID),
 			)
 			return err
 		}
 		s.log.Debug("transition taking succeeded")
-		// TODO актуализировать контекст
-		proc.Term = step.Subst(term.Cont, term.Z, newProc.PID)
+		cfg.Add(newPE)
+		cfg.Remove(term.CEs...)
+		proc.Term = step.Subst(term.Cont, term.PE, newPE.ID)
 		return s.takeProc(proc)
 	case step.FwdSpec:
 		viaID, ok := term.C.(chnl.ID)
@@ -919,7 +1006,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		viaCh, ok := cfg[viaID]
+		curVia, ok := cfg.LookupCh(viaID)
 		if !ok {
 			err = chnl.ErrMissingInCfg(viaID)
 			s.log.Error("transition taking failed",
@@ -927,19 +1014,19 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		curSt, ok := env[viaCh.StID]
+		curSt, ok := cfg.LookupSt(curVia.ID)
 		if !ok {
-			err = state.ErrMissingInEnv(viaCh.StID)
+			err = chnl.ErrMissingInCfg(curVia.ID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
 			return err
 		}
-		curSem, err := s.steps.SelectByVID(viaCh.ID)
+		curSem, err := s.steps.SelectByVID(curVia.ID)
 		if err != nil {
 			s.log.Error("step selection failed",
 				slog.Any("reason", err),
-				slog.Any("via", viaCh),
+				slog.Any("vud", curVia.ID),
 			)
 			return err
 		}
@@ -947,12 +1034,16 @@ func (s *dealService) takeProcWith(
 		case state.Pos:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
-				c, ok := cfg[term.C.(chnl.ID)]
+				cID, ok := term.C.(chnl.ID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(c.ID)
-					s.log.Error("transition taking failed",
-						slog.Any("reason", err),
-					)
+					err := chnl.ErrNotAnID(term.C)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
+					return err
+				}
+				c, ok := cfg.LookupCh(cID)
+				if !ok {
+					err = chnl.ErrMissingInCfg(cID)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
 				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{c.ID})
@@ -966,18 +1057,21 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  []chnl.ID{c.ID},
 					Term: step.Subst(sem.Cont, term.D, c.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case step.MsgRoot:
-				d, ok := cfg[term.D.(chnl.ID)]
+				dID, ok := term.C.(chnl.ID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(d.ID)
-					s.log.Error("transition taking failed",
-						slog.Any("reason", err),
-					)
+					err := chnl.ErrNotAnID(term.D)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
+					return err
+				}
+				d, ok := cfg.LookupCh(dID)
+				if !ok {
+					err = chnl.ErrMissingInCfg(dID)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
 				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{d.ID})
@@ -991,7 +1085,6 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  []chnl.ID{d.ID},
 					Term: step.Subst(sem.Val, term.C, d.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -1000,7 +1093,7 @@ func (s *dealService) takeProcWith(
 				newMsg := step.MsgRoot{
 					ID:  id.New(),
 					PID: proc.PID,
-					VID: viaCh.ID,
+					VID: curVia.ID,
 					Val: term,
 				}
 				err := s.steps.Insert(newMsg)
@@ -1019,12 +1112,16 @@ func (s *dealService) takeProcWith(
 		case state.Neg:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
-				d, ok := cfg[term.D.(chnl.ID)]
+				dID, ok := term.C.(chnl.ID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(d.ID)
-					s.log.Error("transition taking failed",
-						slog.Any("reason", err),
-					)
+					err := chnl.ErrNotAnID(term.D)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
+					return err
+				}
+				d, ok := cfg.LookupCh(dID)
+				if !ok {
+					err = chnl.ErrMissingInCfg(dID)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
 				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{d.ID})
@@ -1038,18 +1135,21 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  []chnl.ID{d.ID},
 					Term: step.Subst(sem.Cont, term.C, d.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case step.MsgRoot:
-				c := cfg[term.C.(chnl.ID)]
+				cID, ok := term.C.(chnl.ID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(c.ID)
-					s.log.Error("transition taking failed",
-						slog.Any("reason", err),
-					)
+					err := chnl.ErrNotAnID(term.C)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
+					return err
+				}
+				c, ok := cfg.LookupCh(cID)
+				if !ok {
+					err = chnl.ErrMissingInCfg(cID)
+					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
 				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{c.ID})
@@ -1063,7 +1163,6 @@ func (s *dealService) takeProcWith(
 				newProc := step.ProcRoot{
 					ID:   id.New(),
 					PID:  sem.PID,
-					Ctx:  []chnl.ID{c.ID},
 					Term: step.Subst(sem.Val, term.D, c.ID),
 				}
 				s.log.Debug("transition taking succeeded")
@@ -1072,7 +1171,7 @@ func (s *dealService) takeProcWith(
 				newSrv := step.SrvRoot{
 					ID:   id.New(),
 					PID:  proc.PID,
-					VID:  viaCh.ID,
+					VID:  curVia.ID,
 					Cont: term,
 				}
 				err = s.steps.Insert(newSrv)
@@ -1124,7 +1223,8 @@ type PartSpec struct {
 	Deal  ID
 	Decl  seat.ID
 	Owner chnl.ID
-	Ctx   []chnl.ID
+	// Transferable Endpoints
+	TEs []chnl.ID
 }
 
 // Transition
@@ -1141,7 +1241,7 @@ type TranSpec struct {
 func (s *dealService) checkState(
 	env Environment,
 	ctx state.Context,
-	pe state.PE,
+	pe state.EP,
 	t step.Term,
 ) error {
 	if pe.Z == t.Via() {
@@ -1154,7 +1254,7 @@ func (s *dealService) checkState(
 func (s *dealService) checkProvider(
 	env Environment,
 	ctx state.Context,
-	pe state.PE,
+	pe state.EP,
 	t step.Term,
 ) error {
 	switch term := t.(type) {
@@ -1288,7 +1388,7 @@ func (s *dealService) checkProvider(
 func (s *dealService) checkClient(
 	env Environment,
 	ctx state.Context,
-	pe state.PE,
+	pe state.EP,
 	t step.Term,
 ) error {
 	switch got := t.(type) {
@@ -1430,26 +1530,26 @@ func (s *dealService) checkClient(
 		}
 		return nil
 	case step.SpawnSpec:
-		if !env.Contains(got.SeatID) {
-			err := seat.ErrRootMissingInEnv(got.SeatID)
+		if !env.Contains(got.Seat) {
+			err := seat.ErrRootMissingInEnv(got.Seat)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		wantCtx := env.LookupCEs(got.SeatID)
-		if len(got.Ctx) != len(wantCtx) {
-			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCtx), len(got.Ctx))
+		wantCtx := env.LookupCEs(got.Seat)
+		if len(got.CEs) != len(wantCtx) {
+			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCtx), len(got.CEs))
 			s.log.Error("type checking failed",
 				slog.Any("reason", err),
 				slog.Any("via", t.Via()),
 				slog.Any("want", wantCtx),
-				slog.Any("got", got.Ctx),
+				slog.Any("got", got.CEs),
 			)
 			return err
 		}
-		if len(got.Ctx) == 0 {
+		if len(got.CEs) == 0 {
 			return nil
 		}
-		for i, gotID := range got.Ctx {
+		for i, gotID := range got.CEs {
 			gotSt := ctx.Linear[gotID]
 			err := state.CheckRoot(gotSt, wantCtx[i].C)
 			if err != nil {
@@ -1463,7 +1563,7 @@ func (s *dealService) checkClient(
 			}
 			delete(ctx.Linear, gotID)
 		}
-		ctx.Linear[got.Z] = env.LookupPE(got.SeatID).C
+		ctx.Linear[got.PE] = env.LookupPE(got.Seat).C
 		return s.checkState(env, ctx, pe, got.Cont)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))

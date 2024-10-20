@@ -40,16 +40,15 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		INSERT INTO steps (
-			id, kind, pid, vid, ctx, term
+			id, kind, pid, vid, term
 		) VALUES (
-			@id, @kind, @pid, @vid, @ctx, @term
+			@id, @kind, @pid, @vid, @term
 		)`
 	args := pgx.NamedArgs{
 		"id":   dto.ID,
 		"kind": dto.K,
 		"pid":  dto.PID,
 		"vid":  dto.VID,
-		"ctx":  dto.Ctx,
 		"term": dto.Term,
 	}
 	_, err = tx.Exec(ctx, query, args)
@@ -76,7 +75,7 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 func (r *repoPgx) SelectByPID(pid chnl.ID) (Root, error) {
 	query := `
 		SELECT
-			id, kind, pid, vid, ctx, term
+			id, kind, pid, vid, term
 		FROM steps
 		WHERE pid = $1`
 	return r.execute(query, pid.String())
@@ -85,7 +84,7 @@ func (r *repoPgx) SelectByPID(pid chnl.ID) (Root, error) {
 func (r *repoPgx) SelectByVID(vid chnl.ID) (Root, error) {
 	query := `
 		SELECT
-			id, kind, pid, vid, ctx, term
+			id, kind, pid, vid, term
 		FROM steps
 		WHERE vid = $1`
 	return r.execute(query, vid.String())

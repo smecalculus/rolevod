@@ -31,6 +31,13 @@ func (mto RefMsg) Validate() error {
 	)
 }
 
+type RootMsg struct {
+	ID    string `json:"id" param:"id"`
+	Name  string `json:"name"`
+	PreID string `json:"pre_id"`
+	StID  string `json:"st_id"`
+}
+
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
@@ -41,6 +48,8 @@ var (
 	MsgFromSpec func(Spec) SpecMsg
 	MsgToRef    func(RefMsg) (Ref, error)
 	MsgFromRef  func(Ref) RefMsg
+	MsgToRoot   func(RootMsg) (Root, error)
+	MsgFromRoot func(Root) RootMsg
 )
 
 func MsgFromRefMap(refs map[Name]ID) []RefMsg {

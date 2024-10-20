@@ -35,7 +35,6 @@ type RootMsg struct {
 type ProcRootMsg struct {
 	ID   string   `json:"id"`
 	PID  string   `json:"pid"`
-	Ctx  []string `json:"ctx"`
 	Term *TermMsg `json:"term"`
 }
 
@@ -164,16 +163,16 @@ func (mto CaseMsg) Validate() error {
 }
 
 type SpawnMsg struct {
-	Z      core.PlaceholderDTO `json:"z"`
-	Ctx    []string            `json:"ctx"`
+	PE     core.PlaceholderDTO `json:"pe"`
+	CEs    []string            `json:"ces"`
 	Cont   TermMsg             `json:"cont"`
 	SeatID string              `json:"seat_id"`
 }
 
 func (mto SpawnMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Z, validation.Required),
-		validation.Field(&mto.Ctx, core.CtxOptional...),
+		validation.Field(&mto.PE, validation.Required),
+		validation.Field(&mto.CEs, core.CtxOptional...),
 		validation.Field(&mto.Cont, validation.Required),
 		validation.Field(&mto.SeatID, id.Required...),
 	)
@@ -282,10 +281,10 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Spawn,
 			Spawn: &SpawnMsg{
-				Z:      core.DTOFromPH(term.Z),
-				Ctx:    id.StringsFromIDs(term.Ctx),
+				PE:     core.DTOFromPH(term.PE),
+				CEs:    id.StringsFromIDs(term.CEs),
 				Cont:   MsgFromTerm(term.Cont),
-				SeatID: term.SeatID.String(),
+				SeatID: term.Seat.String(),
 			},
 		}
 	case FwdSpec:
@@ -379,11 +378,11 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return CaseSpec{Z: z, Conts: conts}, nil
 	case Spawn:
-		z, err := core.DTOToPH(mto.Spawn.Z)
+		z, err := core.DTOToPH(mto.Spawn.PE)
 		if err != nil {
 			return nil, err
 		}
-		ctx, err := id.StringsToIDs(mto.Spawn.Ctx)
+		ces, err := id.StringsToIDs(mto.Spawn.CEs)
 		if err != nil {
 			return nil, err
 		}
@@ -395,7 +394,7 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return SpawnSpec{Z: z, Ctx: ctx, Cont: cont, SeatID: seatID}, nil
+		return SpawnSpec{PE: z, CEs: ces, Cont: cont, Seat: seatID}, nil
 	case Fwd:
 		c, err := core.DTOToPH(mto.Fwd.C)
 		if err != nil {

@@ -17,13 +17,13 @@ func TestMain(m *testing.M) {
 
 func TestCollectCtx(t *testing.T) {
 	// given
-	chID := id.New()
+	ce := id.New()
 	// and
-	term := SpawnSpec{Ctx: []chnl.ID{chID}, Cont: CloseSpec{}}
+	term := SpawnSpec{CEs: []chnl.ID{ce}, Cont: CloseSpec{}}
 	// when
-	actualCtx := CollectCtx(id.New(), term)
+	actualCEs := CollectCEs(id.New(), term)
 	// then
-	if !slices.Contains(actualCtx, chID) {
-		t.Errorf("unexpected ctx: want %q in %v", chID, actualCtx)
+	if !slices.Contains(actualCEs, ce) {
+		t.Errorf("unexpected ces: want %q in %v", ce, actualCEs)
 	}
 }

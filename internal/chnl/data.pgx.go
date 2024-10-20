@@ -233,7 +233,7 @@ func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
 }
 
 func (r *repoPgx) SelectCfg(ids []ID) (map[ID]Root, error) {
-	chnls, err := r.SelectMany(ids)
+	chnls, err := r.SelectByIDs(ids)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (r *repoPgx) SelectCfg(ids []ID) (map[ID]Root, error) {
 	return cfg, nil
 }
 
-func (r *repoPgx) SelectMany(ids []ID) (rs []Root, err error) {
+func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 	if len(ids) == 0 {
 		return []Root{}, nil
 	}

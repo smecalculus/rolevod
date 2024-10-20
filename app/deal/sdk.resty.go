@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
-	"smecalculus/rolevod/internal/step"
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
 )
 
@@ -74,21 +74,21 @@ func (c *dealClient) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (c *dealClient) Involve(spec PartSpec) (step.ProcRoot, error) {
+func (c *dealClient) Involve(spec PartSpec) (chnl.Root, error) {
 	req := MsgFromPartSpec(spec)
-	var res step.ProcRootMsg
+	var res chnl.RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		SetPathParam("id", req.Deal).
 		Post("/deals/{id}/parts")
 	if err != nil {
-		return step.ProcRoot{}, err
+		return chnl.Root{}, err
 	}
 	if resp.IsError() {
-		return step.ProcRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return chnl.Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return step.MsgToProcRoot(res)
+	return chnl.MsgToRoot(res)
 }
 
 func (c *dealClient) Take(spec TranSpec) error {

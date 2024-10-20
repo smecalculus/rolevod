@@ -16,7 +16,6 @@ type rootData struct {
 	K    stepKind       `db:"kind"`
 	PID  sql.NullString `db:"pid"`
 	VID  sql.NullString `db:"vid"`
-	Ctx  []string       `db:"ctx"`
 	Term termData       `db:"term"`
 }
 
@@ -124,7 +123,6 @@ func dataFromRoot(r Root) (*rootData, error) {
 			K:    proc,
 			ID:   root.ID.String(),
 			PID:  pid,
-			Ctx:  id.StringsFromIDs(root.Ctx),
 			Term: term,
 		}, nil
 	case MsgRoot:
@@ -180,15 +178,11 @@ func dataToRoot(dto *rootData) (Root, error) {
 	}
 	switch dto.K {
 	case proc:
-		ctx, err := id.StringsToIDs(dto.Ctx)
-		if err != nil {
-			return nil, err
-		}
 		term, err := dataToTerm(dto.Term)
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: rid, PID: pid, Ctx: ctx, Term: term}, nil
+		return ProcRoot{ID: rid, PID: pid, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Term)
 		if err != nil {

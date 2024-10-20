@@ -45,7 +45,6 @@ type Root interface {
 type ProcRoot struct {
 	ID   ID
 	PID  chnl.ID
-	Ctx  []chnl.ID
 	Term Term
 }
 
@@ -159,7 +158,6 @@ func (s CaseSpec) Via() core.Placeholder { return s.Z }
 type CTASpec struct {
 	AK  ak.ADT
 	SID seat.ID
-	Ctx map[chnl.Name]chnl.ID
 }
 
 func (s CTASpec) act() {}
@@ -167,13 +165,13 @@ func (s CTASpec) act() {}
 func (s CTASpec) Via() core.Placeholder { return s.SID }
 
 // aka ExpName
-type RecurSpec struct {
-	C    chnl.ID
-	Ctx  []chnl.ID
+type LinkSpec struct {
+	PE   chnl.ID
+	CEs  []chnl.ID
 	Seat sym.ADT
 }
 
-func (s RecurSpec) Via() core.Placeholder { return s.C }
+func (s LinkSpec) Via() core.Placeholder { return s.PE }
 
 type FwdSpec struct {
 	C core.Placeholder // from
@@ -187,13 +185,13 @@ func (FwdSpec) cont() {}
 func (s FwdSpec) Via() core.Placeholder { return s.C }
 
 type SpawnSpec struct {
-	Z      core.Placeholder
-	Ctx    []chnl.ID
-	Cont   Term
-	SeatID id.ADT
+	PE   core.Placeholder
+	CEs  []chnl.ID
+	Cont Term
+	Seat id.ADT
 }
 
-func (s SpawnSpec) Via() core.Placeholder { return s.Z }
+func (s SpawnSpec) Via() core.Placeholder { return s.PE }
 
 type Repo interface {
 	Insert(Root) error
@@ -217,69 +215,69 @@ func collectEnvRec(t Term, env []id.ADT) []id.ADT {
 		}
 		return env
 	case SpawnSpec:
-		return collectEnvRec(term.Cont, append(env, term.SeatID))
+		return collectEnvRec(term.Cont, append(env, term.Seat))
 	default:
 		return env
 	}
 }
 
-func CollectCtx(pid chnl.ID, t Term) []chnl.ID {
-	return collectCtxRec(pid, t, nil)
+func CollectCEs(pe chnl.ID, t Term) []chnl.ID {
+	return collectCEsRec(pe, t, nil)
 }
 
-func collectCtxRec(pid chnl.ID, t Term, ctx []chnl.ID) []chnl.ID {
+func collectCEsRec(pe chnl.ID, t Term, ces []chnl.ID) []chnl.ID {
 	switch term := t.(type) {
 	case WaitSpec:
 		x, ok := term.X.(chnl.ID)
-		if ok && x != pid {
-			ctx = append(ctx, x)
+		if ok && x != pe {
+			ces = append(ces, x)
 		}
-		return collectCtxRec(pid, term.Cont, ctx)
+		return collectCEsRec(pe, term.Cont, ces)
 	case SendSpec:
 		a, ok := term.A.(chnl.ID)
-		if ok && a != pid {
-			ctx = append(ctx, a)
+		if ok && a != pe {
+			ces = append(ces, a)
 		}
 		b, ok := term.B.(chnl.ID)
 		if ok {
-			ctx = append(ctx, b)
+			ces = append(ces, b)
 		}
-		return ctx
+		return ces
 	case RecvSpec:
 		x, ok := term.X.(chnl.ID)
-		if ok && x != pid {
-			ctx = append(ctx, x)
+		if ok && x != pe {
+			ces = append(ces, x)
 		}
 		y, ok := term.Y.(chnl.ID)
 		if ok {
-			ctx = append(ctx, y)
+			ces = append(ces, y)
 		}
-		return collectCtxRec(pid, term.Cont, ctx)
+		return collectCEsRec(pe, term.Cont, ces)
 	case LabSpec:
 		c, ok := term.C.(chnl.ID)
-		if ok && c != pid {
-			ctx = append(ctx, c)
+		if ok && c != pe {
+			ces = append(ces, c)
 		}
-		return ctx
+		return ces
 	case CaseSpec:
 		z, ok := term.Z.(chnl.ID)
-		if ok && z != pid {
-			ctx = append(ctx, z)
+		if ok && z != pe {
+			ces = append(ces, z)
 		}
 		for _, cont := range term.Conts {
-			ctx = collectCtxRec(pid, cont, ctx)
+			ces = collectCEsRec(pe, cont, ces)
 		}
-		return ctx
+		return ces
 	case FwdSpec:
 		d, ok := term.D.(chnl.ID)
 		if ok {
-			ctx = append(ctx, d)
+			ces = append(ces, d)
 		}
-		return ctx
+		return ces
 	case SpawnSpec:
-		return collectCtxRec(pid, term.Cont, append(ctx, term.Ctx...))
+		return collectCEsRec(pe, term.Cont, append(ces, term.CEs...))
 	default:
-		return ctx
+		return ces
 	}
 }
 

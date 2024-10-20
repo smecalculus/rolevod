@@ -17,7 +17,7 @@ type Name = string
 
 type SeatSpec struct {
 	// Fully Qualified Name
-	FQN sym.ADT
+	FQN FQN
 	// Providable Endpoint Spec
 	PE chnl.Spec
 	// Consumable Endpoint Specs
@@ -27,13 +27,13 @@ type SeatSpec struct {
 type SeatRef struct {
 	ID ID
 	// Short Name
-	Name string
+	Name Name
 }
 
 // aka ExpDec or ExpDecDef without expression
 type SeatRoot struct {
 	ID       ID
-	Name     string
+	Name     Name
 	PE       chnl.Spec
 	CEs      []chnl.Spec
 	Children []SeatRef

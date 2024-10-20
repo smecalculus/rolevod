@@ -118,7 +118,7 @@ func MsgFromSpec(s Spec) SpecMsg {
 	case LinkSpec:
 		return SpecMsg{
 			K:    Link,
-			Link: &LinkMsg{FQN: sym.StringFromSym(spec.FQN)}}
+			Link: &LinkMsg{FQN: sym.StringFromSym(spec.Role)}}
 	case TensorSpec:
 		return SpecMsg{
 			K: Tensor,
@@ -157,7 +157,7 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 	case One:
 		return OneSpec{}, nil
 	case Link:
-		return LinkSpec{FQN: sym.StringToSym(mto.Link.FQN)}, nil
+		return LinkSpec{Role: sym.StringToSym(mto.Link.FQN)}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {

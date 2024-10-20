@@ -99,14 +99,14 @@ type PartSpecMsg struct {
 	Deal  string   `json:"deal_id" param:"id"`
 	Decl  string   `json:"seat_id"`
 	Owner string   `json:"owner_id"`
-	Ctx   []string `json:"ctx"`
+	TEs   []string `json:"tes"`
 }
 
 func (mto PartSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.Deal, id.Required...),
 		validation.Field(&mto.Decl, id.Required...),
-		validation.Field(&mto.Ctx, core.CtxOptional...),
+		validation.Field(&mto.TEs, core.CtxOptional...),
 	)
 }
 
@@ -114,10 +114,8 @@ type PartRootMsg struct {
 	ID     string        `json:"id"`
 	DealID string        `json:"deal_id"`
 	SeatID string        `json:"seat_id"`
-	PAK    string        `json:"pak"`
-	CAK    string        `json:"cak"`
 	PID    string        `json:"pid"`
-	Ctx    []chnl.RefMsg `json:"ctx"`
+	TEs    []chnl.RefMsg `json:"tes"`
 }
 
 // goverter:variables
