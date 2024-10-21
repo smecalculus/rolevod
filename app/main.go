@@ -17,7 +17,7 @@ import (
 	"smecalculus/rolevod/app/agent"
 	"smecalculus/rolevod/app/deal"
 	"smecalculus/rolevod/app/role"
-	"smecalculus/rolevod/app/seat"
+	"smecalculus/rolevod/app/sig"
 	"smecalculus/rolevod/app/web"
 )
 
@@ -36,7 +36,7 @@ func main() {
 		agent.Module,
 		deal.Module,
 		role.Module,
-		seat.Module,
+		sig.Module,
 		web.Module,
 	).Run()
 }

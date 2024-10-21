@@ -19,7 +19,7 @@ var (
 	DataFromDealRef  func(DealRef) dealRefData
 	DataToDealRefs   func([]dealRefData) ([]DealRef, error)
 	DataFromDealRefs func([]DealRef) []dealRefData
-	// goverter:ignore Seats
+	// goverter:ignore Sigs
 	DataToDealRoot   func(dealRootData) (DealRoot, error)
 	DataFromDealRoot func(DealRoot) dealRootData
 )

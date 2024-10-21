@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package seat
+package sig
 
 import (
 	"embed"
@@ -14,20 +14,20 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/seat",
+var Module = fx.Module("app/sig",
 	fx.Provide(
-		fx.Annotate(newSeatService, fx.As(new(SeatApi))),
-		fx.Annotate(newSeatRepoPgx, fx.As(new(SeatRepo))),
+		fx.Annotate(newSigService, fx.As(new(Api))),
+		fx.Annotate(newSigRepoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newSeatHandlerEcho,
+		newSigHandlerEcho,
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(
-		cfgSeatEcho,
+		cfgSigEcho,
 		cfgKinshipEcho,
 	),
 )
@@ -36,21 +36,21 @@ var Module = fx.Module("app/seat",
 var viesFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("seat").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
+	t, err := template.New("sig").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgSeatEcho(e *echo.Echo, h *seatHandlerEcho) error {
-	e.POST("/api/v1/seats", h.ApiPostOne)
-	e.GET("/api/v1/seats/:id", h.ApiGetOne)
-	e.GET("/ssr/seats/:id", h.SsrGetOne)
+func cfgSigEcho(e *echo.Echo, h *sigHandlerEcho) error {
+	e.POST("/api/v1/sigs", h.ApiPostOne)
+	e.GET("/api/v1/sigs/:id", h.ApiGetOne)
+	e.GET("/ssr/sigs/:id", h.SsrGetOne)
 	return nil
 }
 
 func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
-	e.POST("/api/v1/seats/:id/kinships", h.ApiPostOne)
+	e.POST("/api/v1/sigs/:id/kinships", h.ApiPostOne)
 	return nil
 }

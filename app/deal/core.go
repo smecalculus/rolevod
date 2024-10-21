@@ -15,7 +15,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
-	"smecalculus/rolevod/app/seat"
+	"smecalculus/rolevod/app/sig"
 )
 
 type Name = string
@@ -35,26 +35,26 @@ type DealRoot struct {
 	ID       ID
 	Name     Name
 	Children []DealRef
-	Seats    []seat.SeatRef
+	Sigs     []sig.Ref
 }
 
 type Environment struct {
-	seats  map[seat.ID]seat.SeatRoot
+	sigs   map[sig.ID]sig.Root
 	states map[state.ID]state.Root
 }
 
-func (e Environment) Contains(id seat.ID) bool {
-	_, ok := e.seats[id]
+func (e Environment) Contains(id sig.ID) bool {
+	_, ok := e.sigs[id]
 	return ok
 }
 
-func (e Environment) LookupPE(id seat.ID) state.EP {
-	decl := e.seats[id]
+func (e Environment) LookupPE(id sig.ID) state.EP {
+	decl := e.sigs[id]
 	return state.EP{Z: sym.New(decl.PE.Name), St: e.states[decl.PE.StID]}
 }
 
-func (e Environment) LookupCEs(id seat.ID) []state.EP {
-	decl := e.seats[id]
+func (e Environment) LookupCEs(id sig.ID) []state.EP {
+	decl := e.sigs[id]
 	ces := []state.EP{}
 	for _, ce := range decl.CEs {
 		ces = append(ces, state.EP{Z: sym.New(ce.Name), St: e.states[ce.StID]})
@@ -115,7 +115,7 @@ type DealApi interface {
 
 type dealService struct {
 	deals    dealRepo
-	seats    seat.SeatRepo
+	sigs     sig.Repo
 	chnls    chnl.Repo
 	steps    step.Repo
 	states   state.Repo
@@ -130,7 +130,7 @@ func newDealApi() DealApi {
 
 func newDealService(
 	deals dealRepo,
-	seats seat.SeatRepo,
+	sigs sig.Repo,
 	chnls chnl.Repo,
 	steps step.Repo,
 	states state.Repo,
@@ -139,7 +139,7 @@ func newDealService(
 ) *dealService {
 	name := slog.String("name", "dealService")
 	return &dealService{
-		deals, seats, chnls, steps, states, kinships, l.With(name),
+		deals, sigs, chnls, steps, states, kinships, l.With(name),
 	}
 }
 
@@ -196,10 +196,10 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 }
 
 func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
-	s.log.Debug("seat involvement started", slog.Any("spec", gotSpec))
-	wantSpec, err := s.seats.SelectByID(gotSpec.Decl)
+	s.log.Debug("sig involvement started", slog.Any("spec", gotSpec))
+	wantSpec, err := s.sigs.SelectByID(gotSpec.Decl)
 	if err != nil {
-		s.log.Error("seat selection failed",
+		s.log.Error("signature selection failed",
 			slog.Any("reason", err),
 			slog.Any("id", gotSpec.Decl),
 		)
@@ -234,8 +234,8 @@ func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		ID:  id.New(),
 		PID: newPE.ID,
 		Term: step.CTASpec{
-			AK:   ak.New(),
-			Seat: gotSpec.Decl,
+			AK:  ak.New(),
+			Sig: gotSpec.Decl,
 		},
 	}
 	err = s.steps.Insert(newProc)
@@ -246,7 +246,7 @@ func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		)
 		return chnl.Root{}, err
 	}
-	s.log.Debug("seat involvement succeeded", slog.Any("proc", newProc))
+	s.log.Debug("sig involvement succeeded", slog.Any("proc", newProc))
 	return newPE, nil
 }
 
@@ -291,9 +291,9 @@ func (s *dealService) Take(spec TranSpec) error {
 		return err
 	}
 	sigIDs := step.CollectEnv(spec.Term)
-	sigs, err := s.seats.SelectEnv(sigIDs)
+	sigs, err := s.sigs.SelectEnv(sigIDs)
 	if err != nil {
-		s.log.Error("seats selection failed",
+		s.log.Error("signatures selection failed",
 			slog.Any("reason", err),
 			slog.Any("pid", proc.PID),
 			slog.Any("ids", sigIDs),
@@ -318,7 +318,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	envIDs := seat.CollectStIDs(maps.Values(sigs))
+	envIDs := sig.CollectStIDs(maps.Values(sigs))
 	ctxIDs := chnl.CollectStIDs(append(ces, pe))
 	states, err := s.states.SelectEnv(append(envIDs, ctxIDs...))
 	if err != nil {
@@ -986,7 +986,7 @@ func (s *dealService) takeProcWith(
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
-		newPE, err := s.Involve(PartSpec{Decl: term.Seat, Owner: proc.PID, TEs: term.CEs})
+		newPE, err := s.Involve(PartSpec{Decl: term.Sig, Owner: proc.PID, TEs: term.CEs})
 		if err != nil {
 			return err
 		}
@@ -1216,7 +1216,7 @@ type dealRepo interface {
 	SelectAll() ([]DealRef, error)
 	SelectByID(ID) (DealRoot, error)
 	SelectChildren(ID) ([]DealRef, error)
-	SelectSeats(ID) ([]seat.SeatRef, error)
+	SelectSigs(ID) ([]sig.Ref, error)
 }
 
 // Kinship Relation
@@ -1237,7 +1237,7 @@ type kinshipRepo interface {
 // Participation aka lightweight Spawn
 type PartSpec struct {
 	Deal  ID
-	Decl  seat.ID
+	Decl  sig.ID
 	Owner chnl.ID
 	// Transferable Endpoints
 	TEs []chnl.ID
@@ -1545,12 +1545,12 @@ func (s *dealService) checkClient(
 		}
 		return nil
 	case step.SpawnSpec:
-		if !env.Contains(got.Seat) {
-			err := seat.ErrRootMissingInEnv(got.Seat)
+		if !env.Contains(got.Sig) {
+			err := sig.ErrRootMissingInEnv(got.Sig)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		wantCEs := env.LookupCEs(got.Seat)
+		wantCEs := env.LookupCEs(got.Sig)
 		if len(got.CEs) != len(wantCEs) {
 			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCEs), len(got.CEs))
 			s.log.Error("type checking failed",
@@ -1578,7 +1578,7 @@ func (s *dealService) checkClient(
 			}
 			delete(ctx.Linear, gotCE)
 		}
-		ctx.Linear[got.PE] = env.LookupPE(got.Seat).St
+		ctx.Linear[got.PE] = env.LookupPE(got.Sig).St
 		return s.checkState(env, ctx, pe, got.Cont)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))

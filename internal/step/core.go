@@ -155,19 +155,19 @@ func (CaseSpec) cont() {}
 func (s CaseSpec) Via() ph.ADT { return s.X }
 
 type CTASpec struct {
-	AK   ak.ADT
-	Seat id.ADT
+	AK  ak.ADT
+	Sig id.ADT
 }
 
 func (s CTASpec) act() {}
 
-func (s CTASpec) Via() ph.ADT { return s.Seat }
+func (s CTASpec) Via() ph.ADT { return s.Sig }
 
 // aka ExpName
 type LinkSpec struct {
-	PE   chnl.ID
-	CEs  []chnl.ID
-	Seat sym.ADT
+	PE  chnl.ID
+	CEs []chnl.ID
+	Sig sym.ADT
 }
 
 func (s LinkSpec) Via() ph.ADT { return s.PE }
@@ -187,7 +187,7 @@ type SpawnSpec struct {
 	PE   ph.ADT
 	CEs  []chnl.ID
 	Cont Term
-	Seat id.ADT
+	Sig  id.ADT
 }
 
 func (s SpawnSpec) Via() ph.ADT { return s.PE }
@@ -214,7 +214,7 @@ func collectEnvRec(t Term, env []id.ADT) []id.ADT {
 		}
 		return env
 	case SpawnSpec:
-		return collectEnvRec(term.Cont, append(env, term.Seat))
+		return collectEnvRec(term.Cont, append(env, term.Sig))
 	default:
 		return env
 	}

@@ -9,9 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/app/sig"
 	"smecalculus/rolevod/lib/id"
-
-	"smecalculus/rolevod/app/seat"
 )
 
 // Adapter
@@ -84,8 +83,8 @@ func (r *dealRepoPgx) SelectChildren(id id.ADT) ([]DealRef, error) {
 	return DataToDealRefs(dtos)
 }
 
-func (r *dealRepoPgx) SelectSeats(id id.ADT) ([]seat.SeatRef, error) {
-	return []seat.SeatRef{}, nil
+func (r *dealRepoPgx) SelectSigs(id id.ADT) ([]sig.Ref, error) {
+	return []sig.Ref{}, nil
 }
 
 // Adapter

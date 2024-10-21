@@ -19,12 +19,12 @@ import (
 
 	"smecalculus/rolevod/app/deal"
 	"smecalculus/rolevod/app/role"
-	"smecalculus/rolevod/app/seat"
+	"smecalculus/rolevod/app/sig"
 )
 
 var (
 	roleApi = role.NewRoleApi()
-	seatApi = seat.NewSeatApi()
+	sigApi  = sig.NewSigApi()
 	dealApi = deal.NewDealApi()
 	tc      *testCase
 )
@@ -62,7 +62,7 @@ type testCase struct {
 }
 
 func (tc *testCase) Setup(t *testing.T) {
-	tables := []string{"aliases", "roles", "seats", "states", "channels", "steps", "clientships"}
+	tables := []string{"aliases", "roles", "signatures", "states", "channels", "steps", "clientships"}
 	for _, table := range tables {
 		_, err := tc.db.Exec(fmt.Sprintf("truncate table %v", table))
 		if err != nil {
@@ -72,6 +72,7 @@ func (tc *testCase) Setup(t *testing.T) {
 }
 
 func TestEstablishKinship(t *testing.T) {
+	tc.Setup(t)
 	// given
 	ps := deal.DealSpec{Name: "parent-deal"}
 	pr, err := dealApi.Create(ps)
@@ -119,29 +120,29 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeatSpec1 := seat.SeatSpec{
-			FQN: "seat-1",
+		oneSigSpec1 := sig.Spec{
+			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
 				StID: oneRole.St.Ident(),
 			},
 		}
-		oneSeat1, err := seatApi.Create(oneSeatSpec1)
+		oneSig1, err := sigApi.Create(oneSigSpec1)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneSeatSpec2 := seat.SeatSpec{
-			FQN: "seat-2",
+		oneSigSpec2 := sig.Spec{
+			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
 				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
-				oneSeat1.PE,
+				oneSig1.PE,
 			},
 		}
-		oneSeat2, err := seatApi.Create(oneSeatSpec2)
+		oneSig2, err := sigApi.Create(oneSigSpec2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -156,7 +157,7 @@ func TestTake(t *testing.T) {
 		// and
 		closerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat1.ID,
+			Decl: oneSig1.ID,
 		}
 		closer, err := dealApi.Involve(closerSpec)
 		if err != nil {
@@ -165,7 +166,7 @@ func TestTake(t *testing.T) {
 		// and
 		waiterSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat2.ID,
+			Decl: oneSig2.ID,
 			TEs: []chnl.ID{
 				closer.ID,
 			},
@@ -231,42 +232,42 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		lolliSeatSpec := seat.SeatSpec{
-			FQN: "seat-1",
+		lolliSigSpec := sig.Spec{
+			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
 				StID: lolliRole.St.Ident(),
 			},
 		}
-		lolliSeat, err := seatApi.Create(lolliSeatSpec)
+		lolliSig, err := sigApi.Create(lolliSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneSeatSpec1 := seat.SeatSpec{
-			FQN: "seat-2",
+		oneSigSpec1 := sig.Spec{
+			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
 				StID: oneRole.St.Ident(),
 			},
 		}
-		oneSeat1, err := seatApi.Create(oneSeatSpec1)
+		oneSig1, err := sigApi.Create(oneSigSpec1)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneSeatSpec2 := seat.SeatSpec{
-			FQN: "seat-3",
+		oneSigSpec2 := sig.Spec{
+			FQN: "sig-3",
 			PE: chnl.Spec{
 				Name: "chnl-3",
 				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
-				lolliSeatSpec.PE,
-				oneSeat1.PE,
+				lolliSigSpec.PE,
+				oneSig1.PE,
 			},
 		}
-		oneSeat2, err := seatApi.Create(oneSeatSpec2)
+		oneSig2, err := sigApi.Create(oneSigSpec2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -281,7 +282,7 @@ func TestTake(t *testing.T) {
 		// and
 		receiverSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: lolliSeat.ID,
+			Decl: lolliSig.ID,
 		}
 		receiver, err := dealApi.Involve(receiverSpec)
 		if err != nil {
@@ -290,7 +291,7 @@ func TestTake(t *testing.T) {
 		// and
 		messageSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat1.ID,
+			Decl: oneSig1.ID,
 		}
 		message, err := dealApi.Involve(messageSpec)
 		if err != nil {
@@ -299,7 +300,7 @@ func TestTake(t *testing.T) {
 		// and
 		senderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat2.ID,
+			Decl: oneSig2.ID,
 			TEs: []chnl.ID{
 				receiver.ID,
 				message.ID,
@@ -374,29 +375,29 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		withSeatSpec := seat.SeatSpec{
-			FQN: "seat-1",
+		withSigSpec := sig.Spec{
+			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
 				StID: withRole.St.Ident(),
 			},
 		}
-		withSeat, err := seatApi.Create(withSeatSpec)
+		withSig, err := sigApi.Create(withSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneSeatSpec := seat.SeatSpec{
-			FQN: "seat-2",
+		oneSigSpec := sig.Spec{
+			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
 				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
-				withSeat.PE,
+				withSig.PE,
 			},
 		}
-		oneSeat, err := seatApi.Create(oneSeatSpec)
+		oneSig, err := sigApi.Create(oneSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -411,7 +412,7 @@ func TestTake(t *testing.T) {
 		// and
 		followerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: withSeat.ID,
+			Decl: withSig.ID,
 		}
 		follower, err := dealApi.Involve(followerSpec)
 		if err != nil {
@@ -420,7 +421,7 @@ func TestTake(t *testing.T) {
 		// and
 		deciderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat.ID,
+			Decl: oneSig.ID,
 			TEs: []chnl.ID{
 				follower.ID,
 			},
@@ -478,9 +479,9 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat1, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-1",
+		oneSig1, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
 					StID: oneRole.St.Ident(),
@@ -491,15 +492,15 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat2, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-2",
+		oneSig2, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
 					StID: oneRole.St.Ident(),
 				},
 				CEs: []chnl.Spec{
-					oneSeat1.PE,
+					oneSig1.PE,
 				},
 			},
 		)
@@ -507,15 +508,15 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat3, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-3",
+		oneSig3, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
 					StID: oneRole.St.Ident(),
 				},
 				CEs: []chnl.Spec{
-					oneSeat1.PE,
+					oneSig1.PE,
 				},
 			},
 		)
@@ -535,7 +536,7 @@ func TestTake(t *testing.T) {
 		injectee, err := dealApi.Involve(
 			deal.PartSpec{
 				Deal: bigDeal.ID,
-				Decl: oneSeat1.ID,
+				Decl: oneSig1.ID,
 			},
 		)
 		if err != nil {
@@ -544,7 +545,7 @@ func TestTake(t *testing.T) {
 		// and
 		spawnerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat2.ID,
+			Decl: oneSig2.ID,
 			TEs: []chnl.ID{
 				injectee.ID,
 			},
@@ -570,7 +571,7 @@ func TestTake(t *testing.T) {
 						A: spawner.ID,
 					},
 				},
-				Seat: oneSeat3.ID,
+				Sig: oneSig3.ID,
 			},
 		}
 		// when
@@ -595,9 +596,9 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat1, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-1",
+		oneSig1, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
 					StID: oneRole.St.Ident(),
@@ -608,15 +609,15 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat2, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-2",
+		oneSig2, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
 					StID: oneRole.St.Ident(),
 				},
 				CEs: []chnl.Spec{
-					oneSeat1.PE,
+					oneSig1.PE,
 				},
 			},
 		)
@@ -624,15 +625,15 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSeat3, err := seatApi.Create(
-			seat.SeatSpec{
-				FQN: "seat-3",
+		oneSig3, err := sigApi.Create(
+			sig.Spec{
+				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
 					StID: oneRole.St.Ident(),
 				},
 				CEs: []chnl.Spec{
-					oneSeat1.PE,
+					oneSig1.PE,
 				},
 			},
 		)
@@ -651,7 +652,7 @@ func TestTake(t *testing.T) {
 		// and
 		closerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat1.ID,
+			Decl: oneSig1.ID,
 		}
 		closer, err := dealApi.Involve(closerSpec)
 		if err != nil {
@@ -660,7 +661,7 @@ func TestTake(t *testing.T) {
 		// and
 		forwarderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat2.ID,
+			Decl: oneSig2.ID,
 			TEs: []chnl.ID{
 				closer.ID,
 			},
@@ -672,7 +673,7 @@ func TestTake(t *testing.T) {
 		// and
 		waiterSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSeat3.ID,
+			Decl: oneSig3.ID,
 			TEs: []chnl.ID{
 				forwarder.ID,
 			},

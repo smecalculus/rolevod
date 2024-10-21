@@ -1,4 +1,4 @@
-package seat
+package sig
 
 import (
 	"context"
@@ -13,28 +13,28 @@ import (
 )
 
 // Adapter
-type seatRepoPgx struct {
+type sigRepoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newSeatRepoPgx(p *pgxpool.Pool, l *slog.Logger) *seatRepoPgx {
-	name := slog.String("name", "seatRepoPgx")
-	return &seatRepoPgx{p, l.With(name)}
+func newSigRepoPgx(p *pgxpool.Pool, l *slog.Logger) *sigRepoPgx {
+	name := slog.String("name", "sigRepoPgx")
+	return &sigRepoPgx{p, l.With(name)}
 }
 
-func (r *seatRepoPgx) Insert(root SeatRoot) error {
+func (r *sigRepoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto, err := DataFromSeatRoot(root)
+	dto, err := DataFromSigRoot(root)
 	if err != nil {
 		return err
 	}
 	query := `
-		INSERT INTO seats (
+		INSERT INTO signatures (
 			id, name, pe, ces
 		) VALUES (
 			@id, @name, @pe, @ces
@@ -42,7 +42,7 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	args := pgx.NamedArgs{
 		"id":   dto.ID,
 		"name": dto.Name,
-		"pe":  dto.PE,
+		"pe":   dto.PE,
 		"ces":  dto.CEs,
 	}
 	_, err = tx.Exec(ctx, query, args)
@@ -52,48 +52,48 @@ func (r *seatRepoPgx) Insert(root SeatRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *seatRepoPgx) SelectByID(rid ID) (SeatRoot, error) {
+func (r *sigRepoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
 			id, name, pe, ces
-		FROM seats
+		FROM signatures
 		WHERE id = $1`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
-		return SeatRoot{}, err
+		return Root{}, err
 	}
 	defer rows.Close()
-	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[seatRootData])
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[sigRootData])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
-		return SeatRoot{}, err
+		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "seat selection succeeded", slog.Any("dto", dto))
-	return DataToSeatRoot(dto)
+	r.log.Log(ctx, core.LevelTrace, "signature selection succeeded", slog.Any("dto", dto))
+	return DataToSigRoot(dto)
 }
 
-func (r *seatRepoPgx) SelectEnv(ids []ID) (map[ID]SeatRoot, error) {
-	seats, err := r.SelectByIDs(ids)
+func (r *sigRepoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
+	sigs, err := r.SelectByIDs(ids)
 	if err != nil {
 		return nil, err
 	}
-	env := make(map[ID]SeatRoot, len(seats))
-	for _, s := range seats {
+	env := make(map[ID]Root, len(sigs))
+	for _, s := range sigs {
 		env[s.ID] = s
 	}
 	return env, nil
 }
 
-func (r *seatRepoPgx) SelectByIDs(ids []ID) ([]SeatRoot, error) {
+func (r *sigRepoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	if len(ids) == 0 {
-		return []SeatRoot{}, nil
+		return []Root{}, nil
 	}
 	query := `
 		SELECT
 			id, name, pe, ces
-		FROM seats
+		FROM signatures
 		WHERE id = $1`
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
@@ -111,7 +111,7 @@ func (r *seatRepoPgx) SelectByIDs(ids []ID) ([]SeatRoot, error) {
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	var dtos []seatRootData
+	var dtos []sigRootData
 	for _, rid := range ids {
 		rows, err := br.Query()
 		if err != nil {
@@ -120,7 +120,7 @@ func (r *seatRepoPgx) SelectByIDs(ids []ID) ([]SeatRoot, error) {
 				slog.Any("id", rid),
 			)
 		}
-		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[seatRootData])
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[sigRootData])
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
@@ -136,20 +136,20 @@ func (r *seatRepoPgx) SelectByIDs(ids []ID) ([]SeatRoot, error) {
 	if err != nil {
 		return nil, errors.Join(err, tx.Rollback(ctx))
 	}
-	r.log.Log(ctx, core.LevelTrace, "seats selection succeeded", slog.Any("dtos", dtos))
+	r.log.Log(ctx, core.LevelTrace, "signatures selection succeeded", slog.Any("dtos", dtos))
 	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
-	return DataToSeatRoots(dtos)
+	return DataToSigRoots(dtos)
 }
 
-func (r *seatRepoPgx) SelectChildren(id ID) ([]SeatRef, error) {
+func (r *sigRepoPgx) SelectChildren(id ID) ([]Ref, error) {
 	query := `
 		SELECT
 			s.id,
 			s.name
-		FROM seats s
+		FROM signatures s
 		LEFT JOIN kinships k
 			ON s.id = k.child_id
 		WHERE k.parent_id = $1`
@@ -159,15 +159,15 @@ func (r *seatRepoPgx) SelectChildren(id ID) ([]SeatRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[seatRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[sigRefData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToSeatRefs(dtos)
+	return DataToSigRefs(dtos)
 }
 
-func (r *seatRepoPgx) SelectAll() ([]SeatRef, error) {
-	return []SeatRef{}, nil
+func (r *sigRepoPgx) SelectAll() ([]Ref, error) {
+	return []Ref{}, nil
 }
 
 // Adapter

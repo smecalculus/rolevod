@@ -3,14 +3,13 @@ package deal
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/app/sig"
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/step"
-
-	"smecalculus/rolevod/app/seat"
 )
 
 type DealSpecMsg struct {
@@ -46,16 +45,16 @@ func (mto DealRefMsg) Validate() error {
 }
 
 type DealRootMsg struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Seats    []seat.SeatRefMsg `json:"seats"`
-	Children []DealRefMsg      `json:"children"`
+	ID       string          `json:"id"`
+	Name     string          `json:"name"`
+	Sigs     []sig.SigRefMsg `json:"sigs"`
+	Children []DealRefMsg    `json:"children"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/app/seat:Msg.*
+// goverter:extend smecalculus/rolevod/app/sig:Msg.*
 var (
 	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
 	MsgFromDealSpec  func(DealSpec) DealSpecMsg
@@ -97,7 +96,7 @@ var (
 
 type PartSpecMsg struct {
 	Deal  string   `json:"deal_id" param:"id"`
-	Decl  string   `json:"seat_id"`
+	Decl  string   `json:"sig_id"`
 	Owner string   `json:"owner_id"`
 	TEs   []string `json:"tes"`
 }
@@ -113,7 +112,7 @@ func (mto PartSpecMsg) Validate() error {
 type PartRootMsg struct {
 	ID     string        `json:"id"`
 	DealID string        `json:"deal_id"`
-	SeatID string        `json:"seat_id"`
+	SigID  string        `json:"sig_id"`
 	PID    string        `json:"pid"`
 	TEs    []chnl.RefMsg `json:"tes"`
 }
@@ -123,7 +122,7 @@ type PartRootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/lib/ak:String.*
 // goverter:extend smecalculus/rolevod/internal/chnl:Msg.*
-// goverter:extend smecalculus/rolevod/app/seat:Msg.*
+// goverter:extend smecalculus/rolevod/app/sig:Msg.*
 var (
 	MsgFromPartSpec func(PartSpec) PartSpecMsg
 	MsgToPartSpec   func(PartSpecMsg) (PartSpec, error)

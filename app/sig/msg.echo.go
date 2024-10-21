@@ -1,4 +1,4 @@
-package seat
+package sig
 
 import (
 	"log/slog"
@@ -11,19 +11,19 @@ import (
 )
 
 // Adapter
-type seatHandlerEcho struct {
-	api SeatApi
+type sigHandlerEcho struct {
+	api Api
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newSeatHandlerEcho(a SeatApi, r msg.Renderer, l *slog.Logger) *seatHandlerEcho {
-	name := slog.String("name", "seatHandlerEcho")
-	return &seatHandlerEcho{a, r, l.With(name)}
+func newSigHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *sigHandlerEcho {
+	name := slog.String("name", "sigHandlerEcho")
+	return &sigHandlerEcho{a, r, l.With(name)}
 }
 
-func (h *seatHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto SeatSpecMsg
+func (h *sigHandlerEcho) ApiPostOne(c echo.Context) error {
+	var mto SigSpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		h.log.Error("mto binding failed", slog.Any("reason", err))
@@ -34,7 +34,7 @@ func (h *seatHandlerEcho) ApiPostOne(c echo.Context) error {
 		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
 	}
-	spec, err := MsgToSeatSpec(mto)
+	spec, err := MsgToSigSpec(mto)
 	if err != nil {
 		h.log.Error("mto conversion failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
@@ -43,10 +43,10 @@ func (h *seatHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromSeatRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromSigRoot(root))
 }
 
-func (h *seatHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *sigHandlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -60,10 +60,10 @@ func (h *seatHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromSeatRoot(root))
+	return c.JSON(http.StatusOK, MsgFromSigRoot(root))
 }
 
-func (h *seatHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *sigHandlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -77,7 +77,7 @@ func (h *seatHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("seat", MsgFromSeatRoot(root))
+	html, err := h.ssr.Render("sig", MsgFromSigRoot(root))
 	if err != nil {
 		return err
 	}
@@ -86,12 +86,12 @@ func (h *seatHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api SeatApi
+	api Api
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a SeatApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }

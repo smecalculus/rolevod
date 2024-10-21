@@ -1,4 +1,4 @@
-package seat
+package sig
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -10,13 +10,13 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-type SeatSpecMsg struct {
+type SigSpecMsg struct {
 	FQN string         `json:"name"`
 	PE  chnl.SpecMsg   `json:"pe"`
 	CEs []chnl.SpecMsg `json:"ces"`
 }
 
-func (mto SeatSpecMsg) Validate() error {
+func (mto SigSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.FQN, sym.Required...),
 		validation.Field(&mto.PE, validation.Required),
@@ -34,17 +34,17 @@ func (mto RefMsg) Validate() error {
 	)
 }
 
-type SeatRefMsg struct {
+type SigRefMsg struct {
 	ID   string `param:"id" json:"id"`
 	Name string `query:"name" json:"name"`
 }
 
-type SeatRootMsg struct {
+type SigRootMsg struct {
 	ID       string         `json:"id"`
 	Name     string         `json:"name"`
 	PE       chnl.SpecMsg   `json:"pe"`
 	CEs      []chnl.SpecMsg `json:"ces"`
-	Children []SeatRefMsg   `json:"children"`
+	Children []SigRefMsg    `json:"children"`
 }
 
 // goverter:variables
@@ -53,15 +53,15 @@ type SeatRootMsg struct {
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToID          func(string) (id.ADT, error)
-	MsgFromID        func(id.ADT) string
-	MsgToSeatSpec    func(SeatSpecMsg) (SeatSpec, error)
-	MsgFromSeatSpec  func(SeatSpec) SeatSpecMsg
-	MsgToSeatRef     func(SeatRefMsg) (SeatRef, error)
-	MsgFromSeatRef   func(SeatRef) SeatRefMsg
-	MsgToSeatRoot    func(SeatRootMsg) (SeatRoot, error)
-	MsgFromSeatRoot  func(SeatRoot) SeatRootMsg
-	MsgFromSeatRoots func([]SeatRoot) []SeatRootMsg
+	MsgToID         func(string) (id.ADT, error)
+	MsgFromID       func(id.ADT) string
+	MsgToSigSpec    func(SigSpecMsg) (Spec, error)
+	MsgFromSigSpec  func(Spec) SigSpecMsg
+	MsgToSigRef     func(SigRefMsg) (Ref, error)
+	MsgFromSigRef   func(Ref) SigRefMsg
+	MsgToSigRoot    func(SigRootMsg) (Root, error)
+	MsgFromSigRoot  func(Root) SigRootMsg
+	MsgFromSigRoots func([]Root) []SigRootMsg
 )
 
 type KinshipSpecMsg struct {
@@ -70,8 +70,8 @@ type KinshipSpecMsg struct {
 }
 
 type KinshipRootMsg struct {
-	Parent   SeatRefMsg   `json:"parent"`
-	Children []SeatRefMsg `json:"children"`
+	Parent   SigRefMsg   `json:"parent"`
+	Children []SigRefMsg `json:"children"`
 }
 
 // goverter:variables

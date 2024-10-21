@@ -4,7 +4,7 @@ CREATE TABLE roles (
 	state jsonb
 );
 
-CREATE TABLE seats (
+CREATE TABLE signatures (
 	id varchar(36),
 	name varchar(64),
 	pe jsonb,

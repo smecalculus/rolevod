@@ -179,7 +179,7 @@ type SpawnMsg struct {
 	PE   ph.Msg   `json:"pe"`
 	CEs  []string `json:"ces"`
 	Cont TermMsg  `json:"cont"`
-	Seat string   `json:"seat_id"`
+	Sig  string   `json:"sig_id"`
 }
 
 func (mto SpawnMsg) Validate() error {
@@ -187,7 +187,7 @@ func (mto SpawnMsg) Validate() error {
 		validation.Field(&mto.PE, validation.Required),
 		validation.Field(&mto.CEs, core.CtxOptional...),
 		validation.Field(&mto.Cont, validation.Required),
-		validation.Field(&mto.Seat, id.Required...),
+		validation.Field(&mto.Sig, id.Required...),
 	)
 }
 
@@ -204,14 +204,14 @@ func (mto FwdMsg) Validate() error {
 }
 
 type CTAMsg struct {
-	AK   string `json:"access_key"`
-	Seat string `json:"seat_id"`
+	AK  string `json:"access_key"`
+	Sig string `json:"sig_id"`
 }
 
 func (mto CTAMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.AK, id.Required...),
-		validation.Field(&mto.Seat, id.Required...),
+		validation.Field(&mto.Sig, id.Required...),
 	)
 }
 
@@ -297,7 +297,7 @@ func MsgFromTerm(t Term) TermMsg {
 				PE:   ph.MsgFromPH(term.PE),
 				CEs:  id.StringsFromIDs(term.CEs),
 				Cont: MsgFromTerm(term.Cont),
-				Seat: term.Seat.String(),
+				Sig:  term.Sig.String(),
 			},
 		}
 	case FwdSpec:
@@ -312,8 +312,8 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: CTA,
 			CTA: &CTAMsg{
-				Seat: term.Seat.String(),
-				AK:   ak.StringFromAK(term.AK),
+				Sig: term.Sig.String(),
+				AK:  ak.StringFromAK(term.AK),
 			},
 		}
 	default:
@@ -403,11 +403,11 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		seatID, err := id.StringToID(mto.Spawn.Seat)
+		sigID, err := id.StringToID(mto.Spawn.Sig)
 		if err != nil {
 			return nil, err
 		}
-		return SpawnSpec{PE: pe, CEs: ces, Cont: cont, Seat: seatID}, nil
+		return SpawnSpec{PE: pe, CEs: ces, Cont: cont, Sig: sigID}, nil
 	case Fwd:
 		c, err := ph.MsgToPH(mto.Fwd.C)
 		if err != nil {
@@ -423,11 +423,11 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		seatID, err := id.StringToID(mto.CTA.Seat)
+		sigID, err := id.StringToID(mto.CTA.Sig)
 		if err != nil {
 			return nil, err
 		}
-		return CTASpec{AK: key, Seat: seatID}, nil
+		return CTASpec{AK: key, Sig: sigID}, nil
 	default:
 		panic(ErrUnexpectedTermKind(mto.K))
 	}
