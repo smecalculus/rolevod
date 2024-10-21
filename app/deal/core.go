@@ -290,13 +290,13 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	seatIDs := step.CollectEnv(spec.Term)
-	seats, err := s.seats.SelectEnv(seatIDs)
+	sigIDs := step.CollectEnv(spec.Term)
+	sigs, err := s.seats.SelectEnv(sigIDs)
 	if err != nil {
 		s.log.Error("seats selection failed",
 			slog.Any("reason", err),
 			slog.Any("pid", proc.PID),
-			slog.Any("ids", seatIDs),
+			slog.Any("ids", sigIDs),
 		)
 		return err
 	}
@@ -318,7 +318,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	envIDs := seat.CollectStIDs(maps.Values(seats))
+	envIDs := seat.CollectStIDs(maps.Values(sigs))
 	ctxIDs := chnl.CollectStIDs(append(ces, pe))
 	states, err := s.states.SelectEnv(append(envIDs, ctxIDs...))
 	if err != nil {
@@ -329,7 +329,7 @@ func (s *dealService) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	env := Environment{seats, states}
+	env := Environment{sigs, states}
 	ctx := convertToCtx(ces, states)
 	zc := state.EP{Z: pe.ID, St: states[pe.StID]}
 	// type checking
