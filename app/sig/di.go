@@ -16,12 +16,12 @@ import (
 
 var Module = fx.Module("app/sig",
 	fx.Provide(
-		fx.Annotate(newSigService, fx.As(new(Api))),
-		fx.Annotate(newSigRepoPgx, fx.As(new(Repo))),
+		fx.Annotate(newService, fx.As(new(API))),
+		fx.Annotate(newRepoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newSigHandlerEcho,
+		newHandlerEcho,
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
@@ -43,7 +43,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgSigEcho(e *echo.Echo, h *sigHandlerEcho) error {
+func cfgSigEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/sigs", h.ApiPostOne)
 	e.GET("/api/v1/sigs/:id", h.ApiGetOne)
 	e.GET("/ssr/sigs/:id", h.SsrGetOne)

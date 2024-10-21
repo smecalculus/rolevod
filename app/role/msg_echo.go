@@ -11,25 +11,25 @@ import (
 )
 
 // Adapter
-type roleHandlerEcho struct {
-	api RoleApi
+type handlerEcho struct {
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newRoleHandlerEcho(ra RoleApi, r msg.Renderer, l *slog.Logger) *roleHandlerEcho {
+func newHandlerEcho(ra API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "roleHandlerEcho")
-	return &roleHandlerEcho{ra, r, l.With(name)}
+	return &handlerEcho{ra, r, l.With(name)}
 }
 
-func (h *roleHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto RoleSpecMsg
+func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+	var mto SpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
 	h.log.Debug("role posting started", slog.Any("mto", mto))
-	spec, err := MsgToRoleSpec(mto)
+	spec, err := MsgToSpec(mto)
 	if err != nil {
 		return err
 	}
@@ -37,10 +37,10 @@ func (h *roleHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromRoleRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *roleHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -54,16 +54,16 @@ func (h *roleHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoleRoot(rr))
+	return c.JSON(http.StatusOK, MsgFromRoot(rr))
 }
 
-func (h *roleHandlerEcho) ApiPutOne(c echo.Context) error {
-	var mto RoleRootMsg
+func (h *handlerEcho) ApiPutOne(c echo.Context) error {
+	var mto RootMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	rr, err := MsgToRoleRoot(mto)
+	rr, err := MsgToRoot(mto)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (h *roleHandlerEcho) ApiPutOne(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *roleHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -88,7 +88,7 @@ func (h *roleHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("tp", MsgFromRoleRoot(rr))
+	html, err := h.ssr.Render("tp", MsgFromRoot(rr))
 	if err != nil {
 		return err
 	}
@@ -97,12 +97,12 @@ func (h *roleHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api RoleApi
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a RoleApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }

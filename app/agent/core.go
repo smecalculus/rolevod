@@ -8,43 +8,42 @@ import (
 
 type ID = id.ADT
 
-type AgentSpec struct {
+type Spec struct {
 	Name string
 }
 
-type AgentRef struct {
-	ID   id.ADT
+type Ref struct {
+	ID   ID
 	Name string
 }
 
-// Aggregate Root
-type AgentRoot struct {
-	ID       id.ADT
+type Root struct {
+	ID       ID
 	Name     string
-	Children []AgentRef
+	Children []Ref
 }
 
 // Port
-type AgentApi interface {
-	Create(AgentSpec) (AgentRoot, error)
-	Retrieve(id.ADT) (AgentRoot, error)
+type API interface {
+	Create(Spec) (Root, error)
+	Retrieve(ID) (Root, error)
 	Establish(KinshipSpec) error
-	RetreiveAll() ([]AgentRef, error)
+	RetreiveAll() ([]Ref, error)
 }
 
-type agentService struct {
-	agents   agentRepo
+type service struct {
+	agents   repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
 
-func newAgentService(agents agentRepo, kinships kinshipRepo, l *slog.Logger) *agentService {
+func newService(agents repo, kinships kinshipRepo, l *slog.Logger) *service {
 	name := slog.String("name", "agentService")
-	return &agentService{agents, kinships, l.With(name)}
+	return &service{agents, kinships, l.With(name)}
 }
 
-func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
-	root := AgentRoot{
+func (s *service) Create(spec Spec) (Root, error) {
+	root := Root{
 		ID:   id.New(),
 		Name: spec.Name,
 	}
@@ -55,25 +54,25 @@ func (s *agentService) Create(spec AgentSpec) (AgentRoot, error) {
 	return root, nil
 }
 
-func (s *agentService) Retrieve(id id.ADT) (AgentRoot, error) {
+func (s *service) Retrieve(id ID) (Root, error) {
 	root, err := s.agents.SelectByID(id)
 	if err != nil {
-		return AgentRoot{}, err
+		return Root{}, err
 	}
 	root.Children, err = s.agents.SelectChildren(id)
 	if err != nil {
-		return AgentRoot{}, err
+		return Root{}, err
 	}
 	return root, nil
 }
 
-func (s *agentService) Establish(spec KinshipSpec) error {
-	var children []AgentRef
+func (s *service) Establish(spec KinshipSpec) error {
+	var children []Ref
 	for _, id := range spec.ChildIDs {
-		children = append(children, AgentRef{ID: id})
+		children = append(children, Ref{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   AgentRef{ID: spec.ParentID},
+		Parent:   Ref{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(root)
@@ -84,26 +83,26 @@ func (s *agentService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *agentService) RetreiveAll() ([]AgentRef, error) {
+func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.agents.SelectAll()
 }
 
 // Port
-type agentRepo interface {
-	Insert(AgentRoot) error
-	SelectByID(id.ADT) (AgentRoot, error)
-	SelectChildren(id.ADT) ([]AgentRef, error)
-	SelectAll() ([]AgentRef, error)
+type repo interface {
+	Insert(Root) error
+	SelectByID(ID) (Root, error)
+	SelectChildren(ID) ([]Ref, error)
+	SelectAll() ([]Ref, error)
 }
 
 type KinshipSpec struct {
-	ParentID id.ADT
-	ChildIDs []id.ADT
+	ParentID ID
+	ChildIDs []ID
 }
 
 type KinshipRoot struct {
-	Parent   AgentRef
-	Children []AgentRef
+	Parent   Ref
+	Children []Ref
 }
 
 type kinshipRepo interface {
@@ -114,5 +113,5 @@ type kinshipRepo interface {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:Ident
 var (
-	ToAgentRef func(AgentRoot) AgentRef
+	ToAgentRef func(Root) Ref
 )

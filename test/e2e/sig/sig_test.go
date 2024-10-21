@@ -5,12 +5,13 @@ import (
 	"slices"
 	"testing"
 
-	"smecalculus/rolevod/app/sig"
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/app/sig"
 )
 
 var (
-	sigApi = sig.NewSigApi()
+	api = sig.NewAPI()
 )
 
 func TestMain(m *testing.M) {
@@ -21,13 +22,13 @@ func TestMain(m *testing.M) {
 func TestEstablish(t *testing.T) {
 	// given
 	ps := sig.Spec{FQN: "parent-sig"}
-	pr, err := sigApi.Create(ps)
+	pr, err := api.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
 	cs := sig.Spec{FQN: "child-sig"}
-	cr, err := sigApi.Create(cs)
+	cr, err := api.Create(cs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,12 +37,12 @@ func TestEstablish(t *testing.T) {
 		ParentID: pr.ID,
 		ChildIDs: []id.ADT{cr.ID},
 	}
-	err = sigApi.Establish(ks)
+	err = api.Establish(ks)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := sigApi.Retrieve(pr.ID)
+	actual, err := api.Retrieve(pr.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,20 +21,20 @@ import (
 type Name = string
 type ID = id.ADT
 
-type DealSpec struct {
+type Spec struct {
 	Name Name
 }
 
-type DealRef struct {
+type Ref struct {
 	ID   ID
 	Name Name
 }
 
 // aka Configuration or Eta
-type DealRoot struct {
+type Root struct {
 	ID       ID
 	Name     Name
-	Children []DealRef
+	Children []Ref
 	Sigs     []sig.Ref
 }
 
@@ -101,20 +101,20 @@ func (c *Configuration) Remove(ids ...chnl.ID) {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:Ident
 var (
-	ConvertRootToRef func(DealRoot) DealRef
+	ConvertRootToRef func(Root) Ref
 )
 
-type DealApi interface {
-	Create(DealSpec) (DealRoot, error)
-	Retrieve(ID) (DealRoot, error)
-	RetreiveAll() ([]DealRef, error)
+type API interface {
+	Create(Spec) (Root, error)
+	Retrieve(ID) (Root, error)
+	RetreiveAll() ([]Ref, error)
 	Establish(KinshipSpec) error
 	Involve(PartSpec) (chnl.Root, error)
 	Take(TranSpec) error
 }
 
-type dealService struct {
-	deals    dealRepo
+type service struct {
+	deals    repo
 	sigs     sig.Repo
 	chnls    chnl.Repo
 	steps    step.Repo
@@ -124,28 +124,28 @@ type dealService struct {
 }
 
 // for compilation purposes
-func newDealApi() DealApi {
-	return &dealService{}
+func newAPI() API {
+	return &service{}
 }
 
-func newDealService(
-	deals dealRepo,
+func newService(
+	deals repo,
 	sigs sig.Repo,
 	chnls chnl.Repo,
 	steps step.Repo,
 	states state.Repo,
 	kinships kinshipRepo,
 	l *slog.Logger,
-) *dealService {
+) *service {
 	name := slog.String("name", "dealService")
-	return &dealService{
+	return &service{
 		deals, sigs, chnls, steps, states, kinships, l.With(name),
 	}
 }
 
-func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
+func (s *service) Create(spec Spec) (Root, error) {
 	s.log.Debug("deal creation started", slog.Any("spec", spec))
-	root := DealRoot{
+	root := Root{
 		ID:   id.New(),
 		Name: spec.Name,
 	}
@@ -161,30 +161,30 @@ func (s *dealService) Create(spec DealSpec) (DealRoot, error) {
 	return root, nil
 }
 
-func (s *dealService) Retrieve(id ID) (DealRoot, error) {
+func (s *service) Retrieve(id ID) (Root, error) {
 	root, err := s.deals.SelectByID(id)
 	if err != nil {
-		return DealRoot{}, err
+		return Root{}, err
 	}
 	root.Children, err = s.deals.SelectChildren(id)
 	if err != nil {
-		return DealRoot{}, err
+		return Root{}, err
 	}
 	return root, nil
 }
 
-func (s *dealService) RetreiveAll() ([]DealRef, error) {
+func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.deals.SelectAll()
 }
 
-func (s *dealService) Establish(spec KinshipSpec) error {
+func (s *service) Establish(spec KinshipSpec) error {
 	s.log.Debug("kinship establishment started", slog.Any("spec", spec))
-	var children []DealRef
+	var children []Ref
 	for _, id := range spec.ChildIDs {
-		children = append(children, DealRef{ID: id})
+		children = append(children, Ref{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   DealRef{ID: spec.ParentID},
+		Parent:   Ref{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(root)
@@ -195,7 +195,7 @@ func (s *dealService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
+func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 	s.log.Debug("sig involvement started", slog.Any("spec", gotSpec))
 	wantSpec, err := s.sigs.SelectByID(gotSpec.Decl)
 	if err != nil {
@@ -250,7 +250,7 @@ func (s *dealService) Involve(gotSpec PartSpec) (chnl.Root, error) {
 	return newPE, nil
 }
 
-func (s *dealService) Take(spec TranSpec) error {
+func (s *service) Take(spec TranSpec) error {
 	if spec.Term == nil {
 		panic(step.ErrTermValueNil(spec.PID))
 	}
@@ -344,7 +344,7 @@ func (s *dealService) Take(spec TranSpec) error {
 	return s.takeProcWith(proc, cfg)
 }
 
-func (s *dealService) takeProc(
+func (s *service) takeProc(
 	proc step.ProcRoot,
 ) (err error) {
 	s.log.Debug("transition taking started", slog.Any("proc", proc))
@@ -378,7 +378,7 @@ func (s *dealService) takeProc(
 	return s.takeProcWith(proc, cfg)
 }
 
-func (s *dealService) takeProcWith(
+func (s *service) takeProcWith(
 	proc step.ProcRoot,
 	cfg Configuration,
 ) (err error) {
@@ -1211,11 +1211,11 @@ func (s *dealService) takeProcWith(
 	}
 }
 
-type dealRepo interface {
-	Insert(DealRoot) error
-	SelectAll() ([]DealRef, error)
-	SelectByID(ID) (DealRoot, error)
-	SelectChildren(ID) ([]DealRef, error)
+type repo interface {
+	Insert(Root) error
+	SelectAll() ([]Ref, error)
+	SelectByID(ID) (Root, error)
+	SelectChildren(ID) ([]Ref, error)
 	SelectSigs(ID) ([]sig.Ref, error)
 }
 
@@ -1226,8 +1226,8 @@ type KinshipSpec struct {
 }
 
 type KinshipRoot struct {
-	Parent   DealRef
-	Children []DealRef
+	Parent   Ref
+	Children []Ref
 }
 
 type kinshipRepo interface {
@@ -1254,7 +1254,7 @@ type TranSpec struct {
 	Term step.Term
 }
 
-func (s *dealService) checkState(
+func (s *service) checkState(
 	env Environment,
 	ctx state.Context,
 	pe state.EP,
@@ -1267,7 +1267,7 @@ func (s *dealService) checkState(
 }
 
 // aka checkExp
-func (s *dealService) checkProvider(
+func (s *service) checkProvider(
 	env Environment,
 	ctx state.Context,
 	pe state.EP,
@@ -1401,7 +1401,7 @@ func (s *dealService) checkProvider(
 	}
 }
 
-func (s *dealService) checkClient(
+func (s *service) checkClient(
 	env Environment,
 	ctx state.Context,
 	pe state.EP,

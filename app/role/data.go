@@ -6,16 +6,16 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type RoleRefData struct {
+type refData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
 }
 
-type roleRootData struct {
+type rootData struct {
 	ID       string         `db:"id"`
 	Name     string         `db:"name"`
 	St       *state.RefData `db:"state"`
-	Children []RoleRefData  `db:"-"`
+	Children []refData      `db:"-"`
 }
 
 // goverter:variables
@@ -24,30 +24,30 @@ type roleRootData struct {
 // goverter:extend data.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
-	DataToRoleRef     func(RoleRefData) (RoleRef, error)
-	DataFromRoleRef   func(RoleRef) (RoleRefData, error)
-	DataToRoleRefs    func([]RoleRefData) ([]RoleRef, error)
-	DataFromRoleRefs  func([]RoleRef) ([]RoleRefData, error)
-	DataToRoleRoot    func(roleRootData) (RoleRoot, error)
-	DataFromRoleRoot  func(RoleRoot) (roleRootData, error)
-	DataToRoleRoots   func([]roleRootData) ([]RoleRoot, error)
-	DataFromRoleRoots func([]RoleRoot) ([]roleRootData, error)
+	DataToRef     func(refData) (Ref, error)
+	DataFromRef   func(Ref) (refData, error)
+	DataToRefs    func([]refData) ([]Ref, error)
+	DataFromRefs  func([]Ref) ([]refData, error)
+	DataToRoot    func(rootData) (Root, error)
+	DataFromRoot  func(Root) (rootData, error)
+	DataToRoots   func([]rootData) ([]Root, error)
+	DataFromRoots func([]Root) ([]rootData, error)
 )
 
-func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
+func dataToRoot(dto rootData) (Root, error) {
 	id, err := id.StringToID(dto.ID)
 	if err != nil {
-		return RoleRoot{}, nil
+		return Root{}, nil
 	}
 	state, err := state.DataToRef(dto.St)
 	if err != nil {
-		return RoleRoot{}, nil
+		return Root{}, nil
 	}
-	children, err := DataToRoleRefs(dto.Children)
+	children, err := DataToRefs(dto.Children)
 	if err != nil {
-		return RoleRoot{}, nil
+		return Root{}, nil
 	}
-	return RoleRoot{
+	return Root{
 		ID:       id,
 		Name:     dto.Name,
 		St:       state,
@@ -55,13 +55,13 @@ func dataToRoleRoot(dto roleRootData) (RoleRoot, error) {
 	}, nil
 }
 
-func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
+func dataFromRoot(root Root) (rootData, error) {
 	stateDTO := state.DataFromRef(root.St)
-	childrenDTOs, err := DataFromRoleRefs(root.Children)
+	childrenDTOs, err := DataFromRefs(root.Children)
 	if err != nil {
-		return roleRootData{}, err
+		return rootData{}, err
 	}
-	return roleRootData{
+	return rootData{
 		ID:       root.ID.String(),
 		Name:     root.Name,
 		St:       stateDTO,
@@ -70,8 +70,8 @@ func dataFromRoleRoot(root RoleRoot) (roleRootData, error) {
 }
 
 type kinshipRootData struct {
-	Parent   RoleRefData
-	Children []RoleRefData
+	Parent   refData
+	Children []refData
 }
 
 // goverter:variables

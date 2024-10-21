@@ -12,11 +12,11 @@ import (
 	"smecalculus/rolevod/internal/step"
 )
 
-type DealSpecMsg struct {
+type SpecMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto DealSpecMsg) Validate() error {
+func (mto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.Name, core.NameRequired...),
 	)
@@ -44,7 +44,7 @@ func (mto DealRefMsg) Validate() error {
 	)
 }
 
-type DealRootMsg struct {
+type RootMsg struct {
 	ID       string          `json:"id"`
 	Name     string          `json:"name"`
 	Sigs     []sig.SigRefMsg `json:"sigs"`
@@ -56,13 +56,13 @@ type DealRootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/app/sig:Msg.*
 var (
-	MsgToDealSpec    func(DealSpecMsg) (DealSpec, error)
-	MsgFromDealSpec  func(DealSpec) DealSpecMsg
-	MsgToDealRef     func(DealRefMsg) (DealRef, error)
-	MsgFromDealRef   func(DealRef) *DealRefMsg
-	MsgToDealRoot    func(DealRootMsg) (DealRoot, error)
-	MsgFromDealRoot  func(DealRoot) DealRootMsg
-	MsgFromDealRoots func([]DealRoot) []DealRootMsg
+	MsgToSpec    func(SpecMsg) (Spec, error)
+	MsgFromSpec  func(Spec) SpecMsg
+	MsgToRef     func(DealRefMsg) (Ref, error)
+	MsgFromRef   func(Ref) *DealRefMsg
+	MsgToRoot    func(RootMsg) (Root, error)
+	MsgFromRoot  func(Root) RootMsg
+	MsgFromRoots func([]Root) []RootMsg
 )
 
 type KinshipSpecMsg struct {

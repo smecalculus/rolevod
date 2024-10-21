@@ -9,60 +9,60 @@ import (
 )
 
 // Adapter
-type roleClient struct {
+type clientResty struct {
 	resty *resty.Client
 }
 
-func newRoleClient() *roleClient {
+func newClientResty() *clientResty {
 	r := resty.New().SetBaseURL("http://localhost:8080/api/v1")
-	return &roleClient{r}
+	return &clientResty{r}
 }
 
-func NewRoleApi() RoleApi {
-	return newRoleClient()
+func NewAPI() API {
+	return newClientResty()
 }
 
-func (cl *roleClient) Create(spec RoleSpec) (RoleRoot, error) {
-	req := MsgFromRoleSpec(spec)
-	var res RoleRootMsg
+func (cl *clientResty) Create(spec Spec) (Root, error) {
+	req := MsgFromSpec(spec)
+	var res RootMsg
 	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		Post("/roles")
 	if err != nil {
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	if resp.IsError() {
-		return RoleRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToRoleRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *roleClient) Retrieve(id id.ADT) (RoleRoot, error) {
-	var res RoleRootMsg
+func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
+	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
 		Get("/roles/{id}")
 	if err != nil {
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	if resp.IsError() {
-		return RoleRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToRoleRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *roleClient) Update(root RoleRoot) error {
+func (c *clientResty) Update(root Root) error {
 	return nil
 }
 
-func (c *roleClient) RetreiveAll() ([]RoleRef, error) {
-	rts := []RoleRef{}
+func (c *clientResty) RetreiveAll() ([]Ref, error) {
+	rts := []Ref{}
 	return rts, nil
 }
 
-func (c *roleClient) Establish(ks KinshipSpec) error {
+func (c *clientResty) Establish(ks KinshipSpec) error {
 	req := MsgFromKinshipSpec(ks)
 	resp, err := c.resty.R().
 		SetBody(&req).

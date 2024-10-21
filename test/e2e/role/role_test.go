@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	roleApi = role.NewRoleApi()
+	api = role.NewAPI()
 )
 
 func TestMain(m *testing.M) {
@@ -23,14 +23,14 @@ func TestMain(m *testing.M) {
 
 func TestKinshipEstablishment(t *testing.T) {
 	// given
-	parSpec := role.RoleSpec{FQN: "parent-role"}
-	parRoot, err := roleApi.Create(parSpec)
+	parSpec := role.Spec{FQN: "parent-role"}
+	parRoot, err := api.Create(parSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	childSpec := role.RoleSpec{FQN: "child-role", St: state.OneSpec{}}
-	childRoot, err := roleApi.Create(childSpec)
+	childSpec := role.Spec{FQN: "child-role", St: state.OneSpec{}}
+	childRoot, err := api.Create(childSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,12 +39,12 @@ func TestKinshipEstablishment(t *testing.T) {
 		ParentID: parRoot.ID,
 		ChildIDs: []id.ADT{childRoot.ID},
 	}
-	err = roleApi.Establish(kinshipSpec)
+	err = api.Establish(kinshipSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := roleApi.Retrieve(parRoot.ID)
+	actual, err := api.Retrieve(parRoot.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

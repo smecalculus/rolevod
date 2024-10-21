@@ -13,24 +13,24 @@ import (
 )
 
 // Adapter
-type roleRepoPgx struct {
+type repoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newRoleRepoPgx(p *pgxpool.Pool, l *slog.Logger) *roleRepoPgx {
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "roleRepoPgx")
-	return &roleRepoPgx{p, l.With(name)}
+	return &repoPgx{p, l.With(name)}
 }
 
-func (r *roleRepoPgx) Insert(root RoleRoot) error {
+func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	r.log.Log(ctx, core.LevelTrace, "role insertion started", slog.Any("root", root))
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto, err := dataFromRoleRoot(root)
+	dto, err := dataFromRoot(root)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (r *roleRepoPgx) Insert(root RoleRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
+func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
 			id,
@@ -66,14 +66,14 @@ func (r *roleRepoPgx) SelectAll() ([]RoleRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RoleRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToRoleRefs(dtos)
+	return DataToRefs(dtos)
 }
 
-func (r *roleRepoPgx) SelectByID(rid ID) (RoleRoot, error) {
+func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
 			id, name, state
@@ -83,19 +83,19 @@ func (r *roleRepoPgx) SelectByID(rid ID) (RoleRoot, error) {
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	defer rows.Close()
-	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[roleRootData])
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	r.log.Debug("role selection succeeded", slog.Any("dto", dto))
-	return dataToRoleRoot(dto)
+	return dataToRoot(dto)
 }
 
-func (r *roleRepoPgx) SelectChildren(id id.ADT) ([]RoleRef, error) {
+func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
 			r.id,
@@ -111,11 +111,11 @@ func (r *roleRepoPgx) SelectChildren(id id.ADT) ([]RoleRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[RoleRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToRoleRefs(dtos)
+	return DataToRefs(dtos)
 }
 
 // Adapter

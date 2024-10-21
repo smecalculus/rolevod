@@ -14,56 +14,56 @@ type ID = id.ADT
 type FQN = sym.ADT
 type Name = string
 
-type RoleSpec struct {
+type Spec struct {
 	// Fully Qualified Name
 	FQN FQN
 	St  state.Spec
 }
 
-type RoleRef struct {
+type Ref struct {
 	ID   ID
 	Name Name
 }
 
 // aka TpDef
-type RoleRoot struct {
+type Root struct {
 	ID       ID
 	Name     Name
 	St       state.Ref
-	Children []RoleRef
+	Children []Ref
 }
 
-type RoleApi interface {
-	Create(RoleSpec) (RoleRoot, error)
-	Retrieve(ID) (RoleRoot, error)
-	RetreiveAll() ([]RoleRef, error)
-	Update(RoleRoot) error
+type API interface {
+	Create(Spec) (Root, error)
+	Retrieve(ID) (Root, error)
+	RetreiveAll() ([]Ref, error)
+	Update(Root) error
 	Establish(KinshipSpec) error
 }
 
-type roleService struct {
-	roles    roleRepo
+type service struct {
+	roles    repo
 	states   state.Repo
 	aliases  alias.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
 
-func newRoleService(
-	roles roleRepo,
+func newService(
+	roles repo,
 	states state.Repo,
 	aliases alias.Repo,
 	kinships kinshipRepo,
 	l *slog.Logger,
-) *roleService {
+) *service {
 	name := slog.String("name", "roleService")
-	return &roleService{roles, states, aliases, kinships, l.With(name)}
+	return &service{roles, states, aliases, kinships, l.With(name)}
 }
 
-func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
+func (s *service) Create(spec Spec) (Root, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
 	st := state.ConvertSpecToRoot(spec.St)
-	root := RoleRoot{
+	root := Root{
 		ID:   id.New(),
 		Name: spec.FQN.Name(),
 		St:   st,
@@ -97,33 +97,33 @@ func (s *roleService) Create(spec RoleSpec) (RoleRoot, error) {
 	return root, nil
 }
 
-func (s *roleService) Update(root RoleRoot) error {
+func (s *service) Update(root Root) error {
 	return s.roles.Insert(root)
 }
 
-func (s *roleService) Retrieve(rid ID) (RoleRoot, error) {
+func (s *service) Retrieve(rid ID) (Root, error) {
 	root, err := s.roles.SelectByID(rid)
 	if err != nil {
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	root.Children, err = s.roles.SelectChildren(rid)
 	if err != nil {
-		return RoleRoot{}, err
+		return Root{}, err
 	}
 	return root, nil
 }
 
-func (s *roleService) RetreiveAll() ([]RoleRef, error) {
+func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.roles.SelectAll()
 }
 
-func (s *roleService) Establish(spec KinshipSpec) error {
-	var children []RoleRef
+func (s *service) Establish(spec KinshipSpec) error {
+	var children []Ref
 	for _, id := range spec.ChildIDs {
-		children = append(children, RoleRef{ID: id})
+		children = append(children, Ref{ID: id})
 	}
 	root := KinshipRoot{
-		Parent:   RoleRef{ID: spec.ParentID},
+		Parent:   Ref{ID: spec.ParentID},
 		Children: children,
 	}
 	err := s.kinships.Insert(root)
@@ -134,11 +134,11 @@ func (s *roleService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-type roleRepo interface {
-	Insert(RoleRoot) error
-	SelectAll() ([]RoleRef, error)
-	SelectByID(ID) (RoleRoot, error)
-	SelectChildren(ID) ([]RoleRef, error)
+type repo interface {
+	Insert(Root) error
+	SelectAll() ([]Ref, error)
+	SelectByID(ID) (Root, error)
+	SelectChildren(ID) ([]Ref, error)
 }
 
 type KinshipSpec struct {
@@ -147,8 +147,8 @@ type KinshipSpec struct {
 }
 
 type KinshipRoot struct {
-	Parent   RoleRef
-	Children []RoleRef
+	Parent   Ref
+	Children []Ref
 }
 
 type kinshipRepo interface {
@@ -160,5 +160,5 @@ type kinshipRepo interface {
 // goverter:extend smecalculus/rolevod/lib/id:Ident
 // goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
-	ConverRootToRef func(RoleRoot) RoleRef
+	ConverRootToRef func(Root) Ref
 )

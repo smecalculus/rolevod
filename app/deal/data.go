@@ -1,32 +1,32 @@
 package deal
 
-type dealRefData struct {
+type refData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
 }
 
-type dealRootData struct {
-	ID       string        `db:"id"`
-	Name     string        `db:"name"`
-	Children []dealRefData `db:"-"`
+type rootData struct {
+	ID       string    `db:"id"`
+	Name     string    `db:"name"`
+	Children []refData `db:"-"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
-	DataToDealRef    func(dealRefData) (DealRef, error)
-	DataFromDealRef  func(DealRef) dealRefData
-	DataToDealRefs   func([]dealRefData) ([]DealRef, error)
-	DataFromDealRefs func([]DealRef) []dealRefData
+	DataToRef    func(refData) (Ref, error)
+	DataFromRef  func(Ref) refData
+	DataToRefs   func([]refData) ([]Ref, error)
+	DataFromRefs func([]Ref) []refData
 	// goverter:ignore Sigs
-	DataToDealRoot   func(dealRootData) (DealRoot, error)
-	DataFromDealRoot func(DealRoot) dealRootData
+	DataToRoot   func(rootData) (Root, error)
+	DataFromRoot func(Root) rootData
 )
 
 type kinshipRootData struct {
-	Parent   dealRefData
-	Children []dealRefData
+	Parent   refData
+	Children []refData
 }
 
 // goverter:variables

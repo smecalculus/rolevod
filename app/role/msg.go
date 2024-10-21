@@ -9,12 +9,12 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type RoleSpecMsg struct {
+type SpecMsg struct {
 	FQN string        `json:"fqn"`
 	St  state.SpecMsg `json:"state"`
 }
 
-func (mto RoleSpecMsg) Validate() error {
+func (mto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.FQN, sym.Required...),
 		validation.Field(&mto.St, validation.Required),
@@ -36,7 +36,7 @@ type RoleRefMsg struct {
 	Name string `json:"name"`
 }
 
-type RoleRootMsg struct {
+type RootMsg struct {
 	ID       string       `json:"id" param:"id"`
 	Name     string       `json:"name"`
 	St       state.RefMsg `json:"state"`
@@ -48,16 +48,16 @@ type RoleRootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgFromRoleSpec  func(RoleSpec) RoleSpecMsg
-	MsgToRoleSpec    func(RoleSpecMsg) (RoleSpec, error)
-	MsgFromRoleRef   func(RoleRef) RoleRefMsg
-	MsgToRoleRef     func(RoleRefMsg) (RoleRef, error)
-	MsgFromRoleRefs  func([]RoleRef) []RoleRefMsg
-	MsgToRoleRefs    func([]RoleRefMsg) ([]RoleRef, error)
-	MsgFromRoleRoot  func(RoleRoot) RoleRootMsg
-	MsgToRoleRoot    func(RoleRootMsg) (RoleRoot, error)
-	MsgFromRoleRoots func([]RoleRoot) []RoleRootMsg
-	MsgToRoleRoots   func([]RoleRootMsg) ([]RoleRoot, error)
+	MsgFromSpec  func(Spec) SpecMsg
+	MsgToSpec    func(SpecMsg) (Spec, error)
+	MsgFromRef   func(Ref) RoleRefMsg
+	MsgToRef     func(RoleRefMsg) (Ref, error)
+	MsgFromRefs  func([]Ref) []RoleRefMsg
+	MsgToRefs    func([]RoleRefMsg) ([]Ref, error)
+	MsgFromRoot  func(Root) RootMsg
+	MsgToRoot    func(RootMsg) (Root, error)
+	MsgFromRoots func([]Root) []RootMsg
+	MsgToRoots   func([]RootMsg) ([]Root, error)
 )
 
 type KinshipSpecMsg struct {

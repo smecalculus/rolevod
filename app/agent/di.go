@@ -16,12 +16,12 @@ import (
 
 var Module = fx.Module("app/agent",
 	fx.Provide(
-		fx.Annotate(newAgentService, fx.As(new(AgentApi))),
+		fx.Annotate(newService, fx.As(new(API))),
 	),
 	fx.Provide(
 		fx.Private,
-		newAgentHandlerEcho,
-		fx.Annotate(newAgentRepoPgx, fx.As(new(agentRepo))),
+		newHandlerEcho,
+		fx.Annotate(newRepoPgx, fx.As(new(repo))),
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
@@ -43,7 +43,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgAgentEcho(e *echo.Echo, h *agentHandlerEcho) error {
+func cfgAgentEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/agents", h.ApiPostOne)
 	e.GET("/api/v1/agents/:id", h.ApiGetOne)
 	e.GET("/ssr/agents/:id", h.SsrGetOne)

@@ -13,24 +13,24 @@ import (
 )
 
 // Adapter
-type dealHandlerEcho struct {
-	api DealApi
+type handlerEcho struct {
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newDealHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *dealHandlerEcho {
+func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "dealHandlerEcho")
-	return &dealHandlerEcho{a, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
-func (h *dealHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto DealSpecMsg
+func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+	var mto SpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToDealSpec(mto)
+	spec, err := MsgToSpec(mto)
 	if err != nil {
 		return err
 	}
@@ -38,10 +38,10 @@ func (h *dealHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromDealRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *dealHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -55,10 +55,10 @@ func (h *dealHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromDealRoot(root))
+	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
-func (h *dealHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -72,7 +72,7 @@ func (h *dealHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("deal", MsgFromDealRoot(root))
+	html, err := h.ssr.Render("deal", MsgFromRoot(root))
 	if err != nil {
 		return err
 	}
@@ -81,12 +81,12 @@ func (h *dealHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api DealApi
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }
@@ -114,12 +114,12 @@ func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
 
 // Adapter
 type partHandlerEcho struct {
-	api DealApi
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newPartHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *partHandlerEcho {
+func newPartHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *partHandlerEcho {
 	name := slog.String("name", "partHandlerEcho")
 	return &partHandlerEcho{a, r, l.With(name)}
 }
@@ -150,12 +150,12 @@ func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
 
 // Adapter
 type stepHandlerEcho struct {
-	api DealApi
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newStepHandlerEcho(a DealApi, r msg.Renderer, l *slog.Logger) *stepHandlerEcho {
+func newStepHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *stepHandlerEcho {
 	name := slog.String("name", "stepHandlerEcho")
 	return &stepHandlerEcho{a, r, l.With(name)}
 }

@@ -13,23 +13,23 @@ import (
 )
 
 // Adapter
-type agentRepoPgx struct {
+type repoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newAgentRepoPgx(p *pgxpool.Pool, l *slog.Logger) *agentRepoPgx {
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "agentRepoPgx")
-	return &agentRepoPgx{p, l.With(name)}
+	return &repoPgx{p, l.With(name)}
 }
 
-func (r *agentRepoPgx) Insert(root AgentRoot) error {
+func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := DataFromAgentRoot(root)
+	dto := DataFromRoot(root)
 	query := `
 		INSERT INTO agents (
 			id, name
@@ -48,11 +48,11 @@ func (r *agentRepoPgx) Insert(root AgentRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *agentRepoPgx) SelectByID(id id.ADT) (AgentRoot, error) {
-	return AgentRoot{ID: id, Name: "AgentRoot"}, nil
+func (r *repoPgx) SelectByID(id id.ADT) (Root, error) {
+	return Root{ID: id, Name: "AgentRoot"}, nil
 }
 
-func (r *agentRepoPgx) SelectChildren(id id.ADT) ([]AgentRef, error) {
+func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
 			f.id,
@@ -67,17 +67,17 @@ func (r *agentRepoPgx) SelectChildren(id id.ADT) ([]AgentRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[agentRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToAgentRefs(dtos)
+	return DataToRefs(dtos)
 }
 
-func (r *agentRepoPgx) SelectAll() ([]AgentRef, error) {
-	roots := make([]AgentRef, 5)
+func (r *repoPgx) SelectAll() ([]Ref, error) {
+	roots := make([]Ref, 5)
 	for i := range 5 {
-		roots[i] = AgentRef{ID: id.New(), Name: fmt.Sprintf("AgentRoot%v", i)}
+		roots[i] = Ref{ID: id.New(), Name: fmt.Sprintf("AgentRoot%v", i)}
 	}
 	return roots, nil
 }

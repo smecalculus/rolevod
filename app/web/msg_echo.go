@@ -13,12 +13,12 @@ import (
 
 // Adapter
 type handlerEcho struct {
-	api role.RoleApi
+	api role.API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newHandlerEcho(a role.RoleApi, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a role.API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "web.handlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
@@ -28,7 +28,7 @@ func (h *handlerEcho) Home(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("home.html", role.MsgFromRoleRefs(rts))
+	html, err := h.ssr.Render("home.html", role.MsgFromRefs(rts))
 	if err != nil {
 		return err
 	}

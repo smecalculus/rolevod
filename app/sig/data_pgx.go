@@ -13,23 +13,23 @@ import (
 )
 
 // Adapter
-type sigRepoPgx struct {
+type repoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newSigRepoPgx(p *pgxpool.Pool, l *slog.Logger) *sigRepoPgx {
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "sigRepoPgx")
-	return &sigRepoPgx{p, l.With(name)}
+	return &repoPgx{p, l.With(name)}
 }
 
-func (r *sigRepoPgx) Insert(root Root) error {
+func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto, err := DataFromSigRoot(root)
+	dto, err := DataFromRoot(root)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (r *sigRepoPgx) Insert(root Root) error {
 	return tx.Commit(ctx)
 }
 
-func (r *sigRepoPgx) SelectByID(rid ID) (Root, error) {
+func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
 			id, name, pe, ces
@@ -65,16 +65,16 @@ func (r *sigRepoPgx) SelectByID(rid ID) (Root, error) {
 		return Root{}, err
 	}
 	defer rows.Close()
-	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[sigRootData])
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "signature selection succeeded", slog.Any("dto", dto))
-	return DataToSigRoot(dto)
+	return DataToRoot(dto)
 }
 
-func (r *sigRepoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
+func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	sigs, err := r.SelectByIDs(ids)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (r *sigRepoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	return env, nil
 }
 
-func (r *sigRepoPgx) SelectByIDs(ids []ID) ([]Root, error) {
+func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	if len(ids) == 0 {
 		return []Root{}, nil
 	}
@@ -111,7 +111,7 @@ func (r *sigRepoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	var dtos []sigRootData
+	var dtos []rootData
 	for _, rid := range ids {
 		rows, err := br.Query()
 		if err != nil {
@@ -120,7 +120,7 @@ func (r *sigRepoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 				slog.Any("id", rid),
 			)
 		}
-		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[sigRootData])
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
@@ -141,10 +141,10 @@ func (r *sigRepoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	if err != nil {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
-	return DataToSigRoots(dtos)
+	return DataToRoots(dtos)
 }
 
-func (r *sigRepoPgx) SelectChildren(id ID) ([]Ref, error) {
+func (r *repoPgx) SelectChildren(id ID) ([]Ref, error) {
 	query := `
 		SELECT
 			s.id,
@@ -159,14 +159,14 @@ func (r *sigRepoPgx) SelectChildren(id ID) ([]Ref, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[sigRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToSigRefs(dtos)
+	return DataToRefs(dtos)
 }
 
-func (r *sigRepoPgx) SelectAll() ([]Ref, error) {
+func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return []Ref{}, nil
 }
 

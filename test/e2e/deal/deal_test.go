@@ -23,9 +23,9 @@ import (
 )
 
 var (
-	roleApi = role.NewRoleApi()
-	sigApi  = sig.NewSigApi()
-	dealApi = deal.NewDealApi()
+	roleAPI = role.NewAPI()
+	sigAPI  = sig.NewAPI()
+	dealAPI = deal.NewAPI()
 	tc      *testCase
 )
 
@@ -74,14 +74,14 @@ func (tc *testCase) Setup(t *testing.T) {
 func TestEstablishKinship(t *testing.T) {
 	tc.Setup(t)
 	// given
-	ps := deal.DealSpec{Name: "parent-deal"}
-	pr, err := dealApi.Create(ps)
+	ps := deal.Spec{Name: "parent-deal"}
+	pr, err := dealAPI.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	cs := deal.DealSpec{Name: "child-deal"}
-	cr, err := dealApi.Create(cs)
+	cs := deal.Spec{Name: "child-deal"}
+	cr, err := dealAPI.Create(cs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,12 +90,12 @@ func TestEstablishKinship(t *testing.T) {
 		ParentID: pr.ID,
 		ChildIDs: []id.ADT{cr.ID},
 	}
-	err = dealApi.Establish(ks)
+	err = dealAPI.Establish(ks)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := dealApi.Retrieve(pr.ID)
+	actual, err := dealAPI.Retrieve(pr.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,11 +111,11 @@ func TestTake(t *testing.T) {
 	t.Run("WaitClose", func(t *testing.T) {
 		tc.Setup(t)
 		// given
-		oneRoleSpec := role.RoleSpec{
+		oneRoleSpec := role.Spec{
 			FQN: "one-role",
 			St:  state.OneSpec{},
 		}
-		oneRole, err := roleApi.Create(oneRoleSpec)
+		oneRole, err := roleAPI.Create(oneRoleSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -127,7 +127,7 @@ func TestTake(t *testing.T) {
 				StID: oneRole.St.Ident(),
 			},
 		}
-		oneSig1, err := sigApi.Create(oneSigSpec1)
+		oneSig1, err := sigAPI.Create(oneSigSpec1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,15 +142,15 @@ func TestTake(t *testing.T) {
 				oneSig1.PE,
 			},
 		}
-		oneSig2, err := sigApi.Create(oneSigSpec2)
+		oneSig2, err := sigAPI.Create(oneSigSpec2)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		bigDealSpec := deal.DealSpec{
+		bigDealSpec := deal.Spec{
 			Name: "deal-1",
 		}
-		bigDeal, err := dealApi.Create(bigDealSpec)
+		bigDeal, err := dealAPI.Create(bigDealSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -159,7 +159,7 @@ func TestTake(t *testing.T) {
 			Deal: bigDeal.ID,
 			Decl: oneSig1.ID,
 		}
-		closer, err := dealApi.Involve(closerSpec)
+		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +171,7 @@ func TestTake(t *testing.T) {
 				closer.ID,
 			},
 		}
-		waiter, err := dealApi.Involve(waiterSpec)
+		waiter, err := dealAPI.Involve(waiterSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -184,7 +184,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// when
-		err = dealApi.Take(closeSpec)
+		err = dealAPI.Take(closeSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -200,7 +200,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// and
-		err = dealApi.Take(waitSpec)
+		err = dealAPI.Take(waitSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,23 +211,23 @@ func TestTake(t *testing.T) {
 	t.Run("RecvSend", func(t *testing.T) {
 		tc.Setup(t)
 		// given
-		lolliRoleSpec := role.RoleSpec{
+		lolliRoleSpec := role.Spec{
 			FQN: "lolli-role",
 			St: state.LolliSpec{
 				Y: state.OneSpec{},
 				Z: state.OneSpec{},
 			},
 		}
-		lolliRole, err := roleApi.Create(lolliRoleSpec)
+		lolliRole, err := roleAPI.Create(lolliRoleSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneRoleSpec := role.RoleSpec{
+		oneRoleSpec := role.Spec{
 			FQN: "one-role",
 			St:  state.OneSpec{},
 		}
-		oneRole, err := roleApi.Create(oneRoleSpec)
+		oneRole, err := roleAPI.Create(oneRoleSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -239,7 +239,7 @@ func TestTake(t *testing.T) {
 				StID: lolliRole.St.Ident(),
 			},
 		}
-		lolliSig, err := sigApi.Create(lolliSigSpec)
+		lolliSig, err := sigAPI.Create(lolliSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -251,7 +251,7 @@ func TestTake(t *testing.T) {
 				StID: oneRole.St.Ident(),
 			},
 		}
-		oneSig1, err := sigApi.Create(oneSigSpec1)
+		oneSig1, err := sigAPI.Create(oneSigSpec1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -267,15 +267,15 @@ func TestTake(t *testing.T) {
 				oneSig1.PE,
 			},
 		}
-		oneSig2, err := sigApi.Create(oneSigSpec2)
+		oneSig2, err := sigAPI.Create(oneSigSpec2)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		bigDealSpec := deal.DealSpec{
+		bigDealSpec := deal.Spec{
 			Name: "deal-1",
 		}
-		bigDeal, err := dealApi.Create(bigDealSpec)
+		bigDeal, err := dealAPI.Create(bigDealSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -284,7 +284,7 @@ func TestTake(t *testing.T) {
 			Deal: bigDeal.ID,
 			Decl: lolliSig.ID,
 		}
-		receiver, err := dealApi.Involve(receiverSpec)
+		receiver, err := dealAPI.Involve(receiverSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -293,7 +293,7 @@ func TestTake(t *testing.T) {
 			Deal: bigDeal.ID,
 			Decl: oneSig1.ID,
 		}
-		message, err := dealApi.Involve(messageSpec)
+		message, err := dealAPI.Involve(messageSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -306,7 +306,7 @@ func TestTake(t *testing.T) {
 				message.ID,
 			},
 		}
-		sender, err := dealApi.Involve(senderSpec)
+		sender, err := dealAPI.Involve(senderSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -326,7 +326,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// when
-		err = dealApi.Take(recvSpec)
+		err = dealAPI.Take(recvSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -340,7 +340,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// and
-		err = dealApi.Take(sendSpec)
+		err = dealAPI.Take(sendSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -353,7 +353,7 @@ func TestTake(t *testing.T) {
 		// given
 		label := core.Label("label-1")
 		// and
-		withRoleSpec := role.RoleSpec{
+		withRoleSpec := role.Spec{
 			FQN: "with-role",
 			St: state.WithSpec{
 				Choices: map[core.Label]state.Spec{
@@ -361,16 +361,16 @@ func TestTake(t *testing.T) {
 				},
 			},
 		}
-		withRole, err := roleApi.Create(withRoleSpec)
+		withRole, err := roleAPI.Create(withRoleSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneRoleSpec := role.RoleSpec{
+		oneRoleSpec := role.Spec{
 			FQN: "one-role",
 			St:  state.OneSpec{},
 		}
-		oneRole, err := roleApi.Create(oneRoleSpec)
+		oneRole, err := roleAPI.Create(oneRoleSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -382,7 +382,7 @@ func TestTake(t *testing.T) {
 				StID: withRole.St.Ident(),
 			},
 		}
-		withSig, err := sigApi.Create(withSigSpec)
+		withSig, err := sigAPI.Create(withSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -397,15 +397,15 @@ func TestTake(t *testing.T) {
 				withSig.PE,
 			},
 		}
-		oneSig, err := sigApi.Create(oneSigSpec)
+		oneSig, err := sigAPI.Create(oneSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		bigDealSpec := deal.DealSpec{
+		bigDealSpec := deal.Spec{
 			Name: "deal-1",
 		}
-		bigDeal, err := dealApi.Create(bigDealSpec)
+		bigDeal, err := dealAPI.Create(bigDealSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -414,7 +414,7 @@ func TestTake(t *testing.T) {
 			Deal: bigDeal.ID,
 			Decl: withSig.ID,
 		}
-		follower, err := dealApi.Involve(followerSpec)
+		follower, err := dealAPI.Involve(followerSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -426,7 +426,7 @@ func TestTake(t *testing.T) {
 				follower.ID,
 			},
 		}
-		decider, err := dealApi.Involve(deciderSpec)
+		decider, err := dealAPI.Involve(deciderSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -444,7 +444,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// when
-		err = dealApi.Take(caseSpec)
+		err = dealAPI.Take(caseSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -458,7 +458,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// and
-		err = dealApi.Take(labSpec)
+		err = dealAPI.Take(labSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -469,8 +469,8 @@ func TestTake(t *testing.T) {
 	t.Run("Spawn", func(t *testing.T) {
 		tc.Setup(t)
 		// given
-		oneRole, err := roleApi.Create(
-			role.RoleSpec{
+		oneRole, err := roleAPI.Create(
+			role.Spec{
 				FQN: "one-role",
 				St:  state.OneSpec{},
 			},
@@ -479,7 +479,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig1, err := sigApi.Create(
+		oneSig1, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-1",
 				PE: chnl.Spec{
@@ -492,7 +492,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig2, err := sigApi.Create(
+		oneSig2, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-2",
 				PE: chnl.Spec{
@@ -508,7 +508,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig3, err := sigApi.Create(
+		oneSig3, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-3",
 				PE: chnl.Spec{
@@ -524,8 +524,8 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		bigDeal, err := dealApi.Create(
-			deal.DealSpec{
+		bigDeal, err := dealAPI.Create(
+			deal.Spec{
 				Name: "deal-1",
 			},
 		)
@@ -533,7 +533,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		injectee, err := dealApi.Involve(
+		injectee, err := dealAPI.Involve(
 			deal.PartSpec{
 				Deal: bigDeal.ID,
 				Decl: oneSig1.ID,
@@ -550,7 +550,7 @@ func TestTake(t *testing.T) {
 				injectee.ID,
 			},
 		}
-		spawner, err := dealApi.Involve(spawnerSpec)
+		spawner, err := dealAPI.Involve(spawnerSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -575,7 +575,7 @@ func TestTake(t *testing.T) {
 			},
 		}
 		// when
-		err = dealApi.Take(spawnSpec)
+		err = dealAPI.Take(spawnSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -586,8 +586,8 @@ func TestTake(t *testing.T) {
 	t.Run("Fwd", func(t *testing.T) {
 		tc.Setup(t)
 		// given
-		oneRole, err := roleApi.Create(
-			role.RoleSpec{
+		oneRole, err := roleAPI.Create(
+			role.Spec{
 				FQN: "one-role",
 				St:  state.OneSpec{},
 			},
@@ -596,7 +596,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig1, err := sigApi.Create(
+		oneSig1, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-1",
 				PE: chnl.Spec{
@@ -609,7 +609,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig2, err := sigApi.Create(
+		oneSig2, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-2",
 				PE: chnl.Spec{
@@ -625,7 +625,7 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSig3, err := sigApi.Create(
+		oneSig3, err := sigAPI.Create(
 			sig.Spec{
 				FQN: "sig-3",
 				PE: chnl.Spec{
@@ -641,8 +641,8 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		bigDeal, err := dealApi.Create(
-			deal.DealSpec{
+		bigDeal, err := dealAPI.Create(
+			deal.Spec{
 				Name: "deal-1",
 			},
 		)
@@ -654,7 +654,7 @@ func TestTake(t *testing.T) {
 			Deal: bigDeal.ID,
 			Decl: oneSig1.ID,
 		}
-		closer, err := dealApi.Involve(closerSpec)
+		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -666,7 +666,7 @@ func TestTake(t *testing.T) {
 				closer.ID,
 			},
 		}
-		forwarder, err := dealApi.Involve(forwarderSpec)
+		forwarder, err := dealAPI.Involve(forwarderSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -678,7 +678,7 @@ func TestTake(t *testing.T) {
 				forwarder.ID,
 			},
 		}
-		waiter, err := dealApi.Involve(waiterSpec)
+		waiter, err := dealAPI.Involve(waiterSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -690,7 +690,7 @@ func TestTake(t *testing.T) {
 				A: closer.ID,
 			},
 		}
-		err = dealApi.Take(closeSpec)
+		err = dealAPI.Take(closeSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -704,7 +704,7 @@ func TestTake(t *testing.T) {
 				D: closer.ID,
 			},
 		}
-		err = dealApi.Take(fwdSpec)
+		err = dealAPI.Take(fwdSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -719,7 +719,7 @@ func TestTake(t *testing.T) {
 				},
 			},
 		}
-		err = dealApi.Take(waitSpec)
+		err = dealAPI.Take(waitSpec)
 		if err != nil {
 			t.Fatal(err)
 		}

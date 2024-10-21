@@ -14,23 +14,23 @@ import (
 )
 
 // Adapter
-type dealRepoPgx struct {
+type repoPgx struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func newDealRepoPgx(p *pgxpool.Pool, l *slog.Logger) *dealRepoPgx {
+func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	name := slog.String("name", "dealRepoPgx")
-	return &dealRepoPgx{p, l.With(name)}
+	return &repoPgx{p, l.With(name)}
 }
 
-func (r *dealRepoPgx) Insert(root DealRoot) error {
+func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	dto := DataFromDealRoot(root)
+	dto := DataFromRoot(root)
 	query := `
 		INSERT INTO deals (
 			id, name
@@ -49,19 +49,19 @@ func (r *dealRepoPgx) Insert(root DealRoot) error {
 	return tx.Commit(ctx)
 }
 
-func (r *dealRepoPgx) SelectAll() ([]DealRef, error) {
-	roots := make([]DealRef, 5)
+func (r *repoPgx) SelectAll() ([]Ref, error) {
+	roots := make([]Ref, 5)
 	for i := range 5 {
-		roots[i] = DealRef{ID: id.New(), Name: fmt.Sprintf("DealRoot%v", i)}
+		roots[i] = Ref{ID: id.New(), Name: fmt.Sprintf("DealRoot%v", i)}
 	}
 	return roots, nil
 }
 
-func (r *dealRepoPgx) SelectByID(id id.ADT) (DealRoot, error) {
-	return DealRoot{ID: id, Name: "DealRoot"}, nil
+func (r *repoPgx) SelectByID(id id.ADT) (Root, error) {
+	return Root{ID: id, Name: "DealRoot"}, nil
 }
 
-func (r *dealRepoPgx) SelectChildren(id id.ADT) ([]DealRef, error) {
+func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
 			d.id,
@@ -76,14 +76,14 @@ func (r *dealRepoPgx) SelectChildren(id id.ADT) ([]DealRef, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[dealRefData])
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
 		return nil, err
 	}
-	return DataToDealRefs(dtos)
+	return DataToRefs(dtos)
 }
 
-func (r *dealRepoPgx) SelectSigs(id id.ADT) ([]sig.Ref, error) {
+func (r *repoPgx) SelectSigs(id id.ADT) ([]sig.Ref, error) {
 	return []sig.Ref{}, nil
 }
 

@@ -10,13 +10,13 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-type SigSpecMsg struct {
+type SpecMsg struct {
 	FQN string         `json:"name"`
 	PE  chnl.SpecMsg   `json:"pe"`
 	CEs []chnl.SpecMsg `json:"ces"`
 }
 
-func (mto SigSpecMsg) Validate() error {
+func (mto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.FQN, sym.Required...),
 		validation.Field(&mto.PE, validation.Required),
@@ -39,7 +39,7 @@ type SigRefMsg struct {
 	Name string `query:"name" json:"name"`
 }
 
-type SigRootMsg struct {
+type RootMsg struct {
 	ID       string         `json:"id"`
 	Name     string         `json:"name"`
 	PE       chnl.SpecMsg   `json:"pe"`
@@ -53,15 +53,15 @@ type SigRootMsg struct {
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgToID         func(string) (id.ADT, error)
-	MsgFromID       func(id.ADT) string
-	MsgToSigSpec    func(SigSpecMsg) (Spec, error)
-	MsgFromSigSpec  func(Spec) SigSpecMsg
-	MsgToSigRef     func(SigRefMsg) (Ref, error)
-	MsgFromSigRef   func(Ref) SigRefMsg
-	MsgToSigRoot    func(SigRootMsg) (Root, error)
-	MsgFromSigRoot  func(Root) SigRootMsg
-	MsgFromSigRoots func([]Root) []SigRootMsg
+	MsgToID      func(string) (id.ADT, error)
+	MsgFromID    func(id.ADT) string
+	MsgToSpec    func(SpecMsg) (Spec, error)
+	MsgFromSpec  func(Spec) SpecMsg
+	MsgToRef     func(SigRefMsg) (Ref, error)
+	MsgFromRef   func(Ref) SigRefMsg
+	MsgToRoot    func(RootMsg) (Root, error)
+	MsgFromRoot  func(Root) RootMsg
+	MsgFromRoots func([]Root) []RootMsg
 )
 
 type KinshipSpecMsg struct {

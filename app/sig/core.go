@@ -39,25 +39,25 @@ type Root struct {
 	Children []Ref
 }
 
-type Api interface {
+type API interface {
 	Create(Spec) (Root, error)
 	Retrieve(ID) (Root, error)
 	Establish(KinshipSpec) error
 	RetreiveAll() ([]Ref, error)
 }
 
-type sigService struct {
+type service struct {
 	sigs     Repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
 
-func newSigService(sigs Repo, kinships kinshipRepo, l *slog.Logger) *sigService {
+func newService(sigs Repo, kinships kinshipRepo, l *slog.Logger) *service {
 	name := slog.String("name", "sigService")
-	return &sigService{sigs, kinships, l.With(name)}
+	return &service{sigs, kinships, l.With(name)}
 }
 
-func (s *sigService) Create(spec Spec) (Root, error) {
+func (s *service) Create(spec Spec) (Root, error) {
 	s.log.Debug("sig creation started", slog.Any("spec", spec))
 	root := Root{
 		ID:   id.New(),
@@ -77,7 +77,7 @@ func (s *sigService) Create(spec Spec) (Root, error) {
 	return root, nil
 }
 
-func (s *sigService) Retrieve(rid ID) (Root, error) {
+func (s *service) Retrieve(rid ID) (Root, error) {
 	root, err := s.sigs.SelectByID(rid)
 	if err != nil {
 		return Root{}, err
@@ -89,7 +89,7 @@ func (s *sigService) Retrieve(rid ID) (Root, error) {
 	return root, nil
 }
 
-func (s *sigService) Establish(spec KinshipSpec) error {
+func (s *service) Establish(spec KinshipSpec) error {
 	var children []Ref
 	for _, id := range spec.ChildIDs {
 		children = append(children, Ref{ID: id})
@@ -106,7 +106,7 @@ func (s *sigService) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *sigService) RetreiveAll() ([]Ref, error) {
+func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.sigs.SelectAll()
 }
 

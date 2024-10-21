@@ -16,13 +16,13 @@ import (
 
 var Module = fx.Module("app/deal",
 	fx.Provide(
-		fx.Annotate(newDealService, fx.As(new(DealApi))),
+		fx.Annotate(newService, fx.As(new(API))),
 	),
 	fx.Provide(
 		fx.Private,
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
-		newDealHandlerEcho,
-		fx.Annotate(newDealRepoPgx, fx.As(new(dealRepo))),
+		newHandlerEcho,
+		fx.Annotate(newRepoPgx, fx.As(new(repo))),
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		newPartHandlerEcho,
@@ -47,7 +47,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgDealEcho(e *echo.Echo, h *dealHandlerEcho) error {
+func cfgDealEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/deals", h.ApiPostOne)
 	e.GET("/api/v1/deals/:id", h.ApiGetOne)
 	e.GET("/ssr/deals/:id", h.SsrGetOne)

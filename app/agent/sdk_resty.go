@@ -1,56 +1,56 @@
 package agent
 
 import (
-	"smecalculus/rolevod/lib/id"
-
 	"github.com/go-resty/resty/v2"
+
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
-type agentClient struct {
+type clientResty struct {
 	resty *resty.Client
 }
 
-func newAgentClient() *agentClient {
+func newClientResty() *clientResty {
 	r := resty.New().SetBaseURL("http://localhost:8080/api/v1")
-	return &agentClient{r}
+	return &clientResty{r}
 }
 
-func NewAgentApi() AgentApi {
-	return newAgentClient()
+func NewAPI() API {
+	return newClientResty()
 }
 
-func (cl *agentClient) Create(spec AgentSpec) (AgentRoot, error) {
-	req := MsgFromAgentSpec(spec)
-	var res AgentRootMsg
+func (cl *clientResty) Create(spec Spec) (Root, error) {
+	req := MsgFromSpec(spec)
+	var res RootMsg
 	_, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		Post("/agents")
 	if err != nil {
-		return AgentRoot{}, err
+		return Root{}, err
 	}
-	return MsgToAgentRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *agentClient) Retrieve(id id.ADT) (AgentRoot, error) {
-	var res AgentRootMsg
+func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
+	var res RootMsg
 	_, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
 		Get("/agents/{id}")
 	if err != nil {
-		return AgentRoot{}, err
+		return Root{}, err
 	}
-	return MsgToAgentRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *agentClient) RetreiveAll() ([]AgentRef, error) {
-	refs := []AgentRef{}
+func (c *clientResty) RetreiveAll() ([]Ref, error) {
+	refs := []Ref{}
 	return refs, nil
 }
 
-func (c *agentClient) Establish(spec KinshipSpec) error {
+func (c *clientResty) Establish(spec KinshipSpec) error {
 	req := MsgFromKinshipSpec(spec)
 	_, err := c.resty.R().
 		SetBody(&req).

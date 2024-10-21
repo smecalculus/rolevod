@@ -11,19 +11,19 @@ import (
 )
 
 // Adapter
-type sigHandlerEcho struct {
-	api Api
+type handlerEcho struct {
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newSigHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *sigHandlerEcho {
+func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "sigHandlerEcho")
-	return &sigHandlerEcho{a, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
-func (h *sigHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto SigSpecMsg
+func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+	var mto SpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		h.log.Error("mto binding failed", slog.Any("reason", err))
@@ -34,7 +34,7 @@ func (h *sigHandlerEcho) ApiPostOne(c echo.Context) error {
 		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
 	}
-	spec, err := MsgToSigSpec(mto)
+	spec, err := MsgToSpec(mto)
 	if err != nil {
 		h.log.Error("mto conversion failed", slog.Any("reason", err), slog.Any("mto", mto))
 		return err
@@ -43,10 +43,10 @@ func (h *sigHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromSigRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *sigHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -60,10 +60,10 @@ func (h *sigHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromSigRoot(root))
+	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
-func (h *sigHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -77,7 +77,7 @@ func (h *sigHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("sig", MsgFromSigRoot(root))
+	html, err := h.ssr.Render("sig", MsgFromRoot(root))
 	if err != nil {
 		return err
 	}
@@ -86,12 +86,12 @@ func (h *sigHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api Api
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a Api, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }

@@ -4,17 +4,17 @@ import (
 	"smecalculus/rolevod/internal/chnl"
 )
 
-type sigRefData struct {
+type refData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
 }
 
-type sigRootData struct {
+type rootData struct {
 	ID       string          `db:"id"`
 	Name     string          `db:"name"`
 	PE       chnl.SpecData   `db:"pe"`
 	CEs      []chnl.SpecData `db:"ces"`
-	Children []sigRefData    `db:"-"`
+	Children []refData       `db:"-"`
 }
 
 // goverter:variables
@@ -22,19 +22,19 @@ type sigRootData struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
-	DataToSigRef     func(sigRefData) (Ref, error)
-	DataFromSigRef   func(Ref) sigRefData
-	DataToSigRefs    func([]sigRefData) ([]Ref, error)
-	DataFromSigRefs  func([]Ref) []sigRefData
-	DataToSigRoot    func(sigRootData) (Root, error)
-	DataFromSigRoot  func(Root) (sigRootData, error)
-	DataToSigRoots   func([]sigRootData) ([]Root, error)
-	DataFromSigRoots func([]Root) ([]sigRootData, error)
+	DataToRef     func(refData) (Ref, error)
+	DataFromRef   func(Ref) refData
+	DataToRefs    func([]refData) ([]Ref, error)
+	DataFromRefs  func([]Ref) []refData
+	DataToRoot    func(rootData) (Root, error)
+	DataFromRoot  func(Root) (rootData, error)
+	DataToRoots   func([]rootData) ([]Root, error)
+	DataFromRoots func([]Root) ([]rootData, error)
 )
 
 type kinshipRootData struct {
-	Parent   sigRefData
-	Children []sigRefData
+	Parent   refData
+	Children []refData
 }
 
 // goverter:variables

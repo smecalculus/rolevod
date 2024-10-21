@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	agentApi = agent.NewAgentApi()
+	api = agent.NewAPI()
 )
 
 func TestMain(m *testing.M) {
@@ -21,14 +21,14 @@ func TestMain(m *testing.M) {
 
 func TestEstablish(t *testing.T) {
 	// given
-	ps := agent.AgentSpec{Name: "parent-agent"}
-	pr, err := agentApi.Create(ps)
+	ps := agent.Spec{Name: "parent-agent"}
+	pr, err := api.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	cs := agent.AgentSpec{Name: "child-agent"}
-	cr, err := agentApi.Create(cs)
+	cs := agent.Spec{Name: "child-agent"}
+	cr, err := api.Create(cs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,12 +37,12 @@ func TestEstablish(t *testing.T) {
 		ParentID: pr.ID,
 		ChildIDs: []id.ADT{cr.ID},
 	}
-	err = agentApi.Establish(ks)
+	err = api.Establish(ks)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	actual, err := agentApi.Retrieve(pr.ID)
+	actual, err := api.Retrieve(pr.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

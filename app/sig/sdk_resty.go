@@ -2,28 +2,29 @@ package sig
 
 import (
 	"fmt"
-	"smecalculus/rolevod/lib/id"
 
 	"github.com/go-resty/resty/v2"
+
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
-type sigClient struct {
+type clientResty struct {
 	resty *resty.Client
 }
 
-func newSigClient() *sigClient {
+func newClientResty() *clientResty {
 	r := resty.New().SetBaseURL("http://localhost:8080/api/v1")
-	return &sigClient{r}
+	return &clientResty{r}
 }
 
-func NewSigApi() Api {
-	return newSigClient()
+func NewAPI() API {
+	return newClientResty()
 }
 
-func (cl *sigClient) Create(spec Spec) (Root, error) {
-	req := MsgFromSigSpec(spec)
-	var res SigRootMsg
+func (cl *clientResty) Create(spec Spec) (Root, error) {
+	req := MsgFromSpec(spec)
+	var res RootMsg
 	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
@@ -34,11 +35,11 @@ func (cl *sigClient) Create(spec Spec) (Root, error) {
 	if resp.IsError() {
 		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToSigRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *sigClient) Retrieve(id id.ADT) (Root, error) {
-	var res SigRootMsg
+func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
+	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
@@ -49,15 +50,15 @@ func (c *sigClient) Retrieve(id id.ADT) (Root, error) {
 	if resp.IsError() {
 		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToSigRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *sigClient) RetreiveAll() ([]Ref, error) {
+func (c *clientResty) RetreiveAll() ([]Ref, error) {
 	refs := []Ref{}
 	return refs, nil
 }
 
-func (c *sigClient) Establish(spec KinshipSpec) error {
+func (c *clientResty) Establish(spec KinshipSpec) error {
 	req := MsgFromKinshipSpec(spec)
 	resp, err := c.resty.R().
 		SetBody(&req).

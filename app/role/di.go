@@ -16,12 +16,12 @@ import (
 
 var Module = fx.Module("app/role",
 	fx.Provide(
-		fx.Annotate(newRoleService, fx.As(new(RoleApi))),
+		fx.Annotate(newService, fx.As(new(API))),
 	),
 	fx.Provide(
 		fx.Private,
-		newRoleHandlerEcho,
-		fx.Annotate(newRoleRepoPgx, fx.As(new(roleRepo))),
+		newHandlerEcho,
+		fx.Annotate(newRepoPgx, fx.As(new(repo))),
 		newKinshipHandlerEcho,
 		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
@@ -43,7 +43,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgRoleEcho(e *echo.Echo, h *roleHandlerEcho) error {
+func cfgRoleEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/roles", h.ApiPostOne)
 	e.GET("/api/v1/roles/:id", h.ApiGetOne)
 	e.PUT("/api/v1/roles/:id", h.ApiPutOne)

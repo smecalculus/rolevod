@@ -1,6 +1,6 @@
 package agent
 
-type AgentSpecMsg struct {
+type SpecMsg struct {
 	Name string `json:"name"`
 }
 
@@ -8,7 +8,7 @@ type RefMsg struct {
 	ID string `param:"id" query:"id" json:"id"`
 }
 
-type AgentRootMsg struct {
+type RootMsg struct {
 	ID       string        `json:"id"`
 	Name     string        `json:"name"`
 	Children []AgentRefMsg `json:"children"`
@@ -34,11 +34,11 @@ type KinshipRootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	// agent
-	MsgToAgentSpec    func(AgentSpecMsg) (AgentSpec, error)
-	MsgFromAgentSpec  func(AgentSpec) AgentSpecMsg
-	MsgToAgentRoot    func(AgentRootMsg) (AgentRoot, error)
-	MsgFromAgentRoot  func(AgentRoot) AgentRootMsg
-	MsgFromAgentRoots func([]AgentRoot) []AgentRootMsg
+	MsgToSpec    func(SpecMsg) (Spec, error)
+	MsgFromSpec  func(Spec) SpecMsg
+	MsgToRoot    func(RootMsg) (Root, error)
+	MsgFromRoot  func(Root) RootMsg
+	MsgFromRoots func([]Root) []RootMsg
 	// kinship
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)

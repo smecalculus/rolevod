@@ -11,24 +11,24 @@ import (
 )
 
 // Adapter
-type agentHandlerEcho struct {
-	api AgentApi
+type handlerEcho struct {
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newAgentHandlerEcho(a AgentApi, r msg.Renderer, l *slog.Logger) *agentHandlerEcho {
+func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "agentHandlerEcho")
-	return &agentHandlerEcho{a, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
-func (h *agentHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto AgentSpecMsg
+func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+	var mto SpecMsg
 	err := c.Bind(&mto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToAgentSpec(mto)
+	spec, err := MsgToSpec(mto)
 	if err != nil {
 		return err
 	}
@@ -36,10 +36,10 @@ func (h *agentHandlerEcho) ApiPostOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromAgentRoot(root))
+	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *agentHandlerEcho) ApiGetOne(c echo.Context) error {
+func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -53,10 +53,10 @@ func (h *agentHandlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromAgentRoot(root))
+	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
-func (h *agentHandlerEcho) SsrGetOne(c echo.Context) error {
+func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	var mto RefMsg
 	err := c.Bind(&mto)
 	if err != nil {
@@ -70,7 +70,7 @@ func (h *agentHandlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("agent", MsgFromAgentRoot(root))
+	html, err := h.ssr.Render("agent", MsgFromRoot(root))
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,12 @@ func (h *agentHandlerEcho) SsrGetOne(c echo.Context) error {
 
 // Adapter
 type kinshipHandlerEcho struct {
-	api AgentApi
+	api API
 	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newKinshipHandlerEcho(a AgentApi, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
+func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
 	name := slog.String("name", "kinshipHandlerEcho")
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }

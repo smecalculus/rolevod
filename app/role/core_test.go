@@ -11,7 +11,7 @@ import (
 )
 
 func TestKinshipEstalish(t *testing.T) {
-	s := newRoleService(&roleRepoFixture{}, &stateRepoFixture{}, &aliasRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
+	s := newService(&roleRepoFixture{}, &stateRepoFixture{}, &aliasRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
 	children := []id.ADT{id.New()}
 	s.Establish(KinshipSpec{ParentID: id.New(), ChildIDs: children})
 }
@@ -19,17 +19,17 @@ func TestKinshipEstalish(t *testing.T) {
 type roleRepoFixture struct {
 }
 
-func (r *roleRepoFixture) Insert(rr RoleRoot) error {
+func (r *roleRepoFixture) Insert(rr Root) error {
 	return nil
 }
-func (r *roleRepoFixture) SelectAll() ([]RoleRef, error) {
-	return []RoleRef{}, nil
+func (r *roleRepoFixture) SelectAll() ([]Ref, error) {
+	return []Ref{}, nil
 }
-func (r *roleRepoFixture) SelectByID(id id.ADT) (RoleRoot, error) {
-	return RoleRoot{}, nil
+func (r *roleRepoFixture) SelectByID(id id.ADT) (Root, error) {
+	return Root{}, nil
 }
-func (r *roleRepoFixture) SelectChildren(id id.ADT) ([]RoleRef, error) {
-	return []RoleRef{}, nil
+func (r *roleRepoFixture) SelectChildren(id id.ADT) ([]Ref, error) {
+	return []Ref{}, nil
 }
 func (r *roleRepoFixture) SelectState(id id.ADT) (state.Root, error) {
 	return nil, nil

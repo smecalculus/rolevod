@@ -5,61 +5,62 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
-	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
+
+	"smecalculus/rolevod/internal/chnl"
 )
 
-func NewDealApi() DealApi {
-	return newDealClient()
+func NewAPI() API {
+	return newClientResty()
 }
 
 // Adapter
-type dealClient struct {
+type clientResty struct {
 	resty *resty.Client
 }
 
-func newDealClient() *dealClient {
+func newClientResty() *clientResty {
 	r := resty.New().SetBaseURL("http://localhost:8080/api/v1")
-	return &dealClient{r}
+	return &clientResty{r}
 }
 
-func (cl *dealClient) Create(spec DealSpec) (DealRoot, error) {
-	req := MsgFromDealSpec(spec)
-	var res DealRootMsg
+func (cl *clientResty) Create(spec Spec) (Root, error) {
+	req := MsgFromSpec(spec)
+	var res RootMsg
 	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		Post("/deals")
 	if err != nil {
-		return DealRoot{}, err
+		return Root{}, err
 	}
 	if resp.IsError() {
-		return DealRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToDealRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *dealClient) Retrieve(id id.ADT) (DealRoot, error) {
-	var res DealRootMsg
+func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
+	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
 		Get("/deals/{id}")
 	if err != nil {
-		return DealRoot{}, err
+		return Root{}, err
 	}
 	if resp.IsError() {
-		return DealRoot{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToDealRoot(res)
+	return MsgToRoot(res)
 }
 
-func (c *dealClient) RetreiveAll() ([]DealRef, error) {
-	refs := []DealRef{}
+func (c *clientResty) RetreiveAll() ([]Ref, error) {
+	refs := []Ref{}
 	return refs, nil
 }
 
-func (c *dealClient) Establish(spec KinshipSpec) error {
+func (c *clientResty) Establish(spec KinshipSpec) error {
 	req := MsgFromKinshipSpec(spec)
 	resp, err := c.resty.R().
 		SetBody(&req).
@@ -74,7 +75,7 @@ func (c *dealClient) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (c *dealClient) Involve(spec PartSpec) (chnl.Root, error) {
+func (c *clientResty) Involve(spec PartSpec) (chnl.Root, error) {
 	req := MsgFromPartSpec(spec)
 	var res chnl.RootMsg
 	resp, err := c.resty.R().
@@ -91,7 +92,7 @@ func (c *dealClient) Involve(spec PartSpec) (chnl.Root, error) {
 	return chnl.MsgToRoot(res)
 }
 
-func (c *dealClient) Take(spec TranSpec) error {
+func (c *clientResty) Take(spec TranSpec) error {
 	req := MsgFromTranSpec(spec)
 	resp, err := c.resty.R().
 		SetBody(&req).

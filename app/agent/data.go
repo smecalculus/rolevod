@@ -1,19 +1,19 @@
 package agent
 
-type agentRootData struct {
-	ID       string         `db:"id"`
-	Name     string         `db:"name"`
-	Children []agentRefData `db:"-"`
+type rootData struct {
+	ID       string    `db:"id"`
+	Name     string    `db:"name"`
+	Children []refData `db:"-"`
 }
 
-type agentRefData struct {
+type refData struct {
 	ID   string `db:"id"`
 	Name string `db:"name"`
 }
 
 type kinshipRootData struct {
-	Parent   agentRefData
-	Children []agentRefData
+	Parent   refData
+	Children []refData
 }
 
 // goverter:variables
@@ -21,12 +21,12 @@ type kinshipRootData struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 var (
 	// agent
-	DataToAgentRef    func(agentRefData) (AgentRef, error)
-	DataFromAgentRef  func(AgentRef) agentRefData
-	DataToAgentRefs   func([]agentRefData) ([]AgentRef, error)
-	DataFromAgentRefs func([]AgentRef) []agentRefData
-	DataToAgentRoot   func(agentRootData) (AgentRoot, error)
-	DataFromAgentRoot func(AgentRoot) agentRootData
+	DataToRef    func(refData) (Ref, error)
+	DataFromRef  func(Ref) refData
+	DataToRefs   func([]refData) ([]Ref, error)
+	DataFromRefs func([]Ref) []refData
+	DataToRoot   func(rootData) (Root, error)
+	DataFromRoot func(Root) rootData
 	// kinship
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
 	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
