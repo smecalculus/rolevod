@@ -45,7 +45,6 @@ type Repo interface {
 }
 
 func CollectStIDs(roots []Root) []state.ID {
-	// stIDs := make([]state.ID, len(roots))
 	var stIDs []state.ID
 	for _, r := range roots {
 		stIDs = append(stIDs, r.StID)

@@ -436,7 +436,7 @@ func (s *dealService) takeProcWith(
 		}
 		wait, ok := srv.Cont.(step.WaitSpec)
 		if !ok {
-			err = fmt.Errorf("cont type mismatch: want %T, got %T", step.WaitSpec{}, srv.Cont)
+			err = fmt.Errorf("cont type mismatch: want %T, got %T", wait, srv.Cont)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("cont", srv.Cont),
@@ -623,7 +623,7 @@ func (s *dealService) takeProcWith(
 		}
 		recv, ok := srv.Cont.(step.RecvSpec)
 		if !ok {
-			err = fmt.Errorf("cont type mismatch: want %T, got %T", step.RecvSpec{}, srv.Cont)
+			err = fmt.Errorf("cont type mismatch: want %T, got %T", recv, srv.Cont)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("cont", srv.Cont),
@@ -652,7 +652,7 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		valID, ok := term.B.(chnl.ID)
+		bID, ok := term.B.(chnl.ID)
 		if !ok {
 			err := chnl.ErrNotAnID(term.B)
 			s.log.Error("transition taking failed",
@@ -660,9 +660,9 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		b, ok := cfg.LookupCh(valID)
+		b, ok := cfg.LookupCh(bID)
 		if !ok {
-			err = chnl.ErrMissingInCfg(valID)
+			err = chnl.ErrMissingInCfg(bID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -739,9 +739,9 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		val, ok := msg.Val.(step.SendSpec)
+		send, ok := msg.Val.(step.SendSpec)
 		if !ok {
-			err = fmt.Errorf("val type mismatch: want %T, got %T", step.SendSpec{}, msg.Val)
+			err = fmt.Errorf("val type mismatch: want %T, got %T", send, msg.Val)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("val", msg.Val),
@@ -770,17 +770,17 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		valID, ok := val.B.(chnl.ID)
+		bID, ok := send.B.(chnl.ID)
 		if !ok {
-			err := chnl.ErrNotAnID(val.B)
+			err := chnl.ErrNotAnID(send.B)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
 			return err
 		}
-		b, ok := cfg.LookupCh(valID)
+		b, ok := cfg.LookupCh(bID)
 		if !ok {
-			err = chnl.ErrMissingInCfg(valID)
+			err = chnl.ErrMissingInCfg(bID)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -947,9 +947,9 @@ func (s *dealService) takeProcWith(
 			)
 			return err
 		}
-		val, ok := msg.Val.(step.LabSpec)
+		lab, ok := msg.Val.(step.LabSpec)
 		if !ok {
-			err = fmt.Errorf("val type mismatch: want %T, got %T", step.LabSpec{}, msg.Val)
+			err = fmt.Errorf("val type mismatch: want %T, got %T", lab, msg.Val)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 				slog.Any("val", msg.Val),
@@ -968,7 +968,7 @@ func (s *dealService) takeProcWith(
 			ID:    id.New(),
 			Name:  curVia.Name,
 			PreID: curVia.ID,
-			StID:  curSt.(state.Sum).Next(val.L),
+			StID:  curSt.(state.Sum).Next(lab.L),
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -982,7 +982,7 @@ func (s *dealService) takeProcWith(
 		newProc := step.ProcRoot{
 			ID:   id.New(),
 			PID:  chnl.Subst(proc.PID, curVia.ID, newVia.ID),
-			Term: step.Subst(term.Conts[val.L], term.X, newVia.ID),
+			Term: step.Subst(term.Conts[lab.L], term.X, newVia.ID),
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
@@ -1275,6 +1275,7 @@ func (s *dealService) checkProvider(
 ) error {
 	switch term := t.(type) {
 	case step.CloseSpec:
+		// check ctx
 		if len(ctx.Linear) > 0 {
 			err := fmt.Errorf("context mismatch: want 0 items, got %v items", len(ctx.Linear))
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
@@ -1341,14 +1342,13 @@ func (s *dealService) checkProvider(
 			return err
 		}
 		// check label
-		choice, ok := wantSt.Choices[term.L]
+		_, ok = wantSt.Choices[term.L]
 		if !ok {
-			err := fmt.Errorf("label mismatch: want %q, got nothing", term.L)
+			err := fmt.Errorf("label mismatch: want %v, got %q", maps.Keys(wantSt.Choices), term.L)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// no cont to check
-		pe.St = choice
 		return nil
 	case step.CaseSpec:
 		// check via
@@ -1502,14 +1502,13 @@ func (s *dealService) checkClient(
 			return err
 		}
 		// check label
-		choice, ok := wantSt.Choices[got.L]
+		_, ok = wantSt.Choices[got.L]
 		if !ok {
-			err := fmt.Errorf("label mismatch: want %q, got nothing", got.L)
+			err := fmt.Errorf("label mismatch: want %v, got %q", maps.Keys(wantSt.Choices), got.L)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
 		// no cont to check
-		ctx.Linear[got.A] = choice
 		return nil
 	case step.CaseSpec:
 		// check via

@@ -15,26 +15,26 @@ import (
 type ID = id.ADT
 
 type Ref interface {
-	rID() ID
+	id.Identifiable
 }
 
 type ProcRef struct {
 	ID ID
 }
 
-func (r ProcRef) rID() ID { return r.ID }
+func (r ProcRef) Ident() ID { return r.ID }
 
 type MsgRef struct {
 	ID ID
 }
 
-func (r MsgRef) rID() ID { return r.ID }
+func (r MsgRef) Ident() ID { return r.ID }
 
 type SrvRef struct {
 	ID ID
 }
 
-func (r SrvRef) rID() ID { return r.ID }
+func (r SrvRef) Ident() ID { return r.ID }
 
 type Root interface {
 	step()

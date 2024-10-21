@@ -67,61 +67,65 @@ type DownSpec struct {
 func (DownSpec) spec() {}
 
 type Ref interface {
-	RID() ID
+	id.Identifiable
 }
 
 type OneRef struct {
 	ID ID
 }
 
-func (r OneRef) RID() ID { return r.ID }
+func (r OneRef) Ident() ID { return r.ID }
 
 type LinkRef struct {
 	ID ID
 }
 
-func (r LinkRef) RID() ID { return r.ID }
+func (r LinkRef) Ident() ID { return r.ID }
 
 type PlusRef struct {
 	ID ID
 }
 
-func (r PlusRef) RID() ID { return r.ID }
+func (r PlusRef) Ident() ID { return r.ID }
 
 type WithRef struct {
 	ID ID
 }
 
-func (r WithRef) RID() ID { return r.ID }
+func (r WithRef) Ident() ID { return r.ID }
 
 type TensorRef struct {
 	ID ID
 }
 
-func (r TensorRef) RID() ID { return r.ID }
+func (r TensorRef) Ident() ID { return r.ID }
 
 type LolliRef struct {
 	ID ID
 }
 
-func (r LolliRef) RID() ID { return r.ID }
+func (r LolliRef) Ident() ID { return r.ID }
 
 type UpRef struct {
 	ID ID
 }
 
-func (r UpRef) RID() ID { return r.ID }
+func (r UpRef) Ident() ID { return r.ID }
 
 type DownRef struct {
 	ID ID
 }
 
-func (r DownRef) RID() ID { return r.ID }
+func (r DownRef) Ident() ID { return r.ID }
+
+type Polarizable interface {
+	Pol() Polarity
+}
 
 // aka Stype
 type Root interface {
-	Ref
-	Pol() Polarity
+	id.Identifiable
+	Polarizable
 }
 
 type Prod interface {
@@ -140,7 +144,7 @@ type LinkRoot struct {
 
 func (LinkRoot) spec() {}
 
-func (r LinkRoot) RID() ID { return r.ID }
+func (r LinkRoot) Ident() ID { return r.ID }
 
 func (r LinkRoot) Pol() Polarity { return Zero }
 
@@ -150,7 +154,7 @@ type OneRoot struct {
 
 func (OneRoot) spec() {}
 
-func (r OneRoot) RID() ID { return r.ID }
+func (r OneRoot) Ident() ID { return r.ID }
 
 func (r OneRoot) Pol() Polarity { return Pos }
 
@@ -160,9 +164,9 @@ type PlusRoot struct {
 	Choices map[core.Label]Root
 }
 
-func (r PlusRoot) RID() ID { return r.ID }
+func (r PlusRoot) Ident() ID { return r.ID }
 
-func (r PlusRoot) Next(l core.Label) ID { return r.Choices[l].RID() }
+func (r PlusRoot) Next(l core.Label) ID { return r.Choices[l].Ident() }
 
 func (r PlusRoot) Pol() Polarity { return Pos }
 
@@ -172,9 +176,9 @@ type WithRoot struct {
 	Choices map[core.Label]Root
 }
 
-func (r WithRoot) RID() ID { return r.ID }
+func (r WithRoot) Ident() ID { return r.ID }
 
-func (r WithRoot) Next(l core.Label) ID { return r.Choices[l].RID() }
+func (r WithRoot) Next(l core.Label) ID { return r.Choices[l].Ident() }
 
 func (r WithRoot) Pol() Polarity { return Neg }
 
@@ -184,9 +188,9 @@ type TensorRoot struct {
 	C  Root // cont
 }
 
-func (r TensorRoot) RID() ID { return r.ID }
+func (r TensorRoot) Ident() ID { return r.ID }
 
-func (r TensorRoot) Next() ID { return r.C.RID() }
+func (r TensorRoot) Next() ID { return r.C.Ident() }
 
 func (r TensorRoot) Pol() Polarity { return Pos }
 
@@ -196,9 +200,9 @@ type LolliRoot struct {
 	Z  Root // cont
 }
 
-func (r LolliRoot) RID() ID { return r.ID }
+func (r LolliRoot) Ident() ID { return r.ID }
 
-func (r LolliRoot) Next() ID { return r.Z.RID() }
+func (r LolliRoot) Next() ID { return r.Z.Ident() }
 
 func (r LolliRoot) Pol() Polarity { return Neg }
 
@@ -209,7 +213,7 @@ type UpRoot struct {
 
 func (UpRoot) spec() {}
 
-func (r UpRoot) RID() ID { return r.ID }
+func (r UpRoot) Ident() ID { return r.ID }
 
 func (r UpRoot) Pol() Polarity { return Zero }
 
@@ -220,7 +224,7 @@ type DownRoot struct {
 
 func (DownRoot) spec() {}
 
-func (r DownRoot) RID() ID { return r.ID }
+func (r DownRoot) Ident() ID { return r.ID }
 
 func (r DownRoot) Pol() Polarity { return Zero }
 

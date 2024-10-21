@@ -78,7 +78,7 @@ func TestTakeWaitClose(t *testing.T) {
 		FQN: "seat-1",
 		PE: chnl.Spec{
 			Name: "chnl-1",
-			StID: oneRole.St.RID(),
+			StID: oneRole.St.Ident(),
 		},
 	}
 	oneSeat1, err := seatApi.Create(oneSeatSpec1)
@@ -90,7 +90,7 @@ func TestTakeWaitClose(t *testing.T) {
 		FQN: "seat-2",
 		PE: chnl.Spec{
 			Name: "chnl-2",
-			StID: oneRole.St.RID(),
+			StID: oneRole.St.Ident(),
 		},
 		CEs: []chnl.Spec{
 			oneSeat1.PE,
@@ -189,7 +189,7 @@ func TestTakeRecvSend(t *testing.T) {
 		FQN: "seat-1",
 		PE: chnl.Spec{
 			Name: "chnl-1",
-			StID: lolliRole.St.RID(),
+			StID: lolliRole.St.Ident(),
 		},
 	}
 	lolliSeat, err := seatApi.Create(lolliSeatSpec)
@@ -201,7 +201,7 @@ func TestTakeRecvSend(t *testing.T) {
 		FQN: "seat-2",
 		PE: chnl.Spec{
 			Name: "chnl-2",
-			StID: oneRole.St.RID(),
+			StID: oneRole.St.Ident(),
 		},
 	}
 	oneSeat1, err := seatApi.Create(oneSeatSpec1)
@@ -213,7 +213,7 @@ func TestTakeRecvSend(t *testing.T) {
 		FQN: "seat-3",
 		PE: chnl.Spec{
 			Name: "chnl-3",
-			StID: oneRole.St.RID(),
+			StID: oneRole.St.Ident(),
 		},
 		CEs: []chnl.Spec{
 			lolliSeatSpec.PE,
@@ -331,7 +331,7 @@ func TestTakeCaseLab(t *testing.T) {
 		FQN: "seat-1",
 		PE: chnl.Spec{
 			Name: "chnl-1",
-			StID: withRole.St.RID(),
+			StID: withRole.St.Ident(),
 		},
 	}
 	withSeat, err := seatApi.Create(withSeatSpec)
@@ -343,7 +343,7 @@ func TestTakeCaseLab(t *testing.T) {
 		FQN: "seat-2",
 		PE: chnl.Spec{
 			Name: "chnl-2",
-			StID: oneRole.St.RID(),
+			StID: oneRole.St.Ident(),
 		},
 		CEs: []chnl.Spec{
 			withSeat.PE,
@@ -435,7 +435,7 @@ func TestTakeSpawn(t *testing.T) {
 			FQN: "seat-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 		},
 	)
@@ -448,7 +448,7 @@ func TestTakeSpawn(t *testing.T) {
 			FQN: "seat-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
 				oneSeat1.PE,
@@ -464,7 +464,7 @@ func TestTakeSpawn(t *testing.T) {
 			FQN: "seat-3",
 			PE: chnl.Spec{
 				Name: "chnl-3",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
 				oneSeat1.PE,
@@ -551,7 +551,7 @@ func TestTakeFwd(t *testing.T) {
 			FQN: "seat-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 		},
 	)
@@ -564,7 +564,7 @@ func TestTakeFwd(t *testing.T) {
 			FQN: "seat-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
 				oneSeat1.PE,
@@ -580,7 +580,7 @@ func TestTakeFwd(t *testing.T) {
 			FQN: "seat-3",
 			PE: chnl.Spec{
 				Name: "chnl-3",
-				StID: oneRole.St.RID(),
+				StID: oneRole.St.Ident(),
 			},
 			CEs: []chnl.Spec{
 				oneSeat1.PE,

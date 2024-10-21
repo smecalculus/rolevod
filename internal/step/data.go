@@ -6,10 +6,9 @@ import (
 
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
-
-	"smecalculus/rolevod/internal/chnl"
 )
 
 type rootData struct {
@@ -62,8 +61,8 @@ type recvData struct {
 }
 
 type labData struct {
-	A     ph.Data `json:"a"`
-	Label string  `json:"l"`
+	A ph.Data `json:"a"`
+	L string  `json:"l"`
 }
 
 type caseData struct {
@@ -120,8 +119,8 @@ func dataFromRoot(r Root) (*rootData, error) {
 	}
 	switch root := r.(type) {
 	case ProcRoot:
-		pid := sql.NullString{String: root.PID.String(), Valid: !root.PID.IsEmpty()}
-		term, err := dataFromTerm(root.Term)
+		pid := data.NullStringFromID(root.PID)
+		spec, err := dataFromTerm(root.Term)
 		if err != nil {
 			return nil, err
 		}
@@ -129,11 +128,11 @@ func dataFromRoot(r Root) (*rootData, error) {
 			K:    proc,
 			ID:   root.ID.String(),
 			PID:  pid,
-			Spec: term,
+			Spec: spec,
 		}, nil
 	case MsgRoot:
-		pid := sql.NullString{String: root.PID.String(), Valid: !root.PID.IsEmpty()}
-		vid := sql.NullString{String: root.VID.String(), Valid: !root.VID.IsEmpty()}
+		pid := data.NullStringFromID(root.PID)
+		vid := data.NullStringFromID(root.VID)
 		return &rootData{
 			K:    msg,
 			ID:   root.ID.String(),
@@ -142,9 +141,9 @@ func dataFromRoot(r Root) (*rootData, error) {
 			Spec: dataFromValue(root.Val),
 		}, nil
 	case SrvRoot:
-		pid := sql.NullString{String: root.PID.String(), Valid: !root.PID.IsEmpty()}
-		vid := sql.NullString{String: root.VID.String(), Valid: !root.VID.IsEmpty()}
-		term, err := dataFromCont(root.Cont)
+		pid := data.NullStringFromID(root.PID)
+		vid := data.NullStringFromID(root.VID)
+		spec, err := dataFromCont(root.Cont)
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +152,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 			ID:   root.ID.String(),
 			PID:  pid,
 			VID:  vid,
-			Spec: term,
+			Spec: spec,
 		}, nil
 	default:
 		panic(ErrRootTypeUnexpected(root))
@@ -164,23 +163,17 @@ func dataToRoot(dto *rootData) (Root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rid, err := id.StringToID(dto.ID)
+	ident, err := id.StringToID(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	var pid chnl.ID
-	if dto.PID.Valid {
-		pid, err = id.StringToID(dto.PID.String)
-		if err != nil {
-			return nil, err
-		}
+	pid, err := data.NullStringToID(dto.PID)
+	if err != nil {
+		return nil, err
 	}
-	var vid chnl.ID
-	if dto.VID.Valid {
-		vid, err = id.StringToID(dto.VID.String)
-		if err != nil {
-			return nil, err
-		}
+	vid, err := data.NullStringToID(dto.VID)
+	if err != nil {
+		return nil, err
 	}
 	switch dto.K {
 	case proc:
@@ -188,19 +181,19 @@ func dataToRoot(dto *rootData) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: rid, PID: pid, Term: term}, nil
+		return ProcRoot{ID: ident, PID: pid, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Spec)
 		if err != nil {
 			return nil, err
 		}
-		return MsgRoot{ID: rid, PID: pid, VID: vid, Val: val}, nil
+		return MsgRoot{ID: ident, PID: pid, VID: vid, Val: val}, nil
 	case srv:
 		cont, err := dataToCont(dto.Spec)
 		if err != nil {
 			return nil, err
 		}
-		return SrvRoot{ID: rid, PID: pid, VID: vid, Cont: cont}, nil
+		return SrvRoot{ID: ident, PID: pid, VID: vid, Cont: cont}, nil
 	default:
 		panic(errUnexpectedStepKind(dto.K))
 	}
@@ -319,7 +312,7 @@ func dataToValue(dto specData) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return LabSpec{A: a, L: core.Label(dto.Lab.Label)}, nil
+		return LabSpec{A: a, L: core.Label(dto.Lab.L)}, nil
 	case fwd:
 		c, err := ph.DataToPH(dto.Fwd.C)
 		if err != nil {
@@ -364,8 +357,8 @@ func dataFromCont(c Continuation) (specData, error) {
 		}, nil
 	case CaseSpec:
 		brs := []branchData{}
-		for l, t := range cont.Conts {
-			dto, err := dataFromTerm(t)
+		for l, cont := range cont.Conts {
+			dto, err := dataFromTerm(cont)
 			if err != nil {
 				return specData{}, err
 			}
@@ -374,8 +367,7 @@ func dataFromCont(c Continuation) (specData, error) {
 		return specData{
 			K: caze,
 			Case: &caseData{
-				X: ph.DataFromPH(cont.X),
-				// Conts: conts,
+				X:   ph.DataFromPH(cont.X),
 				Brs: brs,
 			},
 		}, nil

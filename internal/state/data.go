@@ -71,7 +71,7 @@ func DataFromRef(ref Ref) *RefData {
 	if ref == nil {
 		return nil
 	}
-	rid := ref.RID().String()
+	rid := ref.Ident().String()
 	switch ref.(type) {
 	case OneRef, OneRoot:
 		return &RefData{K: one, ID: rid}
@@ -129,7 +129,7 @@ func dataFromRoot(root Root) *rootData {
 		return nil
 	}
 	dto := &rootData{
-		ID:     root.RID().String(),
+		ID:     root.Ident().String(),
 		States: nil,
 	}
 	statesFromRoot("", root, dto)
@@ -196,7 +196,7 @@ func statesFromRoot(from string, r Root, dto *rootData) (string, error) {
 	if len(from) > 0 {
 		fromID = sql.NullString{String: from, Valid: true}
 	}
-	stID := r.RID().String()
+	stID := r.Ident().String()
 	switch root := r.(type) {
 	case OneRoot:
 		st := stateData{ID: stID, K: one, FromID: fromID}

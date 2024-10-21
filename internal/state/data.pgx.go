@@ -136,7 +136,7 @@ func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	}
 	env := make(map[ID]Root, len(states))
 	for _, st := range states {
-		env[st.RID()] = st
+		env[st.Ident()] = st
 	}
 	return env, nil
 }

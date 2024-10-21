@@ -204,20 +204,20 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 }
 
 func MsgFromRef(ref Ref) RefMsg {
-	id := ref.RID().String()
+	ident := ref.Ident().String()
 	switch ref.(type) {
 	case OneRef, OneRoot:
-		return RefMsg{K: One, ID: id}
+		return RefMsg{K: One, ID: ident}
 	case LinkRef, LinkRoot:
-		return RefMsg{K: Link, ID: id}
+		return RefMsg{K: Link, ID: ident}
 	case TensorRef, TensorRoot:
-		return RefMsg{K: Tensor, ID: id}
+		return RefMsg{K: Tensor, ID: ident}
 	case LolliRef, LolliRoot:
-		return RefMsg{K: Lolli, ID: id}
+		return RefMsg{K: Lolli, ID: ident}
 	case PlusRef, PlusRoot:
-		return RefMsg{K: Plus, ID: id}
+		return RefMsg{K: Plus, ID: ident}
 	case WithRef, WithRoot:
-		return RefMsg{K: With, ID: id}
+		return RefMsg{K: With, ID: ident}
 	default:
 		panic(ErrRefTypeUnexpected(ref))
 	}
