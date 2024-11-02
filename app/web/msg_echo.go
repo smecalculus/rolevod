@@ -19,16 +19,16 @@ type handlerEcho struct {
 }
 
 func newHandlerEcho(a role.API, r msg.Renderer, l *slog.Logger) *handlerEcho {
-	name := slog.String("name", "web.handlerEcho")
+	name := slog.String("name", "webHandlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
 
 func (h *handlerEcho) Home(c echo.Context) error {
-	rts, err := h.api.RetreiveAll()
+	refs, err := h.api.RetreiveAll()
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("home.html", role.MsgFromRefs(rts))
+	html, err := h.ssr.Render("home.html", role.MsgFromRefs(refs))
 	if err != nil {
 		return err
 	}

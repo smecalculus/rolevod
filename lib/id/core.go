@@ -42,6 +42,14 @@ func StringFromID(id ADT) string {
 	return xid.ID(id).String()
 }
 
+func StringFromID2(id *ADT) *string {
+	if id == nil {
+		return nil
+	}
+	s := xid.ID(*id).String()
+	return &s
+}
+
 func (id ADT) String() string {
 	return xid.ID(id).String()
 }

@@ -17,19 +17,23 @@ type handlerEcho struct {
 	log *slog.Logger
 }
 
-func newHandlerEcho(ra API, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "roleHandlerEcho")
-	return &handlerEcho{ra, r, l.With(name)}
+	return &handlerEcho{a, r, l.With(name)}
 }
 
-func (h *handlerEcho) ApiPostOne(c echo.Context) error {
-	var mto SpecMsg
-	err := c.Bind(&mto)
+func (h *handlerEcho) PostOne(c echo.Context) error {
+	var dto SpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	h.log.Debug("role posting started", slog.Any("mto", mto))
-	spec, err := MsgToSpec(mto)
+	h.log.Debug("role posting started", slog.Any("dto", dto))
+	err = dto.Validate()
+	if err != nil {
+		return err
+	}
+	spec, err := MsgToSpec(dto)
 	if err != nil {
 		return err
 	}
@@ -40,59 +44,38 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
+func (h *handlerEcho) GetOne(c echo.Context) error {
+	var dto RefMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	id, err := id.StringToID(mto.ID)
+	ident, err := id.StringToID(dto.ID)
 	if err != nil {
 		return err
 	}
-	rr, err := h.api.Retrieve(id)
+	root, err := h.api.Retrieve(ident)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoot(rr))
+	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
-func (h *handlerEcho) ApiPutOne(c echo.Context) error {
-	var mto RootMsg
-	err := c.Bind(&mto)
+func (h *handlerEcho) PutOne(c echo.Context) error {
+	var dto RootMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	rr, err := MsgToRoot(mto)
+	root, err := MsgToRoot(dto)
 	if err != nil {
 		return err
 	}
-	err = h.api.Update(rr)
+	err = h.api.Update(root)
 	if err != nil {
 		return err
 	}
 	return c.NoContent(http.StatusOK)
-}
-
-func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
-	if err != nil {
-		return err
-	}
-	id, err := id.StringToID(mto.ID)
-	if err != nil {
-		return err
-	}
-	rr, err := h.api.Retrieve(id)
-	if err != nil {
-		return err
-	}
-	html, err := h.ssr.Render("tp", MsgFromRoot(rr))
-	if err != nil {
-		return err
-	}
-	return c.HTMLBlob(http.StatusOK, html)
 }
 
 // Adapter
@@ -107,13 +90,13 @@ func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandle
 	return &kinshipHandlerEcho{a, r, l.With(name)}
 }
 
-func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto KinshipSpecMsg
-	err := c.Bind(&mto)
+func (h *kinshipHandlerEcho) PostOne(c echo.Context) error {
+	var dto KinshipSpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToKinshipSpec(mto)
+	spec, err := MsgToKinshipSpec(dto)
 	if err != nil {
 		return err
 	}

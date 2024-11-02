@@ -145,7 +145,7 @@ func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
 	case one:
 		return OneRoot{ID: stID}, nil
 	case tensor:
-		a, err := statesToRoot(states, states[st.Spec.Tensor.Val])
+		b, err := statesToRoot(states, states[st.Spec.Tensor.Val])
 		if err != nil {
 			return nil, err
 		}
@@ -153,9 +153,9 @@ func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return TensorRoot{ID: stID, B: a, C: c}, nil
+		return TensorRoot{ID: stID, B: b, C: c}, nil
 	case lolli:
-		x, err := statesToRoot(states, states[st.Spec.Lolli.Val])
+		y, err := statesToRoot(states, states[st.Spec.Lolli.Val])
 		if err != nil {
 			return nil, err
 		}
@@ -163,11 +163,10 @@ func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return LolliRoot{ID: stID, Y: x, Z: z}, nil
+		return LolliRoot{ID: stID, Y: y, Z: z}, nil
 	case plus:
-		dto := states[st.ID]
-		choices := make(map[core.Label]Root, len(dto.Spec.Plus))
-		for _, ch := range dto.Spec.Plus {
+		choices := make(map[core.Label]Root, len(st.Spec.Plus))
+		for _, ch := range st.Spec.Plus {
 			choice, err := statesToRoot(states, states[ch.Cont])
 			if err != nil {
 				return nil, err
@@ -176,9 +175,8 @@ func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
 		}
 		return PlusRoot{ID: stID, Choices: choices}, nil
 	case with:
-		dto := states[st.ID]
-		choices := make(map[core.Label]Root, len(dto.Spec.With))
-		for _, ch := range dto.Spec.With {
+		choices := make(map[core.Label]Root, len(st.Spec.With))
+		for _, ch := range st.Spec.With {
 			choice, err := statesToRoot(states, states[ch.Cont])
 			if err != nil {
 				return nil, err

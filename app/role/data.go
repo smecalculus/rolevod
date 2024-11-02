@@ -2,8 +2,6 @@ package role
 
 import (
 	"smecalculus/rolevod/lib/id"
-
-	"smecalculus/rolevod/internal/state"
 )
 
 type refData struct {
@@ -12,10 +10,10 @@ type refData struct {
 }
 
 type rootData struct {
-	ID       string         `db:"id"`
-	Name     string         `db:"name"`
-	St       *state.RefData `db:"state"`
-	Children []refData      `db:"-"`
+	ID       string    `db:"id"`
+	Name     string    `db:"name"`
+	StID     string    `db:"st_id"`
+	Children []refData `db:"-"`
 }
 
 // goverter:variables
@@ -35,11 +33,11 @@ var (
 )
 
 func dataToRoot(dto rootData) (Root, error) {
-	id, err := id.StringToID(dto.ID)
+	rid, err := id.StringToID(dto.ID)
 	if err != nil {
 		return Root{}, nil
 	}
-	state, err := state.DataToRef(dto.St)
+	stID, err := id.StringToID(dto.StID)
 	if err != nil {
 		return Root{}, nil
 	}
@@ -48,15 +46,14 @@ func dataToRoot(dto rootData) (Root, error) {
 		return Root{}, nil
 	}
 	return Root{
-		ID:       id,
+		ID:       rid,
 		Name:     dto.Name,
-		St:       state,
+		StID:     stID,
 		Children: children,
 	}, nil
 }
 
 func dataFromRoot(root Root) (rootData, error) {
-	stateDTO := state.DataFromRef(root.St)
 	childrenDTOs, err := DataFromRefs(root.Children)
 	if err != nil {
 		return rootData{}, err
@@ -64,7 +61,7 @@ func dataFromRoot(root Root) (rootData, error) {
 	return rootData{
 		ID:       root.ID.String(),
 		Name:     root.Name,
-		St:       stateDTO,
+		StID:     id.StringFromID(root.State.Ident()),
 		Children: childrenDTOs,
 	}, nil
 }

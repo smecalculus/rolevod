@@ -1,0 +1,91 @@
+{{define "role"}}
+    <script>
+        Alpine.data('role', () => ({
+            mto: {{.}},
+
+            save() {
+                fetch('/api/v1/roles/{{.ID}}', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.mto)
+                })
+                .then(() => {
+                    console.log("Success")
+                })
+                .catch(() => {
+                    console.log("Failure")
+                });
+            }
+        }))
+    </script>
+    <div id="role" x-data="role">
+        <div class="row">
+            <div class="col-auto">
+                <input x-model="mto.name" type="text" class="form-control">
+            </div>
+        </div>
+        {{template "st" (dict "St" .St "Root" .ID "Path" "mto.st")}}
+        <button type="button" @click="save()" class="btn btn-primary">Save</button>
+    </div>
+{{end}}
+
+{{define "st"}}
+    {{$kinds := list "one" "ref" "tensor" "lolli" "plus" "with"}}
+    {{if or (eq .St.K "with") (eq .St.K "plus")}}
+        <ul>
+            <li style="list-style-type: '{{.St.K}}';">
+            {{range $i, $ch := .St.Chs}}
+                <details open>
+                    <summary class="row" onclick="return false">
+                        <div class="col-auto ms-0">
+                            {{$lp := printf "%v.choices[%v].label" $.Path $i}}
+                            <input x-model="{{$lp}}" type="text" class="form-control">
+                        </div>
+                    </summary>
+                    <ul class="row">
+                        {{$sp := printf "%v.choices[%v].session" $.Path $i}}
+                        {{template "st" (dict "St" $ch.S "Root" $.Root "Path" $sp)}}
+                    </ul>
+                </details>
+            {{end}}
+            </li>
+        </ul>
+    {{else if or (eq .St.K "tensor") (eq .St.K "lolli")}}
+        <ul>
+            <li class="input-group text-center align-items-center gap-2">
+                <div class="col-auto">
+                    {{template "st" (dict "St" .St.M "Root" .Root "Path" (printf "%v.message" $.Path))}}
+                </div>
+                <div class="col-1">
+                    <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
+                    {{range $k := $kinds}}
+                        <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+                    {{end}}
+                    </select>
+                </div>
+                <div class="col-auto">                
+                    {{template "st" (dict "St" .St.S "Root" .Root "Path" (printf "%v.session" $.Path))}}
+                </div>
+            </li>
+            {{if ne .St.S.K "ref"}}
+            <div class="col-auto">
+                {{template "st" (dict "St" .St.S "Root" .Root)}}
+            </div>
+            {{end}}
+        </ul>
+    {{else if eq .St.K "ref"}}
+        {{if eq .St.ID .Root}}
+            <span x-text="mto.name"></span>
+        {{else}}
+            <a x-text="{{printf "%v.name" .Path}}" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
+        {{end}}
+    {{else}}
+        <div class="col-1">
+            <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
+            {{range $k := $kinds}}
+                <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+            {{end}}
+            </select>
+        </div>
+    {{end}}
+{{end}}

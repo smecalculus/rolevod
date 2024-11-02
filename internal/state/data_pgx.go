@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
-	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
@@ -90,7 +89,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
+func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		WITH RECURSIVE top_states AS (
 			SELECT
@@ -107,18 +106,18 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("root", rid))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[stateData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("row collection failed", slog.Any("reason", err), slog.Any("root", rid))
 		return nil, err
 	}
 	if len(dtos) == 0 {
 		err := fmt.Errorf("no rows selected")
-		r.log.Error("state selection failed", slog.Any("reason", err))
+		r.log.Error("state selection failed", slog.Any("reason", err), slog.Any("root", rid))
 		return nil, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))

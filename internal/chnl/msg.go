@@ -32,10 +32,10 @@ func (mto RefMsg) Validate() error {
 }
 
 type RootMsg struct {
-	ID    string `json:"id" param:"id"`
-	Name  string `json:"name"`
-	PreID string `json:"pre_id"`
-	StID  string `json:"st_id"`
+	ID    string  `json:"id" param:"id"`
+	Name  string  `json:"name"`
+	PreID *string `json:"pre_id"`
+	StID  *string `json:"st_id"`
 }
 
 // goverter:variables

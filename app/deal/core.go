@@ -80,9 +80,12 @@ func (c *Configuration) LookupSt(id chnl.ID) (state.Root, bool) {
 	if !ok {
 		return nil, false
 	}
-	st, ok := c.states[ch.StID]
+	if ch.StID == nil {
+		return nil, false
+	}
+	st, ok := c.states[*ch.StID]
 	if !ok {
-		panic(state.ErrMissingInCfg(ch.StID))
+		panic(state.ErrMissingInCfg(*ch.StID))
 	}
 	return st, true
 }
@@ -208,7 +211,7 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 	newPE := chnl.Root{
 		ID:   id.New(),
 		Name: wantSpec.PE.Name,
-		StID: wantSpec.PE.StID,
+		StID: &wantSpec.PE.StID,
 	}
 	err = s.chnls.Insert(newPE)
 	if err != nil {
@@ -331,7 +334,7 @@ func (s *service) Take(spec TranSpec) error {
 	}
 	env := Environment{sigs, states}
 	ctx := convertToCtx(ces, states)
-	zc := state.EP{Z: pe.ID, St: states[pe.StID]}
+	zc := state.EP{Z: pe.ID, St: states[*pe.StID]}
 	// type checking
 	err = s.checkState(env, ctx, zc, spec.Term)
 	if err != nil {
@@ -447,8 +450,8 @@ func (s *service) takeProcWith(
 		finVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
-			PreID: curVia.ID,
-			StID:  id.Empty(),
+			PreID: &curVia.ID,
+			StID:  nil,
 		}
 		err = s.chnls.Insert(finVia)
 		if err != nil {
@@ -524,8 +527,8 @@ func (s *service) takeProcWith(
 			finVia := chnl.Root{
 				ID:    id.New(),
 				Name:  curVia.Name,
-				PreID: curVia.ID,
-				StID:  id.Empty(),
+				PreID: &curVia.ID,
+				StID:  nil,
 			}
 			err = s.chnls.Insert(finVia)
 			if err != nil {
@@ -638,11 +641,12 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
+		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
-			PreID: curVia.ID,
-			StID:  curSt.(state.Prod).Next(),
+			PreID: &curVia.ID,
+			StID:  &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -756,11 +760,12 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
+		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
-			PreID: curVia.ID,
-			StID:  curSt.(state.Prod).Next(),
+			PreID: &curVia.ID,
+			StID:  &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -874,11 +879,12 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
+		nextID := curSt.(state.Sum).Next(term.L)
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
-			PreID: curVia.ID,
-			StID:  curSt.(state.Sum).Next(term.L),
+			PreID: &curVia.ID,
+			StID:  &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -964,11 +970,12 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
+		nextID := curSt.(state.Sum).Next(lab.L)
 		newVia := chnl.Root{
 			ID:    id.New(),
 			Name:  curVia.Name,
-			PreID: curVia.ID,
-			StID:  curSt.(state.Sum).Next(lab.L),
+			PreID: &curVia.ID,
+			StID:  &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -1596,7 +1603,7 @@ func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
 func convertToCtx(chnls []chnl.Root, states map[state.ID]state.Root) state.Context {
 	linear := make(map[ph.ADT]state.Root, len(chnls))
 	for _, ch := range chnls {
-		linear[ch.ID] = states[ch.StID]
+		linear[ch.ID] = states[*ch.StID]
 	}
 	return state.Context{Linear: linear}
 }

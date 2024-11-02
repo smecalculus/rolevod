@@ -16,8 +16,8 @@ type Name = string
 
 type Spec struct {
 	// Fully Qualified Name
-	FQN FQN
-	St  state.Spec
+	FQN   FQN
+	State state.Spec
 }
 
 type Ref struct {
@@ -27,13 +27,16 @@ type Ref struct {
 
 // aka TpDef
 type Root struct {
-	ID       ID
-	Name     Name
-	St       state.Ref
+	ID   ID
+	Name Name
+	// Rev      int8
+	StID     state.ID
+	State    state.Root
 	Children []Ref
 }
 
 type API interface {
+	Define(FQN) (Ref, error)
 	Create(Spec) (Root, error)
 	Retrieve(ID) (Root, error)
 	RetreiveAll() ([]Ref, error)
@@ -60,19 +63,46 @@ func newService(
 	return &service{roles, states, aliases, kinships, l.With(name)}
 }
 
-func (s *service) Create(spec Spec) (Root, error) {
-	s.log.Debug("role creation started", slog.Any("spec", spec))
-	st := state.ConvertSpecToRoot(spec.St)
+func (s *service) Define(fqn FQN) (Ref, error) {
+	s.log.Debug("role definition started", slog.Any("fqn", fqn))
 	root := Root{
 		ID:   id.New(),
-		Name: spec.FQN.Name(),
-		St:   st,
+		Name: fqn.Name(),
+	}
+	al := alias.Root{Sym: fqn, ID: root.ID}
+	err := s.aliases.Insert(al)
+	if err != nil {
+		s.log.Error("alias insertion failed",
+			slog.Any("reason", err),
+			slog.Any("alias", al),
+		)
+		return ConverRootToRef(root), err
+	}
+	err = s.roles.Insert(root)
+	if err != nil {
+		s.log.Error("role insertion failed",
+			slog.Any("reason", err),
+			slog.Any("fqn", fqn),
+		)
+		return ConverRootToRef(root), err
+	}
+	return ConverRootToRef(root), nil
+}
+
+func (s *service) Create(spec Spec) (Root, error) {
+	s.log.Debug("role creation started", slog.Any("spec", spec))
+	st := state.ConvertSpecToRoot(spec.State)
+	root := Root{
+		ID:    id.New(),
+		Name:  spec.FQN.Name(),
+		StID:  st.Ident(),
+		State: st,
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
 		s.log.Error("role insertion failed",
 			slog.Any("reason", err),
-			slog.Any("spec", spec),
+			slog.Any("root", root),
 		)
 		return root, err
 	}
@@ -84,12 +114,12 @@ func (s *service) Create(spec Spec) (Root, error) {
 		)
 		return root, err
 	}
-	al := alias.Root{Sym: spec.FQN, ID: root.ID}
-	err = s.aliases.Insert(al)
+	alias := alias.Root{Sym: spec.FQN, ID: root.ID}
+	err = s.aliases.Insert(alias)
 	if err != nil {
 		s.log.Error("alias insertion failed",
 			slog.Any("reason", err),
-			slog.Any("alias", al),
+			slog.Any("alias", alias),
 		)
 		return root, err
 	}
@@ -104,12 +134,19 @@ func (s *service) Update(root Root) error {
 func (s *service) Retrieve(rid ID) (Root, error) {
 	root, err := s.roles.SelectByID(rid)
 	if err != nil {
+		s.log.Error("root selection failed")
 		return Root{}, err
 	}
-	root.Children, err = s.roles.SelectChildren(rid)
+	root.State, err = s.states.SelectByID(root.StID)
 	if err != nil {
+		s.log.Error("state selection failed")
 		return Root{}, err
 	}
+	// root.Children, err = s.roles.SelectChildren(rid)
+	// if err != nil {
+	// 	s.log.Error("children selection failed")
+	// 	return Root{}, err
+	// }
 	return root, nil
 }
 

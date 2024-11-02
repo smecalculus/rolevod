@@ -28,9 +28,9 @@ type Root struct {
 	ID   ID
 	Name Name
 	// Preceding Channel ID
-	PreID ID
+	PreID *ID
 	// Channel State ID
-	StID state.ID
+	StID *state.ID
 }
 
 type Repo interface {
@@ -47,7 +47,10 @@ type Repo interface {
 func CollectStIDs(roots []Root) []state.ID {
 	var stIDs []state.ID
 	for _, r := range roots {
-		stIDs = append(stIDs, r.StID)
+		if r.StID == nil {
+			continue
+		}
+		stIDs = append(stIDs, *r.StID)
 	}
 	return stIDs
 }

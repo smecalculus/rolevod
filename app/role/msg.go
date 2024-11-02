@@ -10,14 +10,14 @@ import (
 )
 
 type SpecMsg struct {
-	FQN string        `json:"fqn"`
-	St  state.SpecMsg `json:"state"`
+	FQN   string        `json:"fqn"`
+	State state.SpecMsg `json:"state"`
 }
 
-func (mto SpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.FQN, sym.Required...),
-		validation.Field(&mto.St, validation.Required),
+func (dto SpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.FQN, sym.Required...),
+		validation.Field(&dto.State, validation.Required),
 	)
 }
 
@@ -25,9 +25,9 @@ type RefMsg struct {
 	ID string `json:"id" param:"id"`
 }
 
-func (mto RefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
+func (dto RefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
 	)
 }
 
@@ -37,10 +37,10 @@ type RoleRefMsg struct {
 }
 
 type RootMsg struct {
-	ID       string       `json:"id" param:"id"`
-	Name     string       `json:"name"`
-	St       state.RefMsg `json:"state"`
-	Children []RoleRefMsg `json:"children"`
+	ID       string        `json:"id" param:"id"`
+	Name     string        `json:"name"`
+	State    state.SpecMsg `json:"state"`
+	Children []RoleRefMsg  `json:"children"`
 }
 
 // goverter:variables
@@ -48,13 +48,14 @@ type RootMsg struct {
 // goverter:extend smecalculus/rolevod/lib/id:String.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
-	MsgFromSpec  func(Spec) SpecMsg
-	MsgToSpec    func(SpecMsg) (Spec, error)
-	MsgFromRef   func(Ref) RoleRefMsg
-	MsgToRef     func(RoleRefMsg) (Ref, error)
-	MsgFromRefs  func([]Ref) []RoleRefMsg
-	MsgToRefs    func([]RoleRefMsg) ([]Ref, error)
-	MsgFromRoot  func(Root) RootMsg
+	MsgFromSpec func(Spec) SpecMsg
+	MsgToSpec   func(SpecMsg) (Spec, error)
+	MsgFromRef  func(Ref) RoleRefMsg
+	MsgToRef    func(RoleRefMsg) (Ref, error)
+	MsgFromRefs func([]Ref) []RoleRefMsg
+	MsgToRefs   func([]RoleRefMsg) ([]Ref, error)
+	MsgFromRoot func(Root) RootMsg
+	// goverter:ignore StID
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoots func([]Root) []RootMsg
 	MsgToRoots   func([]RootMsg) ([]Root, error)

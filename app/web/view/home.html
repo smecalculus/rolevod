@@ -9,18 +9,44 @@
     <body>
         {{ template "navbar" }}
         <div class="container">
-            <table class="table" id="roles">
-                <tbody>
-                {{range .}}
-                    <tr>
-                        <td>
-                            <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
-                        </td>
-                        <td>Decls: <a href="#">0</a></td>
-                    </tr>
-                {{end}}
-                </tbody>
-            </table>
+            <div id="roles" x-data="{ open: false }">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">New</button>
+                <table class="table">
+                    <tbody>
+                    {{range .}}
+                        <tr>
+                            <td>
+                                <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+                <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="foo" hx-post="/ssr/roles" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">
+                                <div class="mb-3">
+                                  <input class="form-control" name="ns" placeholder="Namespace">
+                                </div>
+                                <div class="mb-3">
+                                  <input class="form-control" name="name" placeholder="Name">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" form="foo" class="btn btn-primary" data-bs-dismiss="modal">Create</button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </body>
 </html>

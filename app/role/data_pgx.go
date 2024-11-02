@@ -25,27 +25,28 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 
 func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
-	r.log.Log(ctx, core.LevelTrace, "role insertion started", slog.Any("root", root))
+	r.log.Log(ctx, core.LevelTrace, "role insertion started", slog.Any("id", root.ID))
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	dto, err := dataFromRoot(root)
 	if err != nil {
+		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return err
 	}
-	rq := `
+	query := `
 		INSERT INTO roles (
-			id, name, state
+			id, name, st_id
 		) VALUES (
-			@id, @name, @state
+			@id, @name, @st_id
 		)`
-	ra := pgx.NamedArgs{
+	args := pgx.NamedArgs{
 		"id":    dto.ID,
 		"name":  dto.Name,
-		"state": dto.St,
+		"st_id": dto.StID,
 	}
-	_, err = tx.Exec(ctx, rq, ra)
+	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
@@ -57,17 +58,18 @@ func (r *repoPgx) Insert(root Root) error {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
-			id,
-			name
+			id, name
 		FROM roles`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
 		return nil, err
 	}
 	return DataToRefs(dtos)
@@ -76,7 +78,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
-			id, name, state
+			id, name, st_id
 		FROM roles
 		WHERE id = $1`
 	ctx := context.Background()
@@ -91,7 +93,7 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
-	r.log.Debug("role selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("dto", dto))
 	return dataToRoot(dto)
 }
 

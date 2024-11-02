@@ -1,7 +1,7 @@
 CREATE TABLE roles (
 	id varchar(36),
 	name varchar(64),
-	state jsonb
+	st_id varchar(36)
 );
 
 CREATE TABLE signatures (

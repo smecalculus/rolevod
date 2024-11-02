@@ -11,59 +11,59 @@ import (
 )
 
 func TestKinshipEstalish(t *testing.T) {
-	s := newService(&roleRepoFixture{}, &stateRepoFixture{}, &aliasRepoFixture{}, &kinshipRepoFixture{}, slog.Default())
+	s := newService(&roleRepoStub{}, &stateRepoStub{}, &aliasRepoStub{}, &kinshipRepoStub{}, slog.Default())
 	children := []id.ADT{id.New()}
 	s.Establish(KinshipSpec{ParentID: id.New(), ChildIDs: children})
 }
 
-type roleRepoFixture struct {
+type roleRepoStub struct {
 }
 
-func (r *roleRepoFixture) Insert(rr Root) error {
+func (r *roleRepoStub) Insert(rr Root) error {
 	return nil
 }
-func (r *roleRepoFixture) SelectAll() ([]Ref, error) {
+func (r *roleRepoStub) SelectAll() ([]Ref, error) {
 	return []Ref{}, nil
 }
-func (r *roleRepoFixture) SelectByID(id id.ADT) (Root, error) {
+func (r *roleRepoStub) SelectByID(id id.ADT) (Root, error) {
 	return Root{}, nil
 }
-func (r *roleRepoFixture) SelectChildren(id id.ADT) ([]Ref, error) {
+func (r *roleRepoStub) SelectChildren(id id.ADT) ([]Ref, error) {
 	return []Ref{}, nil
 }
-func (r *roleRepoFixture) SelectState(id id.ADT) (state.Root, error) {
+func (r *roleRepoStub) SelectState(id id.ADT) (state.Root, error) {
 	return nil, nil
 }
 
-type stateRepoFixture struct {
+type stateRepoStub struct {
 }
 
-func (r *stateRepoFixture) Insert(root state.Root) error {
+func (r *stateRepoStub) Insert(root state.Root) error {
 	return nil
 }
-func (r *stateRepoFixture) SelectAll() ([]state.Ref, error) {
+func (r *stateRepoStub) SelectAll() ([]state.Ref, error) {
 	return []state.Ref{}, nil
 }
-func (r *stateRepoFixture) SelectByID(sid id.ADT) (state.Root, error) {
+func (r *stateRepoStub) SelectByID(sid id.ADT) (state.Root, error) {
 	return nil, nil
 }
-func (r *stateRepoFixture) SelectEnv(ids []id.ADT) (map[state.ID]state.Root, error) {
+func (r *stateRepoStub) SelectEnv(ids []id.ADT) (map[state.ID]state.Root, error) {
 	return nil, nil
 }
-func (r *stateRepoFixture) SelectByIDs(ids []id.ADT) ([]state.Root, error) {
+func (r *stateRepoStub) SelectByIDs(ids []id.ADT) ([]state.Root, error) {
 	return nil, nil
 }
 
-type aliasRepoFixture struct {
+type aliasRepoStub struct {
 }
 
-func (r *aliasRepoFixture) Insert(ar alias.Root) error {
+func (r *aliasRepoStub) Insert(ar alias.Root) error {
 	return nil
 }
 
-type kinshipRepoFixture struct {
+type kinshipRepoStub struct {
 }
 
-func (r *kinshipRepoFixture) Insert(kr KinshipRoot) error {
+func (r *kinshipRepoStub) Insert(kr KinshipRoot) error {
 	return nil
 }

@@ -136,6 +136,16 @@ type Sum interface {
 	Next(core.Label) ID
 }
 
+type OneRoot struct {
+	ID ID
+}
+
+func (OneRoot) spec() {}
+
+func (r OneRoot) Ident() ID { return r.ID }
+
+func (r OneRoot) Pol() Polarity { return Pos }
+
 // aka TpName
 type LinkRoot struct {
 	ID   ID
@@ -147,16 +157,6 @@ func (LinkRoot) spec() {}
 func (r LinkRoot) Ident() ID { return r.ID }
 
 func (r LinkRoot) Pol() Polarity { return Zero }
-
-type OneRoot struct {
-	ID ID
-}
-
-func (OneRoot) spec() {}
-
-func (r OneRoot) Ident() ID { return r.ID }
-
-func (r OneRoot) Pol() Polarity { return Pos }
 
 // aka Internal Choice
 type PlusRoot struct {
@@ -228,6 +228,16 @@ func (r DownRoot) Ident() ID { return r.ID }
 
 func (r DownRoot) Pol() Polarity { return Zero }
 
+type TombstoneRoot struct {
+	ID ID
+}
+
+func (TombstoneRoot) spec() {}
+
+func (r TombstoneRoot) Ident() ID { return r.ID }
+
+func (r TombstoneRoot) Pol() Polarity { return Zero }
+
 type Polarity int
 
 const (
@@ -258,22 +268,20 @@ func ConvertSpecToRoot(s Spec) Root {
 	if s == nil {
 		return nil
 	}
-	newID := id.New()
 	switch spec := s.(type) {
 	case OneSpec:
-		// TODO генерировать zero id или не генерировать id вообще
-		return OneRoot{ID: newID}
+		return OneRoot{ID: id.New()}
 	case LinkSpec:
-		return LinkRoot{ID: newID, Role: spec.Role}
+		return LinkRoot{ID: id.New(), Role: spec.Role}
 	case TensorSpec:
 		return TensorRoot{
-			ID: newID,
+			ID: id.New(),
 			B:  ConvertSpecToRoot(spec.B),
 			C:  ConvertSpecToRoot(spec.C),
 		}
 	case LolliSpec:
 		return LolliRoot{
-			ID: newID,
+			ID: id.New(),
 			Y:  ConvertSpecToRoot(spec.Y),
 			Z:  ConvertSpecToRoot(spec.Z),
 		}
@@ -282,13 +290,13 @@ func ConvertSpecToRoot(s Spec) Root {
 		for lab, st := range spec.Choices {
 			choices[lab] = ConvertSpecToRoot(st)
 		}
-		return WithRoot{ID: newID, Choices: choices}
+		return WithRoot{ID: id.New(), Choices: choices}
 	case PlusSpec:
 		choices := make(map[core.Label]Root, len(spec.Choices))
 		for lab, st := range spec.Choices {
 			choices[lab] = ConvertSpecToRoot(st)
 		}
-		return PlusRoot{ID: newID, Choices: choices}
+		return PlusRoot{ID: id.New(), Choices: choices}
 	default:
 		panic(ErrSpecTypeUnexpected(spec))
 	}

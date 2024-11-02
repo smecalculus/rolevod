@@ -1,13 +1,12 @@
-{{define "tp"}}
+{{define "view-one"}}
     <script>
-        Alpine.data('tp', () => ({
-            data: {{.}},
-
+        Alpine.data('root', () => ({
+            dto: {{.}},
             save() {
                 fetch('/api/v1/roles/{{.ID}}', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.data)
+                    body: JSON.stringify(this.dto)
                 })
                 .then(() => {
                     console.log("Success")
@@ -18,23 +17,53 @@
             }
         }))
     </script>
-    <div id="role" x-data="tp">
+    <div id="role" x-data="root">
         <div class="row">
             <div class="col-auto">
-                <input x-model="data.name" type="text" class="form-control">
+                <input x-model="dto.name" class="form-control shadow-none" x-bind:readonly="readonly" @click="readonly=false">
             </div>
         </div>
-        {{template "st" (dict "St" .St "Root" .ID "Path" "data.st")}}
+    {{template "st" (dict "St" .State "Root" .ID "Path" "dto.st")}}
         <button type="button" @click="save()" class="btn btn-primary">Save</button>
     </div>
 {{end}}
 
+{{define "view-many"}}
+    <div id="roles" x-data="{ open: false }">
+        <table class="table">
+            <tbody>
+            {{range .}}
+                <tr>
+                    <td>
+                        <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+        <button x-on:click="open = true">New</button>
+        <div x-show="open" class="modal-dialog modal-dialog-centered">
+            <form >
+                <div class="mb-3">
+                  <label for="ns" class="form-label">Namespace</label>
+                  <input class="form-control" id="ns" name="ns">
+                </div>
+                <div class="mb-3">
+                  <label for="name" class="form-label">Name</label>
+                  <input class="form-control" id="name" name="name">
+                </div>
+                <button type="submit" class="btn btn-primary" hx-post="/ssr/roles" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">Create</button>
+            </form>
+        </div>
+    </div>
+{{end}}
+
 {{define "st"}}
-    {{$kinds := list "one" "ref" "tensor" "lolli" "with" "plus"}}
+    {{$kinds := list "one" "link" "tensor" "lolli" "plus" "with"}}
     {{if or (eq .St.K "with") (eq .St.K "plus")}}
         <ul>
             <li style="list-style-type: '{{.St.K}}';">
-            {{range $i, $ch := .St.Chs}}
+            {{range $i, $ch := .St.Choices}}
                 <details open>
                     <summary class="row" onclick="return false">
                         <div class="col-auto ms-0">
@@ -67,15 +96,15 @@
                     {{template "st" (dict "St" .St.S "Root" .Root "Path" (printf "%v.session" $.Path))}}
                 </div>
             </li>
-            {{if ne .St.S.K "ref"}}
+            {{if ne .St.S.K "link"}}
             <div class="col-auto">
                 {{template "st" (dict "St" .St.S "Root" .Root)}}
             </div>
             {{end}}
         </ul>
-    {{else if eq .St.K "ref"}}
+    {{else if eq .St.K "link"}}
         {{if eq .St.ID .Root}}
-            <span x-text="data.name"></span>
+            <span x-text="dto.name"></span>
         {{else}}
             <a x-text="{{printf "%v.name" .Path}}" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
         {{end}}

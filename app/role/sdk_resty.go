@@ -22,6 +22,10 @@ func NewAPI() API {
 	return newClientResty()
 }
 
+func (cl *clientResty) Define(fqn FQN) (Ref, error) {
+	return Ref{}, nil
+}
+
 func (cl *clientResty) Create(spec Spec) (Root, error) {
 	req := MsgFromSpec(spec)
 	var res RootMsg

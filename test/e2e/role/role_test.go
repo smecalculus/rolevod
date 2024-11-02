@@ -29,7 +29,7 @@ func TestKinshipEstablishment(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	childSpec := role.Spec{FQN: "child-role", St: state.OneSpec{}}
+	childSpec := role.Spec{FQN: "child-role", State: state.OneSpec{}}
 	childRoot, err := api.Create(childSpec)
 	if err != nil {
 		t.Fatal(err)
