@@ -12,11 +12,15 @@ func New() ADT {
 	return ADT(xid.New())
 }
 
-func Ident(ak ADT) ADT {
+func (ak ADT) String() string {
+	return xid.ID(ak).String()
+}
+
+func ConvertToSame(ak ADT) ADT {
 	return ak
 }
 
-func StringToAK(s string) (ADT, error) {
+func ConvertFromString(s string) (ADT, error) {
 	xid, err := xid.FromString(s)
 	if err != nil {
 		return ADT{}, err
@@ -24,11 +28,7 @@ func StringToAK(s string) (ADT, error) {
 	return ADT(xid), nil
 }
 
-func StringFromAK(ak ADT) string {
-	return xid.ID(ak).String()
-}
-
-func (ak ADT) String() string {
+func ConvertToString(ak ADT) string {
 	return xid.ID(ak).String()
 }
 

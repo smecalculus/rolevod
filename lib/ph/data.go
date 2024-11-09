@@ -26,7 +26,7 @@ func DataFromPH(ph ADT) Data {
 	case id.ADT:
 		return Data{K: idKind, ID: val.String()}
 	case sym.ADT:
-		return Data{K: symKind, Sym: sym.StringFromSym(val)}
+		return Data{K: symKind, Sym: sym.ConvertToString(val)}
 	default:
 		panic(errUnexpectedType(ph))
 	}
@@ -35,9 +35,9 @@ func DataFromPH(ph ADT) Data {
 func DataToPH(dto Data) (ADT, error) {
 	switch dto.K {
 	case idKind:
-		return id.StringToID(dto.ID)
+		return id.ConvertFromString(dto.ID)
 	case symKind:
-		return sym.StringToSym(dto.Sym), nil
+		return sym.CovertFromString(dto.Sym), nil
 	default:
 		panic(fmt.Errorf("unexpected placeholder kind: %v", dto.K))
 	}

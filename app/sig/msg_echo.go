@@ -52,7 +52,7 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringToID(mto.ID)
+	id, err := id.ConvertFromString(mto.ID)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, err := id.StringToID(mto.ID)
+	id, err := id.ConvertFromString(mto.ID)
 	if err != nil {
 		return err
 	}

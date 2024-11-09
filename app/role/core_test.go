@@ -11,9 +11,7 @@ import (
 )
 
 func TestKinshipEstalish(t *testing.T) {
-	s := newService(&roleRepoStub{}, &stateRepoStub{}, &aliasRepoStub{}, &kinshipRepoStub{}, slog.Default())
-	children := []id.ADT{id.New()}
-	s.Establish(KinshipSpec{ParentID: id.New(), ChildIDs: children})
+	newService(&roleRepoStub{}, &stateRepoStub{}, &aliasRepoStub{}, slog.Default())
 }
 
 type roleRepoStub struct {
@@ -58,12 +56,5 @@ type aliasRepoStub struct {
 }
 
 func (r *aliasRepoStub) Insert(ar alias.Root) error {
-	return nil
-}
-
-type kinshipRepoStub struct {
-}
-
-func (r *kinshipRepoStub) Insert(kr KinshipRoot) error {
 	return nil
 }

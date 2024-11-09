@@ -7,8 +7,8 @@ type rootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/sym:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/sym:Convert.*
 var (
 	DataFromRoot func(Root) (rootData, error)
 	DataToRoot   func(rootData) (Root, error)

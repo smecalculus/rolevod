@@ -22,7 +22,8 @@ func (dto SpecMsg) Validate() error {
 }
 
 type RefMsg struct {
-	ID string `json:"id" param:"id"`
+	ID   string `json:"id" param:"id"`
+	Name string `json:"name"`
 }
 
 func (dto RefMsg) Validate() error {
@@ -31,53 +32,30 @@ func (dto RefMsg) Validate() error {
 	)
 }
 
-type RoleRefMsg struct {
-	ID   string `json:"id" param:"id"`
-	Name string `json:"name"`
-}
-
 type RootMsg struct {
-	ID       string        `json:"id" param:"id"`
-	Name     string        `json:"name"`
-	State    state.SpecMsg `json:"state"`
-	Children []RoleRefMsg  `json:"children"`
+	ID      string        `json:"id" param:"id"`
+	Rev     int64         `json:"rev"`
+	Name    string        `json:"name"`
+	StateID string        `json:"state_id"`
+	State   state.SpecMsg `json:"state"`
+	Parts   []RefMsg      `json:"parts"`
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/rev:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgFromSpec func(Spec) SpecMsg
 	MsgToSpec   func(SpecMsg) (Spec, error)
-	MsgFromRef  func(Ref) RoleRefMsg
-	MsgToRef    func(RoleRefMsg) (Ref, error)
-	MsgFromRefs func([]Ref) []RoleRefMsg
-	MsgToRefs   func([]RoleRefMsg) ([]Ref, error)
+	MsgFromRef  func(Ref) RefMsg
+	MsgToRef    func(RefMsg) (Ref, error)
+	MsgFromRefs func([]Ref) []RefMsg
+	MsgToRefs   func([]RefMsg) ([]Ref, error)
 	MsgFromRoot func(Root) RootMsg
-	// goverter:ignore StID
+	// goverter:ignore WholeID
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoots func([]Root) []RootMsg
 	MsgToRoots   func([]RootMsg) ([]Root, error)
-)
-
-type KinshipSpecMsg struct {
-	ParentID string   `json:"parent_id" param:"id"`
-	ChildIDs []string `json:"child_ids"`
-}
-
-type KinshipRootMsg struct {
-	Parent   RoleRefMsg   `json:"parent"`
-	Children []RoleRefMsg `json:"children"`
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/internal/state:Msg.*
-var (
-	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
-	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
-	MsgFromKinshipRoot func(KinshipRoot) KinshipRootMsg
-	MsgToKinshipRoot   func(KinshipRootMsg) (KinshipRoot, error)
 )

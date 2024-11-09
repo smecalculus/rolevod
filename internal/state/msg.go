@@ -13,7 +13,6 @@ import (
 )
 
 type SpecMsg struct {
-	ID     string   `json:"id,omitempty"`
 	K      Kind     `json:"kind"`
 	Link   *LinkMsg `json:"link,omitempty"`
 	Tensor *ProdMsg `json:"tensor,omitempty"`
@@ -105,64 +104,12 @@ var kindRequired = []validation.Rule{
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend Msg.*
 var (
 	MsgFromRefs func([]Ref) []RefMsg
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
 )
-
-func MsgFromRoot(r Root) SpecMsg {
-	switch root := r.(type) {
-	case OneRoot:
-		return SpecMsg{ID: root.ID.String(), K: One}
-	case LinkRoot:
-		return SpecMsg{
-			ID:   root.ID.String(),
-			K:    Link,
-			Link: &LinkMsg{FQN: sym.StringFromSym(root.Role)}}
-	case TensorRoot:
-		return SpecMsg{
-			ID: root.ID.String(),
-			K:  Tensor,
-			Tensor: &ProdMsg{
-				Value: MsgFromRoot(root.B),
-				Cont:  MsgFromRoot(root.C),
-			},
-		}
-	case LolliRoot:
-		return SpecMsg{
-			ID: root.ID.String(),
-			K:  Lolli,
-			Lolli: &ProdMsg{
-				Value: MsgFromRoot(root.Y),
-				Cont:  MsgFromRoot(root.Z),
-			},
-		}
-	case WithRoot:
-		choices := make([]ChoiceMsg, len(root.Choices))
-		for i, l := range maps.Keys(root.Choices) {
-			choices[i] = ChoiceMsg{Label: string(l), Cont: MsgFromRoot(root.Choices[l])}
-		}
-		return SpecMsg{
-			ID:   root.ID.String(),
-			K:    With,
-			With: &SumMsg{Choices: choices},
-		}
-	case PlusRoot:
-		choices := make([]ChoiceMsg, len(root.Choices))
-		for i, l := range maps.Keys(root.Choices) {
-			choices[i] = ChoiceMsg{Label: string(l), Cont: MsgFromRoot(root.Choices[l])}
-		}
-		return SpecMsg{
-			ID:   root.ID.String(),
-			K:    Plus,
-			Plus: &SumMsg{Choices: choices},
-		}
-	default:
-		panic(ErrRootTypeUnexpected(r))
-	}
-}
 
 func MsgFromSpec(s Spec) SpecMsg {
 	switch spec := s.(type) {
@@ -171,7 +118,7 @@ func MsgFromSpec(s Spec) SpecMsg {
 	case LinkSpec:
 		return SpecMsg{
 			K:    Link,
-			Link: &LinkMsg{FQN: sym.StringFromSym(spec.Role)}}
+			Link: &LinkMsg{FQN: sym.ConvertToString(spec.Role)}}
 	case TensorSpec:
 		return SpecMsg{
 			K: Tensor,
@@ -205,67 +152,12 @@ func MsgFromSpec(s Spec) SpecMsg {
 	}
 }
 
-func MsgToRoot(dto SpecMsg) (Root, error) {
-	rid, err := id.StringToID(dto.ID)
-	if err != nil {
-		return nil, err
-	}
-	switch dto.K {
-	case One:
-		return OneRoot{rid}, nil
-	case Link:
-		return LinkRoot{ID: rid, Role: sym.StringToSym(dto.Link.FQN)}, nil
-	case Tensor:
-		val, err := MsgToRoot(dto.Tensor.Value)
-		if err != nil {
-			return nil, err
-		}
-		cont, err := MsgToRoot(dto.Tensor.Cont)
-		if err != nil {
-			return nil, err
-		}
-		return TensorRoot{ID: rid, B: val, C: cont}, nil
-	case Lolli:
-		val, err := MsgToRoot(dto.Lolli.Value)
-		if err != nil {
-			return nil, err
-		}
-		cont, err := MsgToRoot(dto.Lolli.Cont)
-		if err != nil {
-			return nil, err
-		}
-		return LolliRoot{ID: rid, Y: val, Z: cont}, nil
-	case Plus:
-		choices := make(map[core.Label]Root, len(dto.Plus.Choices))
-		for _, ch := range dto.Plus.Choices {
-			cont, err := MsgToRoot(ch.Cont)
-			if err != nil {
-				return nil, err
-			}
-			choices[core.Label(ch.Label)] = cont
-		}
-		return PlusRoot{ID: rid, Choices: choices}, nil
-	case With:
-		choices := make(map[core.Label]Root, len(dto.With.Choices))
-		for _, ch := range dto.With.Choices {
-			choice, err := MsgToRoot(ch.Cont)
-			if err != nil {
-				return nil, err
-			}
-			choices[core.Label(ch.Label)] = choice
-		}
-		return WithRoot{ID: rid, Choices: choices}, nil
-	default:
-		panic(errKindUnexpected(dto.K))
-	}
-}
-
 func MsgToSpec(mto SpecMsg) (Spec, error) {
 	switch mto.K {
 	case One:
 		return OneSpec{}, nil
 	case Link:
-		return LinkSpec{Role: sym.StringToSym(mto.Link.FQN)}, nil
+		return LinkSpec{Role: sym.CovertFromString(mto.Link.FQN)}, nil
 	case Tensor:
 		v, err := MsgToSpec(mto.Tensor.Value)
 		if err != nil {
@@ -332,7 +224,7 @@ func MsgFromRef(ref Ref) RefMsg {
 }
 
 func MsgToRef(mto RefMsg) (Ref, error) {
-	rid, err := id.StringToID(mto.ID)
+	rid, err := id.ConvertFromString(mto.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -353,6 +245,7 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 		panic(errKindUnexpected(mto.K))
 	}
 }
+
 func ErrPolarityUnexpected(got Root) error {
 	return fmt.Errorf("root polarity unexpected: %v", got.Pol())
 }

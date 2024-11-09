@@ -49,7 +49,7 @@ type RootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/app/role:Msg.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
@@ -76,7 +76,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)

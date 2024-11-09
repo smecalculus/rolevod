@@ -39,7 +39,7 @@ func (p *presenterEcho) PostOne(c echo.Context) error {
 		p.log.Error("dto validation failed")
 		return err
 	}
-	fqn := sym.StringToSym(dto.NS).New(dto.Name)
+	fqn := sym.CovertFromString(dto.NS).New(dto.Name)
 	root, err := p.api.Create(Spec{FQN: fqn, State: state.OneSpec{}})
 	if err != nil {
 		p.log.Error("root creation failed")
@@ -74,7 +74,7 @@ func (p *presenterEcho) GetOne(c echo.Context) error {
 		p.log.Error("dto binding failed")
 		return err
 	}
-	ident, err := id.StringToID(dto.ID)
+	ident, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		p.log.Error("ident mapping failed")
 		return err

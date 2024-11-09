@@ -30,21 +30,23 @@ func (r *repoPgx) Insert(root Root) error {
 	if err != nil {
 		return err
 	}
-	dto, err := dataFromRoot(root)
+	dto, err := DataFromRoot(root)
 	if err != nil {
 		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return err
 	}
 	query := `
 		INSERT INTO roles (
-			id, name, st_id
+			id, rev, name, state_id, whole_id
 		) VALUES (
-			@id, @name, @st_id
+			@id, @rev, @name, @state_id, @whole_id
 		)`
 	args := pgx.NamedArgs{
-		"id":    dto.ID,
-		"name":  dto.Name,
-		"st_id": dto.StID,
+		"id":       dto.ID,
+		"rev":      dto.Rev,
+		"name":     dto.Name,
+		"state_id": dto.StateID,
+		"whole_id": dto.WholeID,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
@@ -78,7 +80,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
-			id, name, st_id
+			id, rev, name, state_id, whole_id
 		FROM roles
 		WHERE id = $1`
 	ctx := context.Background()
@@ -94,7 +96,7 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 		return Root{}, err
 	}
 	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("dto", dto))
-	return dataToRoot(dto)
+	return DataToRoot(dto)
 }
 
 func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
@@ -118,64 +120,4 @@ func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
 		return nil, err
 	}
 	return DataToRefs(dtos)
-}
-
-// Adapter
-type kinshipRepoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
-}
-
-func newKinshipRepoPgx(p *pgxpool.Pool, l *slog.Logger) *kinshipRepoPgx {
-	name := slog.String("name", "kinshipRepoPgx")
-	return &kinshipRepoPgx{p, l.With(name)}
-}
-
-func (r *kinshipRepoPgx) Insert(root KinshipRoot) error {
-	query := `
-		INSERT INTO kinships (
-			parent_id,
-			child_id
-		) values (
-			@parent_id,
-			@child_id
-		)`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	batch := pgx.Batch{}
-	dto, err := DataFromKinshipRoot(root)
-	if err != nil {
-		return err
-	}
-	for _, child := range dto.Children {
-		args := pgx.NamedArgs{
-			"parent_id": dto.Parent.ID,
-			"child_id":  child.ID,
-		}
-		batch.Queue(query, args)
-	}
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	for _, child := range dto.Children {
-		_, err = br.Exec()
-		if err != nil {
-			r.log.Error("insert failed",
-				slog.Any("reason", err),
-				slog.Any("parent", dto.Parent),
-				slog.Any("child", child))
-		}
-	}
-	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	err = br.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
 }

@@ -9,6 +9,7 @@ import (
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
+	"smecalculus/rolevod/lib/pol"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -102,7 +103,7 @@ func (c *Configuration) Remove(ids ...chnl.ID) {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Ident
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
 	ConvertRootToRef func(Root) Ref
 )
@@ -1046,7 +1047,7 @@ func (s *service) takeProcWith(
 			return err
 		}
 		switch curSt.Pol() {
-		case state.Pos:
+		case pol.Pos:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
 				cID, ok := term.C.(chnl.ID)
@@ -1128,7 +1129,7 @@ func (s *service) takeProcWith(
 			default:
 				panic(step.ErrRootTypeUnexpected(curSem))
 			}
-		case state.Neg:
+		case pol.Neg:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
 				dID, ok := term.C.(chnl.ID)

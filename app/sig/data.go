@@ -19,7 +19,7 @@ type rootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToRef     func(refData) (Ref, error)
@@ -39,7 +39,7 @@ type kinshipRootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
 	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
 	DataFromKinshipRoot func(KinshipRoot) kinshipRootData

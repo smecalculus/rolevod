@@ -23,9 +23,9 @@ type rootData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/ak:String.*
-// goverter:extend smecalculus/rolevod/lib/data:NullString.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/ak:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Data.*
 var (
 	DataToSpec    func(SpecData) (Spec, error)

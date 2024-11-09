@@ -11,7 +11,7 @@ import (
 type kind int
 
 const (
-	nonstate = iota
+	unkst = iota
 	one
 	link
 	tensor
@@ -56,7 +56,7 @@ type sumData struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend data.*
 // goverter:extend DataToRef
 // goverter:extend DataFromRef
@@ -94,7 +94,7 @@ func DataToRef(dto *RefData) (Ref, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	rid, err := id.StringToID(dto.ID)
+	rid, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func dataFromRoot(root Root) *rootData {
 }
 
 func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
-	stID, err := id.StringToID(st.ID)
+	stID, err := id.ConvertFromString(st.ID)
 	if err != nil {
 		return nil, err
 	}

@@ -40,8 +40,8 @@ type RootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/ak:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/ak:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	MsgToSpec   func(SpecMsg) (Spec, error)
@@ -63,7 +63,7 @@ func MsgFromRefMap(refs map[Name]ID) []RefMsg {
 func MsgToRefMap(mtos []RefMsg) (map[Name]ID, error) {
 	refs := make(map[Name]ID, len(mtos))
 	for _, mto := range mtos {
-		mtoID, err := id.StringToID(mto.ID)
+		mtoID, err := id.ConvertFromString(mto.ID)
 		if err != nil {
 			return nil, err
 		}

@@ -26,11 +26,24 @@ func (id ADT) IsEmpty() bool {
 	return xid.ID(id).IsZero()
 }
 
-func Ident(id ADT) ADT {
+func (id ADT) String() string {
+	return xid.ID(id).String()
+}
+
+// goverter:variables
+// goverter:output:format assign-variable
+// goverter:extend ConvertFromString
+// goverter:extend ConvertToString
+var (
+	ConvertFromStrings func([]string) ([]ADT, error)
+	ConvertToStrings   func([]ADT) []string
+)
+
+func ConvertToSame(id ADT) ADT {
 	return id
 }
 
-func StringToID(s string) (ADT, error) {
+func ConvertFromString(s string) (ADT, error) {
 	xid, err := xid.FromString(s)
 	if err != nil {
 		return ADT{}, err
@@ -38,30 +51,17 @@ func StringToID(s string) (ADT, error) {
 	return ADT(xid), nil
 }
 
-func StringFromID(id ADT) string {
+func ConvertToString(id ADT) string {
 	return xid.ID(id).String()
 }
 
-func StringFromID2(id *ADT) *string {
+func ConvertPtrToStringPtr(id *ADT) *string {
 	if id == nil {
 		return nil
 	}
 	s := xid.ID(*id).String()
 	return &s
 }
-
-func (id ADT) String() string {
-	return xid.ID(id).String()
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend StringToID
-// goverter:extend StringFromID
-var (
-	StringsToIDs   func([]string) ([]ADT, error)
-	StringsFromIDs func([]ADT) []string
-)
 
 var (
 	ErrEmpty = errors.New("empty id")

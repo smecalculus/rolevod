@@ -23,14 +23,11 @@ var Module = fx.Module("app/role",
 		newHandlerEcho,
 		newPresenterEcho,
 		fx.Annotate(newRepoPgx, fx.As(new(repo))),
-		newKinshipHandlerEcho,
-		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(
 		cfgApiEcho,
 		cfgSsrEcho,
-		cfgKinshipEcho,
 	),
 )
 
@@ -56,10 +53,5 @@ func cfgSsrEcho(e *echo.Echo, h *presenterEcho) error {
 	e.POST("/ssr/roles", h.PostOne)
 	e.GET("/ssr/roles", h.GetMany)
 	e.GET("/ssr/roles/:id", h.GetOne)
-	return nil
-}
-
-func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
-	e.POST("/api/v1/roles/:id/kinships", h.PostOne)
 	return nil
 }

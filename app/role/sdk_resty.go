@@ -65,18 +65,3 @@ func (c *clientResty) RetreiveAll() ([]Ref, error) {
 	rts := []Ref{}
 	return rts, nil
 }
-
-func (c *clientResty) Establish(ks KinshipSpec) error {
-	req := MsgFromKinshipSpec(ks)
-	resp, err := c.resty.R().
-		SetBody(&req).
-		SetPathParam("id", req.ParentID).
-		Post("/roles/{id}/kinships")
-	if err != nil {
-		return err
-	}
-	if resp.IsError() {
-		return fmt.Errorf("received: %v", string(resp.Body()))
-	}
-	return nil
-}

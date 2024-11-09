@@ -53,7 +53,7 @@ type RootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/app/sig:Msg.*
 var (
 	MsgToSpec    func(SpecMsg) (Spec, error)
@@ -86,7 +86,7 @@ type KinshipRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
 	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
 	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
@@ -119,8 +119,8 @@ type PartRootMsg struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/ak:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/ak:Convert.*
 // goverter:extend smecalculus/rolevod/internal/chnl:Msg.*
 // goverter:extend smecalculus/rolevod/app/sig:Msg.*
 var (
@@ -146,8 +146,8 @@ func (mto TranSpecMsg) Validate() error {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/ak:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/ak:Convert.*
 // goverter:extend smecalculus/rolevod/internal/step:Msg.*
 var (
 	MsgFromTranSpec func(TranSpec) TranSpecMsg

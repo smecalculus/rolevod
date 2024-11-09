@@ -111,7 +111,7 @@ type kinshipRepo interface {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Ident
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
 	ToAgentRef func(Root) Ref
 )

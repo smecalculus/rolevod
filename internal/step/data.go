@@ -6,7 +6,6 @@ import (
 
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
-	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 )
@@ -88,7 +87,7 @@ type ctaData struct {
 type termKind int
 
 const (
-	nonterm = termKind(iota)
+	unkterm = termKind(iota)
 	close
 	wait
 	send
@@ -119,7 +118,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 	}
 	switch root := r.(type) {
 	case ProcRoot:
-		pid := data.NullStringFromID(root.PID)
+		pid := id.ConvertToNullString(root.PID)
 		spec, err := dataFromTerm(root.Term)
 		if err != nil {
 			return nil, err
@@ -131,8 +130,8 @@ func dataFromRoot(r Root) (*rootData, error) {
 			Spec: spec,
 		}, nil
 	case MsgRoot:
-		pid := data.NullStringFromID(root.PID)
-		vid := data.NullStringFromID(root.VID)
+		pid := id.ConvertToNullString(root.PID)
+		vid := id.ConvertToNullString(root.VID)
 		return &rootData{
 			K:    msg,
 			ID:   root.ID.String(),
@@ -141,8 +140,8 @@ func dataFromRoot(r Root) (*rootData, error) {
 			Spec: dataFromValue(root.Val),
 		}, nil
 	case SrvRoot:
-		pid := data.NullStringFromID(root.PID)
-		vid := data.NullStringFromID(root.VID)
+		pid := id.ConvertToNullString(root.PID)
+		vid := id.ConvertToNullString(root.VID)
 		spec, err := dataFromCont(root.Cont)
 		if err != nil {
 			return nil, err
@@ -163,15 +162,15 @@ func dataToRoot(dto *rootData) (Root, error) {
 	if dto == nil {
 		return nil, nil
 	}
-	ident, err := id.StringToID(dto.ID)
+	ident, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	pid, err := data.NullStringToID(dto.PID)
+	pid, err := id.ConvertFromNullString(dto.PID)
 	if err != nil {
 		return nil, err
 	}
-	vid, err := data.NullStringToID(dto.VID)
+	vid, err := id.ConvertFromNullString(dto.VID)
 	if err != nil {
 		return nil, err
 	}
@@ -245,11 +244,11 @@ func dataToTerm(dto specData) (Term, error) {
 	case fwd:
 		return dataToValue(dto)
 	case cta:
-		key, err := ak.StringToAK(dto.CTA.AK)
+		key, err := ak.ConvertFromString(dto.CTA.AK)
 		if err != nil {
 			return nil, err
 		}
-		sig, err := id.StringToID(dto.CTA.Sig)
+		sig, err := id.ConvertFromString(dto.CTA.Sig)
 		if err != nil {
 			return nil, err
 		}

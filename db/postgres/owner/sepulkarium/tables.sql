@@ -1,7 +1,9 @@
 CREATE TABLE roles (
 	id varchar(36),
+	rev bigint,
 	name varchar(64),
-	st_id varchar(36)
+	state_id varchar(36),
+	whole_id varchar(36)
 );
 
 CREATE TABLE signatures (

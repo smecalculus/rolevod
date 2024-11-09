@@ -41,7 +41,7 @@ type RootView struct {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Msg.*
 var (
 	ViewFromRef  func(Ref) RefView

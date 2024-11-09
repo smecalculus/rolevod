@@ -64,9 +64,8 @@ func Subst(cur ID, pat ID, new ID) ID {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Ident
-// goverter:extend smecalculus/rolevod/lib/id:String.*
-// goverter:extend smecalculus/rolevod/lib/ak:Ident
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
+// goverter:extend smecalculus/rolevod/lib/ak:Convert.*
 var (
 	ConvertRootToRef func(Root) Ref
 )

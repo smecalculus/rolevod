@@ -120,35 +120,35 @@ func TestTake(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		oneSigSpec1 := sig.Spec{
-			FQN: "sig-1",
+		closerSigSpec := sig.Spec{
+			FQN: "closer",
 			PE: chnl.Spec{
-				Name: "chnl-1",
-				StID: oneRole.State.Ident(),
+				Name: "closing-1",
+				StID: oneRole.StateID,
 			},
 		}
-		oneSig1, err := sigAPI.Create(oneSigSpec1)
+		closerSig, err := sigAPI.Create(closerSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
-		oneSigSpec2 := sig.Spec{
-			FQN: "sig-2",
+		waiterSigSpec := sig.Spec{
+			FQN: "waiter",
 			PE: chnl.Spec{
-				Name: "chnl-2",
-				StID: oneRole.State.Ident(),
+				Name: "closing-2",
+				StID: oneRole.StateID,
 			},
 			CEs: []chnl.Spec{
-				oneSig1.PE,
+				closerSig.PE,
 			},
 		}
-		oneSig2, err := sigAPI.Create(oneSigSpec2)
+		waiterSig, err := sigAPI.Create(waiterSigSpec)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// and
 		bigDealSpec := deal.Spec{
-			Name: "deal-1",
+			Name: "big-deal",
 		}
 		bigDeal, err := dealAPI.Create(bigDealSpec)
 		if err != nil {
@@ -157,7 +157,7 @@ func TestTake(t *testing.T) {
 		// and
 		closerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig1.ID,
+			Decl: closerSig.ID,
 		}
 		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
@@ -166,7 +166,7 @@ func TestTake(t *testing.T) {
 		// and
 		waiterSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig2.ID,
+			Decl: waiterSig.ID,
 			TEs: []chnl.ID{
 				closer.ID,
 			},
@@ -236,7 +236,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: lolliRole.State.Ident(),
+				StID: lolliRole.StateID,
 			},
 		}
 		lolliSig, err := sigAPI.Create(lolliSigSpec)
@@ -248,7 +248,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.State.Ident(),
+				StID: oneRole.StateID,
 			},
 		}
 		oneSig1, err := sigAPI.Create(oneSigSpec1)
@@ -260,7 +260,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-3",
 			PE: chnl.Spec{
 				Name: "chnl-3",
-				StID: oneRole.State.Ident(),
+				StID: oneRole.StateID,
 			},
 			CEs: []chnl.Spec{
 				lolliSigSpec.PE,
@@ -379,7 +379,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: withRole.State.Ident(),
+				StID: withRole.StateID,
 			},
 		}
 		withSig, err := sigAPI.Create(withSigSpec)
@@ -391,7 +391,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.State.Ident(),
+				StID: oneRole.StateID,
 			},
 			CEs: []chnl.Spec{
 				withSig.PE,
@@ -484,7 +484,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 			},
 		)
@@ -497,7 +497,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -513,7 +513,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -601,7 +601,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 			},
 		)
@@ -614,7 +614,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -630,7 +630,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
-					StID: oneRole.State.Ident(),
+					StID: oneRole.StateID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,

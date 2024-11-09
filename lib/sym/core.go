@@ -30,16 +30,16 @@ func (s ADT) NS() ADT {
 	return ADT(sym[0:strings.LastIndex(sym, sep)])
 }
 
-func Ident(s ADT) ADT {
-	return s
+func ConvertToSame(a ADT) ADT {
+	return a
 }
 
-func StringToSym(s string) ADT {
+func CovertFromString(s string) ADT {
 	return ADT(s)
 }
 
-func StringFromSym(s ADT) string {
-	return string(s)
+func ConvertToString(a ADT) string {
+	return string(a)
 }
 
 const (

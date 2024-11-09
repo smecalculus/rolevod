@@ -6,9 +6,11 @@ import (
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
+	"smecalculus/rolevod/lib/pol"
 	"smecalculus/rolevod/lib/sym"
 )
 
+// for external readability
 type ID = id.ADT
 
 type Spec interface {
@@ -71,180 +73,183 @@ type Ref interface {
 }
 
 type OneRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r OneRef) Ident() ID { return r.ID }
+func (r OneRef) Ident() id.ADT { return r.ID }
 
 type LinkRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r LinkRef) Ident() ID { return r.ID }
+func (r LinkRef) Ident() id.ADT { return r.ID }
 
 type PlusRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r PlusRef) Ident() ID { return r.ID }
+func (r PlusRef) Ident() id.ADT { return r.ID }
 
 type WithRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r WithRef) Ident() ID { return r.ID }
+func (r WithRef) Ident() id.ADT { return r.ID }
 
 type TensorRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r TensorRef) Ident() ID { return r.ID }
+func (r TensorRef) Ident() id.ADT { return r.ID }
 
 type LolliRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r LolliRef) Ident() ID { return r.ID }
+func (r LolliRef) Ident() id.ADT { return r.ID }
 
 type UpRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r UpRef) Ident() ID { return r.ID }
+func (r UpRef) Ident() id.ADT { return r.ID }
 
 type DownRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r DownRef) Ident() ID { return r.ID }
+func (r DownRef) Ident() id.ADT { return r.ID }
 
-type Polarizable interface {
-	Pol() Polarity
+type TombRef struct {
+	ID id.ADT
 }
+
+func (r TombRef) Ident() id.ADT { return r.ID }
 
 // aka Stype
 type Root interface {
+	Spec
 	id.Identifiable
-	Polarizable
+	pol.Polarizable
 }
 
 type Prod interface {
-	Next() ID
+	Next() id.ADT
 }
 
 type Sum interface {
-	Next(core.Label) ID
+	Next(core.Label) id.ADT
 }
 
 type OneRoot struct {
-	ID ID
+	ID id.ADT
 }
 
 func (OneRoot) spec() {}
 
-func (r OneRoot) Ident() ID { return r.ID }
+func (r OneRoot) Ident() id.ADT { return r.ID }
 
-func (r OneRoot) Pol() Polarity { return Pos }
+func (r OneRoot) Pol() pol.ADT { return pol.Pos }
 
 // aka TpName
 type LinkRoot struct {
-	ID   ID
+	ID   id.ADT
 	Role sym.ADT
 }
 
 func (LinkRoot) spec() {}
 
-func (r LinkRoot) Ident() ID { return r.ID }
+func (r LinkRoot) Ident() id.ADT { return r.ID }
 
-func (r LinkRoot) Pol() Polarity { return Zero }
+func (LinkRoot) Pol() pol.ADT { return pol.Zero }
 
 // aka Internal Choice
 type PlusRoot struct {
-	ID      ID
+	ID      id.ADT
 	Choices map[core.Label]Root
 }
 
-func (r PlusRoot) Ident() ID { return r.ID }
+func (PlusRoot) spec() {}
 
-func (r PlusRoot) Next(l core.Label) ID { return r.Choices[l].Ident() }
+func (r PlusRoot) Ident() id.ADT { return r.ID }
 
-func (r PlusRoot) Pol() Polarity { return Pos }
+func (r PlusRoot) Next(l core.Label) id.ADT { return r.Choices[l].Ident() }
+
+func (PlusRoot) Pol() pol.ADT { return pol.Pos }
 
 // aka External Choice
 type WithRoot struct {
-	ID      ID
+	ID      id.ADT
 	Choices map[core.Label]Root
 }
 
-func (r WithRoot) Ident() ID { return r.ID }
+func (WithRoot) spec() {}
 
-func (r WithRoot) Next(l core.Label) ID { return r.Choices[l].Ident() }
+func (r WithRoot) Ident() id.ADT { return r.ID }
 
-func (r WithRoot) Pol() Polarity { return Neg }
+func (r WithRoot) Next(l core.Label) id.ADT { return r.Choices[l].Ident() }
+
+func (WithRoot) Pol() pol.ADT { return pol.Neg }
 
 type TensorRoot struct {
-	ID ID
+	ID id.ADT
 	B  Root // value
 	C  Root // cont
 }
 
-func (r TensorRoot) Ident() ID { return r.ID }
+func (TensorRoot) spec() {}
 
-func (r TensorRoot) Next() ID { return r.C.Ident() }
+func (r TensorRoot) Ident() id.ADT { return r.ID }
 
-func (r TensorRoot) Pol() Polarity { return Pos }
+func (r TensorRoot) Next() id.ADT { return r.C.Ident() }
+
+func (TensorRoot) Pol() pol.ADT { return pol.Pos }
 
 type LolliRoot struct {
-	ID ID
+	ID id.ADT
 	Y  Root // value
 	Z  Root // cont
 }
 
-func (r LolliRoot) Ident() ID { return r.ID }
+func (LolliRoot) spec() {}
 
-func (r LolliRoot) Next() ID { return r.Z.Ident() }
+func (r LolliRoot) Ident() id.ADT { return r.ID }
 
-func (r LolliRoot) Pol() Polarity { return Neg }
+func (r LolliRoot) Next() id.ADT { return r.Z.Ident() }
+
+func (LolliRoot) Pol() pol.ADT { return pol.Neg }
 
 type UpRoot struct {
-	ID ID
+	ID id.ADT
 	A  Root
 }
 
 func (UpRoot) spec() {}
 
-func (r UpRoot) Ident() ID { return r.ID }
+func (r UpRoot) Ident() id.ADT { return r.ID }
 
-func (r UpRoot) Pol() Polarity { return Zero }
+func (r UpRoot) Pol() pol.ADT { return pol.Zero }
 
 type DownRoot struct {
-	ID ID
+	ID id.ADT
 	A  Root
 }
 
 func (DownRoot) spec() {}
 
-func (r DownRoot) Ident() ID { return r.ID }
+func (r DownRoot) Ident() id.ADT { return r.ID }
 
-func (r DownRoot) Pol() Polarity { return Zero }
+func (r DownRoot) Pol() pol.ADT { return pol.Zero }
 
-type TombstoneRoot struct {
-	ID ID
+type TombRoot struct {
+	ID id.ADT
 }
 
-func (TombstoneRoot) spec() {}
+func (TombRoot) spec() {}
 
-func (r TombstoneRoot) Ident() ID { return r.ID }
+func (r TombRoot) Ident() id.ADT { return r.ID }
 
-func (r TombstoneRoot) Pol() Polarity { return Zero }
-
-type Polarity int
-
-const (
-	Pos  = Polarity(+1)
-	Zero = Polarity(0)
-	Neg  = Polarity(-1)
-)
+func (r TombRoot) Pol() pol.ADT { return pol.Zero }
 
 type Context struct {
 	Linear map[ph.ADT]Root
@@ -259,9 +264,9 @@ type EP struct {
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(ID) (Root, error)
-	SelectByIDs([]ID) ([]Root, error)
-	SelectEnv([]ID) (map[ID]Root, error)
+	SelectByID(id.ADT) (Root, error)
+	SelectByIDs([]id.ADT) ([]Root, error)
+	SelectEnv([]id.ADT) (map[id.ADT]Root, error)
 }
 
 func ConvertSpecToRoot(s Spec) Root {
@@ -299,6 +304,42 @@ func ConvertSpecToRoot(s Spec) Root {
 		return PlusRoot{ID: id.New(), Choices: choices}
 	default:
 		panic(ErrSpecTypeUnexpected(spec))
+	}
+}
+
+func ConvertRootToSpec(r Root) Spec {
+	if r == nil {
+		return nil
+	}
+	switch root := r.(type) {
+	case OneRoot:
+		return OneSpec{}
+	case LinkRoot:
+		return LinkSpec{Role: root.Role}
+	case TensorRoot:
+		return TensorSpec{
+			B: ConvertRootToSpec(root.B),
+			C: ConvertRootToSpec(root.C),
+		}
+	case LolliRoot:
+		return LolliSpec{
+			Y: ConvertRootToSpec(root.Y),
+			Z: ConvertRootToSpec(root.Z),
+		}
+	case WithRoot:
+		choices := make(map[core.Label]Spec, len(root.Choices))
+		for lab, st := range root.Choices {
+			choices[lab] = ConvertRootToSpec(st)
+		}
+		return WithSpec{Choices: choices}
+	case PlusRoot:
+		choices := make(map[core.Label]Spec, len(root.Choices))
+		for lab, st := range root.Choices {
+			choices[lab] = ConvertRootToSpec(st)
+		}
+		return PlusSpec{Choices: choices}
+	default:
+		panic(ErrRootTypeUnexpected(root))
 	}
 }
 

@@ -4,63 +4,66 @@ import (
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/state"
 )
 
+// for external readability
 type ID = id.ADT
+type Rev = rev.ADT
 type FQN = sym.ADT
 type Name = string
 
 type Spec struct {
 	// Fully Qualified Name
-	FQN   FQN
+	FQN   sym.ADT
 	State state.Spec
 }
 
 type Ref struct {
-	ID   ID
-	Name Name
+	ID   id.ADT
+	Name string
 }
 
 // aka TpDef
 type Root struct {
-	ID   ID
-	Name Name
-	// Rev      int8
-	StID     state.ID
-	State    state.Root
-	Children []Ref
+	ID   id.ADT
+	Rev  rev.ADT
+	Name string
+	// specification relationship
+	StateID state.ID
+	State   state.Spec // read only
+	// composition relationship
+	WholeID id.ADT
+	Parts   []Ref // read only
 }
 
 type API interface {
-	Define(FQN) (Ref, error)
+	Define(sym.ADT) (Ref, error)
 	Create(Spec) (Root, error)
-	Retrieve(ID) (Root, error)
+	Retrieve(id.ADT) (Root, error)
 	RetreiveAll() ([]Ref, error)
 	Update(Root) error
-	Establish(KinshipSpec) error
 }
 
 type service struct {
-	roles    repo
-	states   state.Repo
-	aliases  alias.Repo
-	kinships kinshipRepo
-	log      *slog.Logger
+	roles   repo
+	states  state.Repo
+	aliases alias.Repo
+	log     *slog.Logger
 }
 
 func newService(
 	roles repo,
 	states state.Repo,
 	aliases alias.Repo,
-	kinships kinshipRepo,
 	l *slog.Logger,
 ) *service {
 	name := slog.String("name", "roleService")
-	return &service{roles, states, aliases, kinships, l.With(name)}
+	return &service{roles, states, aliases, l.With(name)}
 }
 
 func (s *service) Define(fqn FQN) (Ref, error) {
@@ -76,7 +79,7 @@ func (s *service) Define(fqn FQN) (Ref, error) {
 			slog.Any("reason", err),
 			slog.Any("alias", al),
 		)
-		return ConverRootToRef(root), err
+		return ConvertRootToRef(root), err
 	}
 	err = s.roles.Insert(root)
 	if err != nil {
@@ -84,19 +87,19 @@ func (s *service) Define(fqn FQN) (Ref, error) {
 			slog.Any("reason", err),
 			slog.Any("fqn", fqn),
 		)
-		return ConverRootToRef(root), err
+		return ConvertRootToRef(root), err
 	}
-	return ConverRootToRef(root), nil
+	return ConvertRootToRef(root), nil
 }
 
 func (s *service) Create(spec Spec) (Root, error) {
 	s.log.Debug("role creation started", slog.Any("spec", spec))
 	st := state.ConvertSpecToRoot(spec.State)
 	root := Root{
-		ID:    id.New(),
-		Name:  spec.FQN.Name(),
-		StID:  st.Ident(),
-		State: st,
+		ID:      id.New(),
+		Rev:     rev.New(),
+		Name:    spec.FQN.Name(),
+		StateID: st.Ident(),
 	}
 	err := s.roles.Insert(root)
 	if err != nil {
@@ -124,6 +127,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 		return root, err
 	}
 	s.log.Debug("role creation succeeded", slog.Any("root", root))
+	root.State = spec.State
 	return root, nil
 }
 
@@ -137,16 +141,11 @@ func (s *service) Retrieve(rid ID) (Root, error) {
 		s.log.Error("root selection failed")
 		return Root{}, err
 	}
-	root.State, err = s.states.SelectByID(root.StID)
+	root.State, err = s.states.SelectByID(root.StateID)
 	if err != nil {
 		s.log.Error("state selection failed")
 		return Root{}, err
 	}
-	// root.Children, err = s.roles.SelectChildren(rid)
-	// if err != nil {
-	// 	s.log.Error("children selection failed")
-	// 	return Root{}, err
-	// }
 	return root, nil
 }
 
@@ -154,48 +153,17 @@ func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.roles.SelectAll()
 }
 
-func (s *service) Establish(spec KinshipSpec) error {
-	var children []Ref
-	for _, id := range spec.ChildIDs {
-		children = append(children, Ref{ID: id})
-	}
-	root := KinshipRoot{
-		Parent:   Ref{ID: spec.ParentID},
-		Children: children,
-	}
-	err := s.kinships.Insert(root)
-	if err != nil {
-		return err
-	}
-	s.log.Debug("kinship establishment succeeded", slog.Any("root", root))
-	return nil
-}
-
 type repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(ID) (Root, error)
+	SelectByID(id.ADT) (Root, error)
 	SelectChildren(ID) ([]Ref, error)
-}
-
-type KinshipSpec struct {
-	ParentID ID
-	ChildIDs []ID
-}
-
-type KinshipRoot struct {
-	Parent   Ref
-	Children []Ref
-}
-
-type kinshipRepo interface {
-	Insert(KinshipRoot) error
 }
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Ident
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
-	ConverRootToRef func(Root) Ref
+	ConvertRootToRef func(Root) Ref
 )

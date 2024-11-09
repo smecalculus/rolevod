@@ -217,7 +217,7 @@ func (mto CTAMsg) Validate() error {
 
 // goverter:variables
 // goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:String.*
+// goverter:extend smecalculus/rolevod/lib/id:Convert.*
 // goverter:extend smecalculus/rolevod/internal/chnl:Msg.*
 // goverter:extend MsgFromTerm
 // goverter:extend MsgToTerm
@@ -295,7 +295,7 @@ func MsgFromTerm(t Term) TermMsg {
 			K: Spawn,
 			Spawn: &SpawnMsg{
 				PE:   ph.MsgFromPH(term.PE),
-				CEs:  id.StringsFromIDs(term.CEs),
+				CEs:  id.ConvertToStrings(term.CEs),
 				Cont: MsgFromTerm(term.Cont),
 				Sig:  term.Sig.String(),
 			},
@@ -313,7 +313,7 @@ func MsgFromTerm(t Term) TermMsg {
 			K: CTA,
 			CTA: &CTAMsg{
 				Sig: term.Sig.String(),
-				AK:  ak.StringFromAK(term.AK),
+				AK:  ak.ConvertToString(term.AK),
 			},
 		}
 	default:
@@ -395,7 +395,7 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		ces, err := id.StringsToIDs(mto.Spawn.CEs)
+		ces, err := id.ConvertFromStrings(mto.Spawn.CEs)
 		if err != nil {
 			return nil, err
 		}
@@ -403,7 +403,7 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		sigID, err := id.StringToID(mto.Spawn.Sig)
+		sigID, err := id.ConvertFromString(mto.Spawn.Sig)
 		if err != nil {
 			return nil, err
 		}
@@ -419,11 +419,11 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return FwdSpec{C: c, D: d}, nil
 	case CTA:
-		key, err := ak.StringToAK(mto.CTA.AK)
+		key, err := ak.ConvertFromString(mto.CTA.AK)
 		if err != nil {
 			return nil, err
 		}
-		sigID, err := id.StringToID(mto.CTA.Sig)
+		sigID, err := id.ConvertFromString(mto.CTA.Sig)
 		if err != nil {
 			return nil, err
 		}

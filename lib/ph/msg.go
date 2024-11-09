@@ -40,7 +40,7 @@ func MsgFromPH(ph ADT) Msg {
 	case id.ADT:
 		return Msg{K: ID, ID: val.String()}
 	case sym.ADT:
-		return Msg{K: Sym, Sym: sym.StringFromSym(val)}
+		return Msg{K: Sym, Sym: sym.ConvertToString(val)}
 	default:
 		panic(errUnexpectedType(ph))
 	}
@@ -49,9 +49,9 @@ func MsgFromPH(ph ADT) Msg {
 func MsgToPH(mto Msg) (ADT, error) {
 	switch mto.K {
 	case ID:
-		return id.StringToID(mto.ID)
+		return id.ConvertFromString(mto.ID)
 	case Sym:
-		return sym.StringToSym(mto.Sym), nil
+		return sym.CovertFromString(mto.Sym), nil
 	default:
 		panic(fmt.Errorf("unexpected placeholder kind: %v", mto.K))
 	}
