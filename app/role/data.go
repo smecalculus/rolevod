@@ -1,9 +1,12 @@
 package role
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 type refData struct {
 	ID   string `db:"id"`
+	Rev  int64  `db:"rev"`
 	Name string `db:"name"`
 }
 

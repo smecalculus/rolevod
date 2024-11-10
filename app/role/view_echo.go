@@ -79,7 +79,7 @@ func (p *presenterEcho) GetOne(c echo.Context) error {
 		p.log.Error("ident mapping failed")
 		return err
 	}
-	root, err := p.api.Retrieve(ident)
+	root, err := p.api.RetrieveLatest(ident)
 	if err != nil {
 		p.log.Error("root retrieving failed")
 		return err

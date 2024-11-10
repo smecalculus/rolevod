@@ -4,6 +4,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/state"
@@ -23,12 +24,28 @@ func (dto SpecMsg) Validate() error {
 
 type RefMsg struct {
 	ID   string `json:"id" param:"id"`
+	Rev  int64  `json:"rev" query:"rev"`
 	Name string `json:"name"`
 }
 
 func (dto RefMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
+		validation.Field(&dto.Rev, rev.Optional...),
+	)
+}
+
+type PatchMsg struct {
+	ID    string        `json:"id" param:"id"`
+	Rev   int64         `json:"rev" query:"rev"`
+	State state.SpecMsg `json:"state"`
+}
+
+func (dto PatchMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+		validation.Field(&dto.Rev, rev.Optional...),
+		validation.Field(&dto.State, validation.Required),
 	)
 }
 
@@ -58,4 +75,5 @@ var (
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoots func([]Root) []RootMsg
 	MsgToRoots   func([]RootMsg) ([]Root, error)
+	MsgToPatch   func(PatchMsg) (Patch, error)
 )

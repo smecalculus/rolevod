@@ -32,13 +32,14 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		INSERT INTO aliases (
-			sym, id
+			sym, id, rev
 		) VALUES (
-			@sym, @id
+			@sym, @id, @rev
 		)`
 	args := pgx.NamedArgs{
 		"sym": dto.Sym,
 		"id":  dto.ID,
+		"rev": dto.Rev,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {

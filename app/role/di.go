@@ -45,7 +45,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 func cfgApiEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/roles", h.PostOne)
 	e.GET("/api/v1/roles/:id", h.GetOne)
-	e.PUT("/api/v1/roles/:id", h.PutOne)
+	e.PATCH("/api/v1/roles/:id", h.PatchOne)
 	return nil
 }
 

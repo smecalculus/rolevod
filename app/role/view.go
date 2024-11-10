@@ -11,6 +11,7 @@ import (
 
 type RefView struct {
 	ID   string `form:"id" json:"id" param:"id"`
+	Rev  int64  `form:"rev" json:"rev"`
 	Name string `form:"name" json:"name"`
 }
 

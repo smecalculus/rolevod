@@ -7,19 +7,17 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"smecalculus/rolevod/lib/id"
-	"smecalculus/rolevod/lib/msg"
 )
 
 // Adapter
 type handlerEcho struct {
 	api API
-	ssr msg.Renderer
 	log *slog.Logger
 }
 
-func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
+func newHandlerEcho(a API, l *slog.Logger) *handlerEcho {
 	name := slog.String("name", "roleHandlerEcho")
-	return &handlerEcho{a, r, l.With(name)}
+	return &handlerEcho{a, l.With(name)}
 }
 
 func (h *handlerEcho) PostOne(c echo.Context) error {
@@ -54,24 +52,25 @@ func (h *handlerEcho) GetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Retrieve(ident)
+	root, err := h.api.RetrieveLatest(ident)
 	if err != nil {
 		return err
 	}
 	return c.JSON(http.StatusOK, MsgFromRoot(root))
 }
 
-func (h *handlerEcho) PutOne(c echo.Context) error {
-	var dto RootMsg
+func (h *handlerEcho) PatchOne(c echo.Context) error {
+	var dto PatchMsg
 	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	root, err := MsgToRoot(dto)
+	h.log.Debug("role patching started", slog.Any("dto", dto))
+	patch, err := MsgToPatch(dto)
 	if err != nil {
 		return err
 	}
-	err = h.api.Update(root)
+	err = h.api.Update(patch)
 	if err != nil {
 		return err
 	}

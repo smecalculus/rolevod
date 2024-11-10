@@ -42,7 +42,7 @@ func (cl *clientResty) Create(spec Spec) (Root, error) {
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
+func (c *clientResty) RetrieveLatest(id id.ADT) (Root, error) {
 	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
@@ -57,7 +57,11 @@ func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) Update(root Root) error {
+func (c *clientResty) Retrieve(ref Ref) (Root, error) {
+	return Root{}, nil
+}
+
+func (c *clientResty) Update(patch Patch) error {
 	return nil
 }
 

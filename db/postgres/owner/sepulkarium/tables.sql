@@ -58,8 +58,9 @@ CREATE TABLE clientships (
 
 CREATE TABLE aliases (
 	sym ltree UNIQUE,
-	kind smallint,
-	id varchar(36)
+	id varchar(36),
+	rev bigint,
+	kind smallint
 );
 
 CREATE INDEX sym_gist_idx ON aliases USING GIST (sym);

@@ -351,6 +351,78 @@ func CheckRef(got, want ID) error {
 }
 
 // aka eqtp
+func CheckSpec(got, want Spec) error {
+	switch wantSt := want.(type) {
+	case OneSpec:
+		_, ok := got.(OneSpec)
+		if !ok {
+			return ErrSpecTypeMismatch(got, want)
+		}
+		return nil
+	case TensorSpec:
+		gotSt, ok := got.(TensorSpec)
+		if !ok {
+			return ErrSpecTypeMismatch(got, want)
+		}
+		err := CheckSpec(gotSt.B, wantSt.B)
+		if err != nil {
+			return err
+		}
+		return CheckSpec(gotSt.C, wantSt.C)
+	case LolliSpec:
+		gotSt, ok := got.(LolliSpec)
+		if !ok {
+			return ErrSpecTypeMismatch(got, want)
+		}
+		err := CheckSpec(gotSt.Y, wantSt.Y)
+		if err != nil {
+			return err
+		}
+		return CheckSpec(gotSt.Z, wantSt.Z)
+	case PlusSpec:
+		gotSt, ok := got.(PlusSpec)
+		if !ok {
+			return ErrSpecTypeMismatch(got, want)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
+			if !ok {
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
+			}
+			err := CheckSpec(gotChoice, wantChoice)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case WithSpec:
+		gotSt, ok := got.(WithSpec)
+		if !ok {
+			return ErrSpecTypeMismatch(got, want)
+		}
+		if len(gotSt.Choices) != len(wantSt.Choices) {
+			return fmt.Errorf("choices mismatch: want %v items, got %v items", len(wantSt.Choices), len(gotSt.Choices))
+		}
+		for wantLab, wantChoice := range wantSt.Choices {
+			gotChoice, ok := gotSt.Choices[wantLab]
+			if !ok {
+				return fmt.Errorf("label mismatch: want %q, got nothing", wantLab)
+			}
+			err := CheckSpec(gotChoice, wantChoice)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		panic(ErrSpecTypeUnexpected(want))
+	}
+}
+
+// aka eqtp
 func CheckRoot(got, want Root) error {
 	switch wantSt := want.(type) {
 	case OneRoot:
@@ -444,6 +516,10 @@ func ErrMissingInCfg(want ID) error {
 
 func ErrRootTypeUnexpected(got Root) error {
 	return fmt.Errorf("root type unexpected: %T", got)
+}
+
+func ErrSpecTypeMismatch(got, want Spec) error {
+	return fmt.Errorf("spec type mismatch: want %T, got %T", want, got)
 }
 
 func ErrRootTypeMismatch(got, want Root) error {
