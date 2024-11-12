@@ -1,13 +1,13 @@
 {{define "role"}}
     <script>
         Alpine.data('role', () => ({
-            mto: {{.}},
+            dto: {{.}},
 
             save() {
                 fetch('/api/v1/roles/{{.ID}}', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.mto)
+                    body: JSON.stringify(this.dto)
                 })
                 .then(() => {
                     console.log("Success")
@@ -21,10 +21,10 @@
     <div id="role" x-data="role">
         <div class="row">
             <div class="col-auto">
-                <input x-model="mto.name" type="text" class="form-control">
+                <input x-model="dto.name" type="text" class="form-control">
             </div>
         </div>
-        {{template "st" (dict "St" .St "Root" .ID "Path" "mto.st")}}
+        {{template "st" (dict "St" .St "Root" .ID "Path" "dto.st")}}
         <button type="button" @click="save()" class="btn btn-primary">Save</button>
     </div>
 {{end}}
@@ -75,7 +75,7 @@
         </ul>
     {{else if eq .St.K "ref"}}
         {{if eq .St.ID .Root}}
-            <span x-text="mto.name"></span>
+            <span x-text="dto.name"></span>
         {{else}}
             <a x-text="{{printf "%v.name" .Path}}" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
         {{end}}

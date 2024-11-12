@@ -27,11 +27,11 @@ type Msg struct {
 	Sym string `json:"sym,omitempty"`
 }
 
-func (mto Msg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.K, kindRequired...),
-		validation.Field(&mto.ID, id.RequiredWhen(mto.K == ID)...),
-		validation.Field(&mto.Sym, sym.ReqiredWhen(mto.K == Sym)...),
+func (dto Msg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.K, kindRequired...),
+		validation.Field(&dto.ID, id.RequiredWhen(dto.K == ID)...),
+		validation.Field(&dto.Sym, sym.ReqiredWhen(dto.K == Sym)...),
 	)
 }
 
@@ -46,13 +46,13 @@ func MsgFromPH(ph ADT) Msg {
 	}
 }
 
-func MsgToPH(mto Msg) (ADT, error) {
-	switch mto.K {
+func MsgToPH(dto Msg) (ADT, error) {
+	switch dto.K {
 	case ID:
-		return id.ConvertFromString(mto.ID)
+		return id.ConvertFromString(dto.ID)
 	case Sym:
-		return sym.CovertFromString(mto.Sym), nil
+		return sym.CovertFromString(dto.Sym), nil
 	default:
-		panic(fmt.Errorf("unexpected placeholder kind: %v", mto.K))
+		panic(fmt.Errorf("unexpected placeholder kind: %v", dto.K))
 	}
 }

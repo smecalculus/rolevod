@@ -46,15 +46,15 @@ func (c *clientResty) Modify(snap Snap) (Snap, error) {
 	return Snap{}, nil
 }
 
-func (c *clientResty) Retrieve(eid id.ADT) (Snap, error) {
+func (c *clientResty) Retrieve(rid id.ADT) (Snap, error) {
 	return Snap{}, nil
 }
 
-func (c *clientResty) RetrieveRoot(eid id.ADT) (Root, error) {
+func (c *clientResty) RetrieveRoot(rid id.ADT) (Root, error) {
 	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
-		SetPathParam("id", eid.String()).
+		SetPathParam("id", rid.String()).
 		Get("/roles/{id}")
 	if err != nil {
 		return Root{}, err

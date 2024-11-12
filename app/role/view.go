@@ -45,6 +45,7 @@ type RootView struct {
 type SnapView struct {
 	ID    string        `json:"id"`
 	Rev   int64         `json:"rev"`
+	Name  string        `json:"name"`
 	State state.SpecMsg `json:"state"`
 }
 

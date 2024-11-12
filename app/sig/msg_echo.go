@@ -23,20 +23,20 @@ func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 }
 
 func (h *handlerEcho) ApiPostOne(c echo.Context) error {
-	var mto SpecMsg
-	err := c.Bind(&mto)
+	var dto SpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
-		h.log.Error("mto binding failed", slog.Any("reason", err))
+		h.log.Error("dto binding failed", slog.Any("reason", err))
 		return err
 	}
-	err = mto.Validate()
+	err = dto.Validate()
 	if err != nil {
-		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("mto", mto))
+		h.log.Error("dto validation failed", slog.Any("reason", err), slog.Any("dto", dto))
 		return err
 	}
-	spec, err := MsgToSpec(mto)
+	spec, err := MsgToSpec(dto)
 	if err != nil {
-		h.log.Error("mto conversion failed", slog.Any("reason", err), slog.Any("mto", mto))
+		h.log.Error("dto conversion failed", slog.Any("reason", err), slog.Any("dto", dto))
 		return err
 	}
 	root, err := h.api.Create(spec)
@@ -47,12 +47,12 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
+	var dto RefMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	id, err := id.ConvertFromString(mto.ID)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return err
 	}
@@ -64,12 +64,12 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
+	var dto RefMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	id, err := id.ConvertFromString(mto.ID)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return err
 	}
@@ -97,12 +97,12 @@ func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandle
 }
 
 func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto KinshipSpecMsg
-	err := c.Bind(&mto)
+	var dto KinshipSpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToKinshipSpec(mto)
+	spec, err := MsgToKinshipSpec(dto)
 	if err != nil {
 		return err
 	}

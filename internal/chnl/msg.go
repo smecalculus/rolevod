@@ -12,10 +12,10 @@ type SpecMsg struct {
 	Role string `json:"role"`
 }
 
-func (mto SpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Name, core.NameRequired...),
-		validation.Field(&mto.Role, id.Required...),
+func (dto SpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Name, core.NameRequired...),
+		validation.Field(&dto.Role, id.Required...),
 	)
 }
 
@@ -24,10 +24,10 @@ type RefMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto RefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
-		validation.Field(&mto.Name, core.NameRequired...),
+func (dto RefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+		validation.Field(&dto.Name, core.NameRequired...),
 	)
 }
 
@@ -62,12 +62,12 @@ func MsgFromRefMap(refs map[Name]ID) []RefMsg {
 
 func MsgToRefMap(mtos []RefMsg) (map[Name]ID, error) {
 	refs := make(map[Name]ID, len(mtos))
-	for _, mto := range mtos {
-		mtoID, err := id.ConvertFromString(mto.ID)
+	for _, dto := range mtos {
+		mtoID, err := id.ConvertFromString(dto.ID)
 		if err != nil {
 			return nil, err
 		}
-		refs[mto.Name] = mtoID
+		refs[dto.Name] = mtoID
 	}
 	return refs, nil
 }

@@ -60,7 +60,7 @@ func (r *repoPgx) Insert(root Root) error {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		SELECT
-			id, name
+			id, rev, name
 		FROM roles`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
@@ -77,7 +77,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(eid ID) (Root, error) {
+func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		select
 			id, rev, name, state_id, whole_id
@@ -86,7 +86,7 @@ func (r *repoPgx) SelectByID(eid ID) (Root, error) {
 		order by rev desc
 		limit 1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, eid.String())
+	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return Root{}, err
@@ -173,7 +173,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	return DataToRoots(dtos)
 }
 
-func (r *repoPgx) SelectParts(eid id.ADT) ([]Ref, error) {
+func (r *repoPgx) SelectParts(rid id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
 			r.id,
@@ -184,7 +184,7 @@ func (r *repoPgx) SelectParts(eid id.ADT) ([]Ref, error) {
 			ON r.id = k.child_id
 		WHERE k.parent_id = $1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, eid.String())
+	rows, err := r.pool.Query(ctx, query, rid.String())
 	if err != nil {
 		return nil, err
 	}

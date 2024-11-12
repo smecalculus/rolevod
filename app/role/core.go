@@ -32,6 +32,7 @@ type Ref struct {
 type Snap struct {
 	ID    id.ADT
 	Rev   rev.ADT
+	Name  string
 	State state.Spec
 	// Parts   []Ref
 }
@@ -145,8 +146,8 @@ func (s *service) Create(spec Spec) (Snap, error) {
 	return Snap{
 		ID:    newRoot.ID,
 		Rev:   newRoot.Rev,
+		Name:  newRoot.Name,
 		State: state.ConvertRootToSpec(newState),
-		// State: newState,
 	}, nil
 }
 
@@ -206,12 +207,17 @@ func (s *service) Modify(newSnap Snap) (Snap, error) {
 	return newSnap, nil
 }
 
-func (s *service) Retrieve(eid ID) (Snap, error) {
-	return Snap{}, nil
+func (s *service) Retrieve(rid ID) (Snap, error) {
+	root, err := s.roles.SelectByID(rid)
+	if err != nil {
+		s.log.Error("root selection failed")
+		return Snap{}, err
+	}
+	return s.RetrieveSnap(root)
 }
 
-func (s *service) RetrieveRoot(eid ID) (Root, error) {
-	root, err := s.roles.SelectByID(eid)
+func (s *service) RetrieveRoot(rid ID) (Root, error) {
+	root, err := s.roles.SelectByID(rid)
 	if err != nil {
 		s.log.Error("root selection failed")
 		return Root{}, err
@@ -228,6 +234,7 @@ func (s *service) RetrieveSnap(root Root) (Snap, error) {
 	return Snap{
 		ID:    root.ID,
 		Rev:   root.Rev,
+		Name:  root.Name,
 		State: state.ConvertRootToSpec(snapState),
 	}, nil
 }
@@ -237,11 +244,11 @@ func (s *service) RetreiveRefs() ([]Ref, error) {
 }
 
 func CollectEnv(roles []Root) []id.ADT {
-	roleIDs := []id.ADT{}
+	stateIDs := []id.ADT{}
 	for _, r := range roles {
-		roleIDs = append(roleIDs, r.StateID)
+		stateIDs = append(stateIDs, r.StateID)
 	}
-	return roleIDs
+	return stateIDs
 }
 
 type Repo interface {

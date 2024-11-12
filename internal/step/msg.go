@@ -72,18 +72,18 @@ type TermMsg struct {
 	CTA   *CTAMsg   `json:"cta,omitempty"`
 }
 
-func (mto TermMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.K, termKindRequired...),
-		validation.Field(&mto.Close, validation.Required.When(mto.K == Close)),
-		validation.Field(&mto.Wait, validation.Required.When(mto.K == Wait)),
-		validation.Field(&mto.Send, validation.Required.When(mto.K == Send)),
-		validation.Field(&mto.Recv, validation.Required.When(mto.K == Recv)),
-		validation.Field(&mto.Lab, validation.Required.When(mto.K == Lab)),
-		validation.Field(&mto.Case, validation.Required.When(mto.K == Case)),
-		validation.Field(&mto.Spawn, validation.Required.When(mto.K == Spawn)),
-		validation.Field(&mto.Fwd, validation.Required.When(mto.K == Fwd)),
-		validation.Field(&mto.CTA, validation.Required.When(mto.K == CTA)),
+func (dto TermMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.K, termKindRequired...),
+		validation.Field(&dto.Close, validation.Required.When(dto.K == Close)),
+		validation.Field(&dto.Wait, validation.Required.When(dto.K == Wait)),
+		validation.Field(&dto.Send, validation.Required.When(dto.K == Send)),
+		validation.Field(&dto.Recv, validation.Required.When(dto.K == Recv)),
+		validation.Field(&dto.Lab, validation.Required.When(dto.K == Lab)),
+		validation.Field(&dto.Case, validation.Required.When(dto.K == Case)),
+		validation.Field(&dto.Spawn, validation.Required.When(dto.K == Spawn)),
+		validation.Field(&dto.Fwd, validation.Required.When(dto.K == Fwd)),
+		validation.Field(&dto.CTA, validation.Required.When(dto.K == CTA)),
 	)
 }
 
@@ -91,9 +91,9 @@ type CloseMsg struct {
 	A ph.Msg `json:"a"`
 }
 
-func (mto CloseMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.A, validation.Required),
+func (dto CloseMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.A, validation.Required),
 	)
 }
 
@@ -102,10 +102,10 @@ type WaitMsg struct {
 	Cont TermMsg `json:"cont"`
 }
 
-func (mto WaitMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.X, validation.Required),
-		validation.Field(&mto.Cont, validation.Required),
+func (dto WaitMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.X, validation.Required),
+		validation.Field(&dto.Cont, validation.Required),
 	)
 }
 
@@ -114,10 +114,10 @@ type SendMsg struct {
 	B ph.Msg `json:"b"`
 }
 
-func (mto SendMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.A, validation.Required),
-		validation.Field(&mto.B, validation.Required),
+func (dto SendMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.A, validation.Required),
+		validation.Field(&dto.B, validation.Required),
 	)
 }
 
@@ -127,11 +127,11 @@ type RecvMsg struct {
 	Cont TermMsg `json:"cont"`
 }
 
-func (mto RecvMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.X, validation.Required),
-		validation.Field(&mto.Y, validation.Required),
-		validation.Field(&mto.Cont, validation.Required),
+func (dto RecvMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.X, validation.Required),
+		validation.Field(&dto.Y, validation.Required),
+		validation.Field(&dto.Cont, validation.Required),
 	)
 }
 
@@ -140,10 +140,10 @@ type LabMsg struct {
 	Label string `json:"label"`
 }
 
-func (mto LabMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.A, validation.Required),
-		validation.Field(&mto.Label, core.NameRequired...),
+func (dto LabMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.A, validation.Required),
+		validation.Field(&dto.Label, core.NameRequired...),
 	)
 }
 
@@ -152,10 +152,10 @@ type CaseMsg struct {
 	Brs []BranchMsg `json:"branches"`
 }
 
-func (mto CaseMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.X, validation.Required),
-		validation.Field(&mto.Brs,
+func (dto CaseMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.X, validation.Required),
+		validation.Field(&dto.Brs,
 			validation.Required,
 			validation.Length(1, 10),
 			validation.Each(validation.Required),
@@ -168,10 +168,10 @@ type BranchMsg struct {
 	Cont  TermMsg `json:"cont"`
 }
 
-func (mto BranchMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Label, core.NameRequired...),
-		validation.Field(&mto.Cont, validation.Required),
+func (dto BranchMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Label, core.NameRequired...),
+		validation.Field(&dto.Cont, validation.Required),
 	)
 }
 
@@ -182,12 +182,12 @@ type SpawnMsg struct {
 	Sig  string   `json:"sig_id"`
 }
 
-func (mto SpawnMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.PE, validation.Required),
-		validation.Field(&mto.CEs, core.CtxOptional...),
-		validation.Field(&mto.Cont, validation.Required),
-		validation.Field(&mto.Sig, id.Required...),
+func (dto SpawnMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.PE, validation.Required),
+		validation.Field(&dto.CEs, core.CtxOptional...),
+		validation.Field(&dto.Cont, validation.Required),
+		validation.Field(&dto.Sig, id.Required...),
 	)
 }
 
@@ -196,10 +196,10 @@ type FwdMsg struct {
 	D ph.Msg `json:"d"`
 }
 
-func (mto FwdMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.C, validation.Required),
-		validation.Field(&mto.D, validation.Required),
+func (dto FwdMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.C, validation.Required),
+		validation.Field(&dto.D, validation.Required),
 	)
 }
 
@@ -208,10 +208,10 @@ type CTAMsg struct {
 	Sig string `json:"sig_id"`
 }
 
-func (mto CTAMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.AK, id.Required...),
-		validation.Field(&mto.Sig, id.Required...),
+func (dto CTAMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.AK, id.Required...),
+		validation.Field(&dto.Sig, id.Required...),
 	)
 }
 
@@ -321,68 +321,68 @@ func MsgFromTerm(t Term) TermMsg {
 	}
 }
 
-func MsgToTermNilable(mto *TermMsg) (Term, error) {
-	if mto == nil {
+func MsgToTermNilable(dto *TermMsg) (Term, error) {
+	if dto == nil {
 		return nil, nil
 	}
-	return MsgToTerm(*mto)
+	return MsgToTerm(*dto)
 }
 
-func MsgToTerm(mto TermMsg) (Term, error) {
-	switch mto.K {
+func MsgToTerm(dto TermMsg) (Term, error) {
+	switch dto.K {
 	case Close:
-		a, err := ph.MsgToPH(mto.Close.A)
+		a, err := ph.MsgToPH(dto.Close.A)
 		if err != nil {
 			return nil, err
 		}
 		return CloseSpec{A: a}, nil
 	case Wait:
-		x, err := ph.MsgToPH(mto.Wait.X)
+		x, err := ph.MsgToPH(dto.Wait.X)
 		if err != nil {
 			return nil, err
 		}
-		cont, err := MsgToTerm(mto.Wait.Cont)
+		cont, err := MsgToTerm(dto.Wait.Cont)
 		if err != nil {
 			return nil, err
 		}
 		return WaitSpec{X: x, Cont: cont}, nil
 	case Send:
-		a, err := ph.MsgToPH(mto.Send.A)
+		a, err := ph.MsgToPH(dto.Send.A)
 		if err != nil {
 			return nil, err
 		}
-		b, err := ph.MsgToPH(mto.Send.B)
+		b, err := ph.MsgToPH(dto.Send.B)
 		if err != nil {
 			return nil, err
 		}
 		return SendSpec{A: a, B: b}, nil
 	case Recv:
-		x, err := ph.MsgToPH(mto.Recv.X)
+		x, err := ph.MsgToPH(dto.Recv.X)
 		if err != nil {
 			return nil, err
 		}
-		y, err := ph.MsgToPH(mto.Recv.Y)
+		y, err := ph.MsgToPH(dto.Recv.Y)
 		if err != nil {
 			return nil, err
 		}
-		cont, err := MsgToTerm(mto.Recv.Cont)
+		cont, err := MsgToTerm(dto.Recv.Cont)
 		if err != nil {
 			return nil, err
 		}
 		return RecvSpec{X: x, Y: y, Cont: cont}, nil
 	case Lab:
-		a, err := ph.MsgToPH(mto.Lab.A)
+		a, err := ph.MsgToPH(dto.Lab.A)
 		if err != nil {
 			return nil, err
 		}
-		return LabSpec{A: a, L: core.Label(mto.Lab.Label)}, nil
+		return LabSpec{A: a, L: core.Label(dto.Lab.Label)}, nil
 	case Case:
-		x, err := ph.MsgToPH(mto.Case.X)
+		x, err := ph.MsgToPH(dto.Case.X)
 		if err != nil {
 			return nil, err
 		}
-		conts := make(map[core.Label]Term, len(mto.Case.Brs))
-		for _, b := range mto.Case.Brs {
+		conts := make(map[core.Label]Term, len(dto.Case.Brs))
+		for _, b := range dto.Case.Brs {
 			cont, err := MsgToTerm(b.Cont)
 			if err != nil {
 				return nil, err
@@ -391,45 +391,45 @@ func MsgToTerm(mto TermMsg) (Term, error) {
 		}
 		return CaseSpec{X: x, Conts: conts}, nil
 	case Spawn:
-		pe, err := ph.MsgToPH(mto.Spawn.PE)
+		pe, err := ph.MsgToPH(dto.Spawn.PE)
 		if err != nil {
 			return nil, err
 		}
-		ces, err := id.ConvertFromStrings(mto.Spawn.CEs)
+		ces, err := id.ConvertFromStrings(dto.Spawn.CEs)
 		if err != nil {
 			return nil, err
 		}
-		cont, err := MsgToTerm(mto.Spawn.Cont)
+		cont, err := MsgToTerm(dto.Spawn.Cont)
 		if err != nil {
 			return nil, err
 		}
-		sigID, err := id.ConvertFromString(mto.Spawn.Sig)
+		sigID, err := id.ConvertFromString(dto.Spawn.Sig)
 		if err != nil {
 			return nil, err
 		}
 		return SpawnSpec{PE: pe, CEs: ces, Cont: cont, Sig: sigID}, nil
 	case Fwd:
-		c, err := ph.MsgToPH(mto.Fwd.C)
+		c, err := ph.MsgToPH(dto.Fwd.C)
 		if err != nil {
 			return nil, err
 		}
-		d, err := ph.MsgToPH(mto.Fwd.D)
+		d, err := ph.MsgToPH(dto.Fwd.D)
 		if err != nil {
 			return nil, err
 		}
 		return FwdSpec{C: c, D: d}, nil
 	case CTA:
-		key, err := ak.ConvertFromString(mto.CTA.AK)
+		key, err := ak.ConvertFromString(dto.CTA.AK)
 		if err != nil {
 			return nil, err
 		}
-		sigID, err := id.ConvertFromString(mto.CTA.Sig)
+		sigID, err := id.ConvertFromString(dto.CTA.Sig)
 		if err != nil {
 			return nil, err
 		}
 		return CTASpec{AK: key, Sig: sigID}, nil
 	default:
-		panic(ErrUnexpectedTermKind(mto.K))
+		panic(ErrUnexpectedTermKind(dto.K))
 	}
 }
 

@@ -16,11 +16,11 @@ type SpecMsg struct {
 	CEs []chnl.SpecMsg `json:"ces"`
 }
 
-func (mto SpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.FQN, sym.Required...),
-		validation.Field(&mto.PE, validation.Required),
-		validation.Field(&mto.CEs, core.CtxOptional...),
+func (dto SpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.FQN, sym.Required...),
+		validation.Field(&dto.PE, validation.Required),
+		validation.Field(&dto.CEs, core.CtxOptional...),
 	)
 }
 
@@ -28,9 +28,9 @@ type RefMsg struct {
 	ID string `json:"id" param:"id"`
 }
 
-func (mto RefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
+func (dto RefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
 	)
 }
 

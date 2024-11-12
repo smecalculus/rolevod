@@ -25,12 +25,12 @@ func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 }
 
 func (h *handlerEcho) ApiPostOne(c echo.Context) error {
-	var mto SpecMsg
-	err := c.Bind(&mto)
+	var dto SpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToSpec(mto)
+	spec, err := MsgToSpec(dto)
 	if err != nil {
 		return err
 	}
@@ -42,12 +42,12 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
+	var dto RefMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	id, err := id.ConvertFromString(mto.ID)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return err
 	}
@@ -59,12 +59,12 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var mto RefMsg
-	err := c.Bind(&mto)
+	var dto RefMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	id, err := id.ConvertFromString(mto.ID)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return err
 	}
@@ -92,16 +92,16 @@ func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandle
 }
 
 func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto KinshipSpecMsg
-	err := c.Bind(&mto)
+	var dto KinshipSpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
 		return err
 	}
-	err = mto.Validate()
+	err = dto.Validate()
 	if err != nil {
 		return err
 	}
-	spec, err := MsgToKinshipSpec(mto)
+	spec, err := MsgToKinshipSpec(dto)
 	if err != nil {
 		return err
 	}
@@ -125,20 +125,20 @@ func newPartHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *partHandlerEcho 
 }
 
 func (h *partHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto PartSpecMsg
-	err := c.Bind(&mto)
+	var dto PartSpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
-		h.log.Error("mto binding failed", slog.Any("reason", err))
+		h.log.Error("dto binding failed", slog.Any("reason", err))
 		return err
 	}
-	err = mto.Validate()
+	err = dto.Validate()
 	if err != nil {
-		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("spec", mto))
+		h.log.Error("dto validation failed", slog.Any("reason", err), slog.Any("spec", dto))
 		return err
 	}
-	spec, err := MsgToPartSpec(mto)
+	spec, err := MsgToPartSpec(dto)
 	if err != nil {
-		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("spec", mto))
+		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("spec", dto))
 		return err
 	}
 	pe, err := h.api.Involve(spec)
@@ -161,22 +161,22 @@ func newStepHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *stepHandlerEcho 
 }
 
 func (h *stepHandlerEcho) ApiPostOne(c echo.Context) error {
-	var mto TranSpecMsg
-	err := c.Bind(&mto)
+	var dto TranSpecMsg
+	err := c.Bind(&dto)
 	if err != nil {
-		h.log.Error("mto binding failed", slog.Any("reason", err))
+		h.log.Error("dto binding failed", slog.Any("reason", err))
 		return err
 	}
 	ctx := c.Request().Context()
-	h.log.Log(ctx, core.LevelTrace, "transition posting started", slog.Any("mto", mto))
-	err = mto.Validate()
+	h.log.Log(ctx, core.LevelTrace, "transition posting started", slog.Any("dto", dto))
+	err = dto.Validate()
 	if err != nil {
-		h.log.Error("mto validation failed", slog.Any("reason", err), slog.Any("mto", mto))
+		h.log.Error("dto validation failed", slog.Any("reason", err), slog.Any("dto", dto))
 		return err
 	}
-	spec, err := MsgToTranSpec(mto)
+	spec, err := MsgToTranSpec(dto)
 	if err != nil {
-		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("mto", mto))
+		h.log.Error("spec mapping failed", slog.Any("reason", err), slog.Any("dto", dto))
 		return err
 	}
 	err = h.api.Take(spec)

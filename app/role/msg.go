@@ -38,6 +38,7 @@ func (dto RefMsg) Validate() error {
 type SnapMsg struct {
 	ID    string        `json:"id" param:"id"`
 	Rev   int64         `json:"rev" query:"rev"`
+	Name  string        `json:"name"`
 	State state.SpecMsg `json:"state"`
 }
 

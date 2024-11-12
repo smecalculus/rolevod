@@ -16,9 +16,9 @@ type SpecMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto SpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Name, core.NameRequired...),
+func (dto SpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Name, core.NameRequired...),
 	)
 }
 
@@ -26,9 +26,9 @@ type RefMsg struct {
 	ID string `json:"id" param:"id"`
 }
 
-func (mto RefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
+func (dto RefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
 	)
 }
 
@@ -37,10 +37,10 @@ type DealRefMsg struct {
 	Name string `json:"name"`
 }
 
-func (mto DealRefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
-		validation.Field(&mto.Name, core.NameRequired...),
+func (dto DealRefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+		validation.Field(&dto.Name, core.NameRequired...),
 	)
 }
 
@@ -70,10 +70,10 @@ type KinshipSpecMsg struct {
 	ChildIDs []string `json:"child_ids"`
 }
 
-func (mto KinshipSpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ParentID, id.Required...),
-		validation.Field(&mto.ChildIDs,
+func (dto KinshipSpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ParentID, id.Required...),
+		validation.Field(&dto.ChildIDs,
 			validation.Required, validation.Length(0, 10),
 			validation.Each(id.Required...)),
 	)
@@ -101,11 +101,11 @@ type PartSpecMsg struct {
 	TEs   []string `json:"tes"`
 }
 
-func (mto PartSpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Deal, id.Required...),
-		validation.Field(&mto.Sig, id.Required...),
-		validation.Field(&mto.TEs, core.CtxOptional...),
+func (dto PartSpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Deal, id.Required...),
+		validation.Field(&dto.Sig, id.Required...),
+		validation.Field(&dto.TEs, core.CtxOptional...),
 	)
 }
 
@@ -135,12 +135,12 @@ type TranSpecMsg struct {
 	Term step.TermMsg `json:"term"`
 }
 
-func (mto TranSpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Deal, id.Required...),
-		validation.Field(&mto.PID, id.Required...),
-		validation.Field(&mto.Key, ak.Required...),
-		validation.Field(&mto.Term, validation.Required),
+func (dto TranSpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Deal, id.Required...),
+		validation.Field(&dto.PID, id.Required...),
+		validation.Field(&dto.Key, ak.Required...),
+		validation.Field(&dto.Term, validation.Required),
 	)
 }
 
