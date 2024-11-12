@@ -41,15 +41,15 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		INSERT INTO channels (
-			id, name, pre_id, st_id
+			id, name, pre_id, state_id
 		) VALUES (
-			@id, @name, @pre_id, @st_id
+			@id, @name, @pre_id, @state_id
 		)`
 	args := pgx.NamedArgs{
-		"id":     dto.ID,
-		"name":   dto.Name,
-		"pre_id": dto.PreID,
-		"st_id":  dto.StID,
+		"id":       dto.ID,
+		"name":     dto.Name,
+		"pre_id":   dto.PreID,
+		"state_id": dto.StateID,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
@@ -61,10 +61,10 @@ func (r *repoPgx) Insert(root Root) error {
 func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
 	query := `
 		INSERT INTO channels (
-			id, name, pre_id, st_id
+			id, name, pre_id, state_id
 		)
 		SELECT
-			@new_id, name, @pre_id, st_id
+			@new_id, name, @pre_id, state_id
 		FROM channels
 		WHERE id = @id
 		RETURNING *`
@@ -135,7 +135,7 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	query := `
 		SELECT
-			id, name, pre_id, st_id
+			id, name, pre_id, state_id
 		FROM channels
 		WHERE id = $1`
 	ctx := context.Background()
@@ -168,7 +168,7 @@ func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
 			FROM channels output, history input
 			WHERE output.pre_id = input.id
 		)
-		SELECT h.id, h.name, h.pre_id, h.st_id
+		SELECT h.id, h.name, h.pre_id, h.state_id
 		FROM history h
 		WHERE NOT EXISTS (
 			SELECT 1
@@ -250,7 +250,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
 	}
 	query := `
 		SELECT
-			id, name, pre_id, st_id, state
+			id, name, pre_id, state_id, state
 		FROM channels
 		WHERE id = $1`
 	ctx := context.Background()

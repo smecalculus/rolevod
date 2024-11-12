@@ -21,7 +21,7 @@ func TestCollectCtx(t *testing.T) {
 	// and
 	term := SpawnSpec{CEs: []chnl.ID{ce}, Cont: CloseSpec{}}
 	// when
-	actualCEs := CollectCEs(id.New(), term)
+	actualCEs := CollectCtx(id.New(), term)
 	// then
 	if !slices.Contains(actualCEs, ce) {
 		t.Errorf("unexpected ces: want %q in %v", ce, actualCEs)

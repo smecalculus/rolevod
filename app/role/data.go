@@ -28,7 +28,6 @@ var (
 	DataFromRef  func(Ref) (refData, error)
 	DataToRefs   func([]refData) ([]Ref, error)
 	DataFromRefs func([]Ref) ([]refData, error)
-	// goverter:ignore State Parts
 	DataToRoot    func(rootData) (Root, error)
 	DataFromRoot  func(Root) (rootData, error)
 	DataToRoots   func([]rootData) ([]Root, error)

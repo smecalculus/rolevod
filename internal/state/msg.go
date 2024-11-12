@@ -21,14 +21,14 @@ type SpecMsg struct {
 	With   *SumMsg  `json:"with,omitempty"`
 }
 
-func (mto SpecMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.K, kindRequired...),
-		validation.Field(&mto.Link, validation.Required.When(mto.K == Link)),
-		validation.Field(&mto.Tensor, validation.Required.When(mto.K == Tensor)),
-		validation.Field(&mto.Lolli, validation.Required.When(mto.K == Lolli)),
-		validation.Field(&mto.Plus, validation.Required.When(mto.K == Plus)),
-		validation.Field(&mto.With, validation.Required.When(mto.K == With)),
+func (dto SpecMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.K, kindRequired...),
+		validation.Field(&dto.Link, validation.Required.When(dto.K == Link)),
+		validation.Field(&dto.Tensor, validation.Required.When(dto.K == Tensor)),
+		validation.Field(&dto.Lolli, validation.Required.When(dto.K == Lolli)),
+		validation.Field(&dto.Plus, validation.Required.When(dto.K == Plus)),
+		validation.Field(&dto.With, validation.Required.When(dto.K == With)),
 	)
 }
 
@@ -36,15 +36,21 @@ type LinkMsg struct {
 	FQN string `json:"fqn"`
 }
 
+func (dto LinkMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.FQN, sym.Required...),
+	)
+}
+
 type ProdMsg struct {
 	Value SpecMsg `json:"value"`
 	Cont  SpecMsg `json:"cont"`
 }
 
-func (mto ProdMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Value, validation.Required),
-		validation.Field(&mto.Cont, validation.Required),
+func (dto ProdMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Value, validation.Required),
+		validation.Field(&dto.Cont, validation.Required),
 	)
 }
 
@@ -52,9 +58,9 @@ type SumMsg struct {
 	Choices []ChoiceMsg `json:"choices"`
 }
 
-func (mto SumMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Choices,
+func (dto SumMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Choices,
 			validation.Required,
 			validation.Length(1, 10),
 			validation.Each(validation.Required),
@@ -67,10 +73,10 @@ type ChoiceMsg struct {
 	Cont  SpecMsg `json:"cont"`
 }
 
-func (mto ChoiceMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.Label, core.NameRequired...),
-		validation.Field(&mto.Cont, validation.Required),
+func (dto ChoiceMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.Label, core.NameRequired...),
+		validation.Field(&dto.Cont, validation.Required),
 	)
 }
 
@@ -79,10 +85,10 @@ type RefMsg struct {
 	K  Kind   `json:"kind"`
 }
 
-func (mto RefMsg) Validate() error {
-	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.ID, id.Required...),
-		validation.Field(&mto.K, kindRequired...),
+func (dto RefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+		validation.Field(&dto.K, kindRequired...),
 	)
 }
 
@@ -152,35 +158,35 @@ func MsgFromSpec(s Spec) SpecMsg {
 	}
 }
 
-func MsgToSpec(mto SpecMsg) (Spec, error) {
-	switch mto.K {
+func MsgToSpec(dto SpecMsg) (Spec, error) {
+	switch dto.K {
 	case One:
 		return OneSpec{}, nil
 	case Link:
-		return LinkSpec{Role: sym.CovertFromString(mto.Link.FQN)}, nil
+		return LinkSpec{Role: sym.CovertFromString(dto.Link.FQN)}, nil
 	case Tensor:
-		v, err := MsgToSpec(mto.Tensor.Value)
+		v, err := MsgToSpec(dto.Tensor.Value)
 		if err != nil {
 			return nil, err
 		}
-		s, err := MsgToSpec(mto.Tensor.Cont)
+		s, err := MsgToSpec(dto.Tensor.Cont)
 		if err != nil {
 			return nil, err
 		}
 		return TensorSpec{B: v, C: s}, nil
 	case Lolli:
-		v, err := MsgToSpec(mto.Lolli.Value)
+		v, err := MsgToSpec(dto.Lolli.Value)
 		if err != nil {
 			return nil, err
 		}
-		s, err := MsgToSpec(mto.Lolli.Cont)
+		s, err := MsgToSpec(dto.Lolli.Cont)
 		if err != nil {
 			return nil, err
 		}
 		return LolliSpec{Y: v, Z: s}, nil
 	case Plus:
-		choices := make(map[core.Label]Spec, len(mto.Plus.Choices))
-		for _, ch := range mto.Plus.Choices {
+		choices := make(map[core.Label]Spec, len(dto.Plus.Choices))
+		for _, ch := range dto.Plus.Choices {
 			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
@@ -189,8 +195,8 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 		}
 		return PlusSpec{Choices: choices}, nil
 	case With:
-		choices := make(map[core.Label]Spec, len(mto.With.Choices))
-		for _, ch := range mto.With.Choices {
+		choices := make(map[core.Label]Spec, len(dto.With.Choices))
+		for _, ch := range dto.With.Choices {
 			choice, err := MsgToSpec(ch.Cont)
 			if err != nil {
 				return nil, err
@@ -199,13 +205,13 @@ func MsgToSpec(mto SpecMsg) (Spec, error) {
 		}
 		return WithSpec{Choices: choices}, nil
 	default:
-		panic(errKindUnexpected(mto.K))
+		panic(errKindUnexpected(dto.K))
 	}
 }
 
-func MsgFromRef(ref Ref) RefMsg {
-	ident := ref.Ident().String()
-	switch ref.(type) {
+func MsgFromRef(r Ref) RefMsg {
+	ident := r.Ident().String()
+	switch r.(type) {
 	case OneRef, OneRoot:
 		return RefMsg{K: One, ID: ident}
 	case LinkRef, LinkRoot:
@@ -219,16 +225,16 @@ func MsgFromRef(ref Ref) RefMsg {
 	case WithRef, WithRoot:
 		return RefMsg{K: With, ID: ident}
 	default:
-		panic(ErrRefTypeUnexpected(ref))
+		panic(ErrRefTypeUnexpected(r))
 	}
 }
 
-func MsgToRef(mto RefMsg) (Ref, error) {
-	rid, err := id.ConvertFromString(mto.ID)
+func MsgToRef(dto RefMsg) (Ref, error) {
+	rid, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		return nil, err
 	}
-	switch mto.K {
+	switch dto.K {
 	case One:
 		return OneRef{rid}, nil
 	case Link:
@@ -242,7 +248,7 @@ func MsgToRef(mto RefMsg) (Ref, error) {
 	case With:
 		return WithRef{rid}, nil
 	default:
-		panic(errKindUnexpected(mto.K))
+		panic(errKindUnexpected(dto.K))
 	}
 }
 

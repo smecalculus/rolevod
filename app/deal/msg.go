@@ -96,7 +96,7 @@ var (
 
 type PartSpecMsg struct {
 	Deal  string   `json:"deal_id" param:"id"`
-	Decl  string   `json:"sig_id"`
+	Sig   string   `json:"sig_id"`
 	Owner string   `json:"owner_id"`
 	TEs   []string `json:"tes"`
 }
@@ -104,7 +104,7 @@ type PartSpecMsg struct {
 func (mto PartSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
 		validation.Field(&mto.Deal, id.Required...),
-		validation.Field(&mto.Decl, id.Required...),
+		validation.Field(&mto.Sig, id.Required...),
 		validation.Field(&mto.TEs, core.CtxOptional...),
 	)
 }
@@ -129,7 +129,7 @@ var (
 )
 
 type TranSpecMsg struct {
-	DID  string       `json:"did"`
+	Deal string       `json:"did"`
 	PID  string       `json:"pid"`
 	Key  string       `json:"key"`
 	Term step.TermMsg `json:"term"`
@@ -137,7 +137,7 @@ type TranSpecMsg struct {
 
 func (mto TranSpecMsg) Validate() error {
 	return validation.ValidateStruct(&mto,
-		validation.Field(&mto.DID, id.Required...),
+		validation.Field(&mto.Deal, id.Required...),
 		validation.Field(&mto.PID, id.Required...),
 		validation.Field(&mto.Key, ak.Required...),
 		validation.Field(&mto.Term, validation.Required),

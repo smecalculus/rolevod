@@ -7,7 +7,6 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"smecalculus/rolevod/lib/core"
-	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 	"smecalculus/rolevod/lib/sym"
 
@@ -33,30 +32,32 @@ func (p *presenterEcho) PostOne(c echo.Context) error {
 		p.log.Error("dto binding failed")
 		return err
 	}
-	p.log.Log(c.Request().Context(), core.LevelTrace, "role posting started", slog.Any("dto", dto))
+	ctx := c.Request().Context()
+	p.log.Log(ctx, core.LevelTrace, "role posting started", slog.Any("dto", dto))
 	err = dto.Validate()
 	if err != nil {
 		p.log.Error("dto validation failed")
 		return err
 	}
 	fqn := sym.CovertFromString(dto.NS).New(dto.Name)
-	root, err := p.api.Create(Spec{FQN: fqn, State: state.OneSpec{}})
+	snap, err := p.api.Create(Spec{FQN: fqn, State: state.OneSpec{}})
 	if err != nil {
-		p.log.Error("root creation failed")
+		p.log.Error("role creation failed")
 		return err
 	}
-	html, err := p.ssr.Render("view-one", ViewFromRoot(root))
+	html, err := p.ssr.Render("view-one", ViewFromSnap(snap))
 	if err != nil {
 		p.log.Error("view rendering failed")
 		return err
 	}
+	p.log.Log(ctx, core.LevelTrace, "role posting succeeded", slog.Any("ref", ConvertSnapToRef(snap)))
 	return c.HTMLBlob(http.StatusOK, html)
 }
 
 func (p *presenterEcho) GetMany(c echo.Context) error {
-	refs, err := p.api.RetreiveAll()
+	refs, err := p.api.RetreiveRefs()
 	if err != nil {
-		p.log.Error("refs retrieving failed")
+		p.log.Error("refs retrieval failed")
 		return err
 	}
 	html, err := p.ssr.Render("view-many", ViewFromRefs(refs))
@@ -74,20 +75,28 @@ func (p *presenterEcho) GetOne(c echo.Context) error {
 		p.log.Error("dto binding failed")
 		return err
 	}
-	ident, err := id.ConvertFromString(dto.ID)
+	ctx := c.Request().Context()
+	p.log.Log(ctx, core.LevelTrace, "root getting started", slog.Any("dto", dto))
+	err = dto.Validate()
 	if err != nil {
-		p.log.Error("ident mapping failed")
+		p.log.Error("dto validation failed")
 		return err
 	}
-	root, err := p.api.RetrieveLatest(ident)
+	ref, err := MsgToRef(dto)
 	if err != nil {
-		p.log.Error("root retrieving failed")
+		p.log.Error("dto mapping failed")
 		return err
 	}
-	html, err := p.ssr.Render("view-one", ViewFromRoot(root))
+	snap, err := p.api.Retrieve(ref.ID)
+	if err != nil {
+		p.log.Error("root retrieval failed")
+		return err
+	}
+	html, err := p.ssr.Render("view-one", ViewFromSnap(snap))
 	if err != nil {
 		p.log.Error("view rendering failed")
 		return err
 	}
+	p.log.Log(ctx, core.LevelTrace, "role getting succeeded", slog.Any("id", snap.ID))
 	return c.HTMLBlob(http.StatusOK, html)
 }

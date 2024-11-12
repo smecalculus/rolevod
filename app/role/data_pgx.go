@@ -25,7 +25,7 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 
 func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
-	r.log.Log(ctx, core.LevelTrace, "role insertion started", slog.Any("id", root.ID))
+	r.log.Log(ctx, core.LevelTrace, "entity insertion started", slog.Any("id", root.ID))
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (r *repoPgx) Insert(root Root) error {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
-	r.log.Log(ctx, core.LevelTrace, "role insertion succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "entity insertion succeeded", slog.Any("dto", dto))
 	return tx.Commit(ctx)
 }
 
@@ -77,14 +77,16 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(rid ID) (Root, error) {
+func (r *repoPgx) SelectByID(eid ID) (Root, error) {
 	query := `
-		SELECT
+		select
 			id, rev, name, state_id, whole_id
-		FROM roles
-		WHERE id = $1`
+		from roles
+		where id = $1
+		order by rev desc
+		limit 1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
+	rows, err := r.pool.Query(ctx, query, eid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return Root{}, err
@@ -95,11 +97,83 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ctx, core.LevelTrace, "entity selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
+func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
+	roots, err := r.SelectByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[ID]Root, len(roots))
+	for _, root := range roots {
+		env[root.ID] = root
+	}
+	return env, nil
+}
+
+func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
+	if len(ids) == 0 {
+		return []Root{}, nil
+	}
+	query := `
+		select
+			id, rev, name, state_id, whole_id
+		from roles
+		where id = $1
+		order by rev desc
+		limit 1`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, rid := range ids {
+		if rid.IsEmpty() {
+			return nil, id.ErrEmpty
+		}
+		batch.Queue(query, rid.String())
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var dtos []rootData
+	for _, rid := range ids {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("id", rid),
+			)
+		}
+		dtos = append(dtos, dto)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "roots selection succeeded", slog.Any("dtos", dtos))
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	return DataToRoots(dtos)
+}
+
+func (r *repoPgx) SelectParts(eid id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
 			r.id,
@@ -110,7 +184,7 @@ func (r *repoPgx) SelectChildren(id id.ADT) ([]Ref, error) {
 			ON r.id = k.child_id
 		WHERE k.parent_id = $1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, id.String())
+	rows, err := r.pool.Query(ctx, query, eid.String())
 	if err != nil {
 		return nil, err
 	}

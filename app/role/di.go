@@ -17,12 +17,12 @@ import (
 var Module = fx.Module("app/role",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
+		fx.Annotate(newRepoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
 		newHandlerEcho,
 		newPresenterEcho,
-		fx.Annotate(newRepoPgx, fx.As(new(repo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(

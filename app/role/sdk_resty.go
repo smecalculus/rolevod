@@ -22,31 +22,39 @@ func NewAPI() API {
 	return newClientResty()
 }
 
-func (cl *clientResty) Define(fqn FQN) (Ref, error) {
+func (cl *clientResty) Incept(fqn FQN) (Ref, error) {
 	return Ref{}, nil
 }
 
-func (cl *clientResty) Create(spec Spec) (Root, error) {
+func (cl *clientResty) Create(spec Spec) (Snap, error) {
 	req := MsgFromSpec(spec)
-	var res RootMsg
+	var res SnapMsg
 	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
 		Post("/roles")
 	if err != nil {
-		return Root{}, err
+		return Snap{}, err
 	}
 	if resp.IsError() {
-		return Root{}, fmt.Errorf("received: %v", string(resp.Body()))
+		return Snap{}, fmt.Errorf("received: %v", string(resp.Body()))
 	}
-	return MsgToRoot(res)
+	return MsgToSnap(res)
 }
 
-func (c *clientResty) RetrieveLatest(id id.ADT) (Root, error) {
+func (c *clientResty) Modify(snap Snap) (Snap, error) {
+	return Snap{}, nil
+}
+
+func (c *clientResty) Retrieve(eid id.ADT) (Snap, error) {
+	return Snap{}, nil
+}
+
+func (c *clientResty) RetrieveRoot(eid id.ADT) (Root, error) {
 	var res RootMsg
 	resp, err := c.resty.R().
 		SetResult(&res).
-		SetPathParam("id", id.String()).
+		SetPathParam("id", eid.String()).
 		Get("/roles/{id}")
 	if err != nil {
 		return Root{}, err
@@ -57,15 +65,10 @@ func (c *clientResty) RetrieveLatest(id id.ADT) (Root, error) {
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) Retrieve(ref Ref) (Root, error) {
-	return Root{}, nil
+func (c *clientResty) RetrieveSnap(entity Root) (Snap, error) {
+	return Snap{}, nil
 }
 
-func (c *clientResty) Update(patch Patch) error {
-	return nil
-}
-
-func (c *clientResty) RetreiveAll() ([]Ref, error) {
-	rts := []Ref{}
-	return rts, nil
+func (c *clientResty) RetreiveRefs() ([]Ref, error) {
+	return []Ref{}, nil
 }

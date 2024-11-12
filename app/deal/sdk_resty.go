@@ -96,7 +96,7 @@ func (c *clientResty) Take(spec TranSpec) error {
 	req := MsgFromTranSpec(spec)
 	resp, err := c.resty.R().
 		SetBody(&req).
-		SetPathParam("id", req.DID).
+		SetPathParam("id", req.Deal).
 		Post("/deals/{id}/steps")
 	if err != nil {
 		return err

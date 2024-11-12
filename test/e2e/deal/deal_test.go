@@ -124,7 +124,7 @@ func TestTake(t *testing.T) {
 			FQN: "closer",
 			PE: chnl.Spec{
 				Name: "closing-1",
-				StID: oneRole.StateID,
+				Role: oneRole.ID,
 			},
 		}
 		closerSig, err := sigAPI.Create(closerSigSpec)
@@ -136,7 +136,7 @@ func TestTake(t *testing.T) {
 			FQN: "waiter",
 			PE: chnl.Spec{
 				Name: "closing-2",
-				StID: oneRole.StateID,
+				Role: oneRole.ID,
 			},
 			CEs: []chnl.Spec{
 				closerSig.PE,
@@ -157,7 +157,7 @@ func TestTake(t *testing.T) {
 		// and
 		closerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: closerSig.ID,
+			Sig:  closerSig.ID,
 		}
 		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
@@ -166,7 +166,7 @@ func TestTake(t *testing.T) {
 		// and
 		waiterSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: waiterSig.ID,
+			Sig:  waiterSig.ID,
 			TEs: []chnl.ID{
 				closer.ID,
 			},
@@ -177,8 +177,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closeSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: closer.ID,
+			Deal: bigDeal.ID,
+			PID:  closer.ID,
 			Term: step.CloseSpec{
 				A: closer.ID,
 			},
@@ -190,8 +190,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waitSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: waiter.ID,
+			Deal: bigDeal.ID,
+			PID:  waiter.ID,
 			Term: step.WaitSpec{
 				X: closer.ID,
 				Cont: step.CloseSpec{
@@ -236,7 +236,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: lolliRole.StateID,
+				Role: lolliRole.ID,
 			},
 		}
 		lolliSig, err := sigAPI.Create(lolliSigSpec)
@@ -248,7 +248,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.StateID,
+				Role: oneRole.ID,
 			},
 		}
 		oneSig1, err := sigAPI.Create(oneSigSpec1)
@@ -260,7 +260,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-3",
 			PE: chnl.Spec{
 				Name: "chnl-3",
-				StID: oneRole.StateID,
+				Role: oneRole.ID,
 			},
 			CEs: []chnl.Spec{
 				lolliSigSpec.PE,
@@ -282,7 +282,7 @@ func TestTake(t *testing.T) {
 		// and
 		receiverSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: lolliSig.ID,
+			Sig:  lolliSig.ID,
 		}
 		receiver, err := dealAPI.Involve(receiverSpec)
 		if err != nil {
@@ -291,7 +291,7 @@ func TestTake(t *testing.T) {
 		// and
 		messageSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig1.ID,
+			Sig:  oneSig1.ID,
 		}
 		message, err := dealAPI.Involve(messageSpec)
 		if err != nil {
@@ -300,7 +300,7 @@ func TestTake(t *testing.T) {
 		// and
 		senderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig2.ID,
+			Sig:  oneSig2.ID,
 			TEs: []chnl.ID{
 				receiver.ID,
 				message.ID,
@@ -312,8 +312,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		recvSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: receiver.ID,
+			Deal: bigDeal.ID,
+			PID:  receiver.ID,
 			Term: step.RecvSpec{
 				X: receiver.ID,
 				Y: message.ID,
@@ -332,8 +332,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		sendSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: sender.ID,
+			Deal: bigDeal.ID,
+			PID:  sender.ID,
 			Term: step.SendSpec{
 				A: receiver.ID,
 				B: message.ID,
@@ -379,7 +379,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-1",
 			PE: chnl.Spec{
 				Name: "chnl-1",
-				StID: withRole.StateID,
+				Role: withRole.ID,
 			},
 		}
 		withSig, err := sigAPI.Create(withSigSpec)
@@ -391,7 +391,7 @@ func TestTake(t *testing.T) {
 			FQN: "sig-2",
 			PE: chnl.Spec{
 				Name: "chnl-2",
-				StID: oneRole.StateID,
+				Role: oneRole.ID,
 			},
 			CEs: []chnl.Spec{
 				withSig.PE,
@@ -412,7 +412,7 @@ func TestTake(t *testing.T) {
 		// and
 		followerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: withSig.ID,
+			Sig:  withSig.ID,
 		}
 		follower, err := dealAPI.Involve(followerSpec)
 		if err != nil {
@@ -421,7 +421,7 @@ func TestTake(t *testing.T) {
 		// and
 		deciderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig.ID,
+			Sig:  oneSig.ID,
 			TEs: []chnl.ID{
 				follower.ID,
 			},
@@ -432,8 +432,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		caseSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: follower.ID,
+			Deal: bigDeal.ID,
+			PID:  follower.ID,
 			Term: step.CaseSpec{
 				X: follower.ID,
 				Conts: map[core.Label]step.Term{
@@ -450,8 +450,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		labSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: decider.ID,
+			Deal: bigDeal.ID,
+			PID:  decider.ID,
 			Term: step.LabSpec{
 				A: follower.ID,
 				L: label,
@@ -484,7 +484,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 			},
 		)
@@ -497,7 +497,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -513,7 +513,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -536,7 +536,7 @@ func TestTake(t *testing.T) {
 		injectee, err := dealAPI.Involve(
 			deal.PartSpec{
 				Deal: bigDeal.ID,
-				Decl: oneSig1.ID,
+				Sig:  oneSig1.ID,
 			},
 		)
 		if err != nil {
@@ -545,7 +545,7 @@ func TestTake(t *testing.T) {
 		// and
 		spawnerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig2.ID,
+			Sig:  oneSig2.ID,
 			TEs: []chnl.ID{
 				injectee.ID,
 			},
@@ -558,8 +558,8 @@ func TestTake(t *testing.T) {
 		z := sym.New("z")
 		// and
 		spawnSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: spawner.ID,
+			Deal: bigDeal.ID,
+			PID:  spawner.ID,
 			Term: step.SpawnSpec{
 				PE: z,
 				CEs: []chnl.ID{
@@ -601,7 +601,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-1",
 				PE: chnl.Spec{
 					Name: "chnl-1",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 			},
 		)
@@ -614,7 +614,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-2",
 				PE: chnl.Spec{
 					Name: "chnl-2",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -630,7 +630,7 @@ func TestTake(t *testing.T) {
 				FQN: "sig-3",
 				PE: chnl.Spec{
 					Name: "chnl-3",
-					StID: oneRole.StateID,
+					Role: oneRole.ID,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -652,7 +652,7 @@ func TestTake(t *testing.T) {
 		// and
 		closerSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig1.ID,
+			Sig:  oneSig1.ID,
 		}
 		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
@@ -661,7 +661,7 @@ func TestTake(t *testing.T) {
 		// and
 		forwarderSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig2.ID,
+			Sig:  oneSig2.ID,
 			TEs: []chnl.ID{
 				closer.ID,
 			},
@@ -673,7 +673,7 @@ func TestTake(t *testing.T) {
 		// and
 		waiterSpec := deal.PartSpec{
 			Deal: bigDeal.ID,
-			Decl: oneSig3.ID,
+			Sig:  oneSig3.ID,
 			TEs: []chnl.ID{
 				forwarder.ID,
 			},
@@ -684,8 +684,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closeSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: closer.ID,
+			Deal: bigDeal.ID,
+			PID:  closer.ID,
 			Term: step.CloseSpec{
 				A: closer.ID,
 			},
@@ -696,7 +696,7 @@ func TestTake(t *testing.T) {
 		}
 		// when
 		fwdSpec := deal.TranSpec{
-			DID: bigDeal.ID,
+			Deal: bigDeal.ID,
 			// канал пересыльщика должен закрыться?
 			PID: forwarder.ID,
 			Term: step.FwdSpec{
@@ -710,8 +710,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waitSpec := deal.TranSpec{
-			DID: bigDeal.ID,
-			PID: waiter.ID,
+			Deal: bigDeal.ID,
+			PID:  waiter.ID,
 			Term: step.WaitSpec{
 				X: forwarder.ID,
 				Cont: step.CloseSpec{

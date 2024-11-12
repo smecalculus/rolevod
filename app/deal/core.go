@@ -16,6 +16,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
+	"smecalculus/rolevod/app/role"
 	"smecalculus/rolevod/app/sig"
 )
 
@@ -41,6 +42,7 @@ type Root struct {
 
 type Environment struct {
 	sigs   map[sig.ID]sig.Root
+	roles  map[role.ID]role.Root
 	states map[state.ID]state.Root
 }
 
@@ -51,14 +53,16 @@ func (e Environment) Contains(id sig.ID) bool {
 
 func (e Environment) LookupPE(id sig.ID) state.EP {
 	decl := e.sigs[id]
-	return state.EP{Z: sym.New(decl.PE.Name), St: e.states[decl.PE.StID]}
+	role := e.roles[decl.PE.Role]
+	return state.EP{Z: sym.New(decl.PE.Name), C: e.states[role.StateID]}
 }
 
 func (e Environment) LookupCEs(id sig.ID) []state.EP {
 	decl := e.sigs[id]
 	ces := []state.EP{}
 	for _, ce := range decl.CEs {
-		ces = append(ces, state.EP{Z: sym.New(ce.Name), St: e.states[ce.StID]})
+		role := e.roles[decl.PE.Role]
+		ces = append(ces, state.EP{Z: sym.New(ce.Name), C: e.states[role.StateID]})
 	}
 	return ces
 }
@@ -81,12 +85,12 @@ func (c *Configuration) LookupSt(id chnl.ID) (state.Root, bool) {
 	if !ok {
 		return nil, false
 	}
-	if ch.StID == nil {
+	if ch.StateID == nil {
 		return nil, false
 	}
-	st, ok := c.states[*ch.StID]
+	st, ok := c.states[*ch.StateID]
 	if !ok {
-		panic(state.ErrMissingInCfg(*ch.StID))
+		panic(state.ErrMissingInCfg(*ch.StateID))
 	}
 	return st, true
 }
@@ -119,6 +123,7 @@ type API interface {
 
 type service struct {
 	deals    repo
+	roles    role.Repo
 	sigs     sig.Repo
 	chnls    chnl.Repo
 	steps    step.Repo
@@ -134,6 +139,7 @@ func newAPI() API {
 
 func newService(
 	deals repo,
+	roles role.Repo,
 	sigs sig.Repo,
 	chnls chnl.Repo,
 	steps step.Repo,
@@ -143,7 +149,7 @@ func newService(
 ) *service {
 	name := slog.String("name", "dealService")
 	return &service{
-		deals, sigs, chnls, steps, states, kinships, l.With(name),
+		deals, roles, sigs, chnls, steps, states, kinships, l.With(name),
 	}
 }
 
@@ -201,18 +207,26 @@ func (s *service) Establish(spec KinshipSpec) error {
 
 func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 	s.log.Debug("sig involvement started", slog.Any("spec", gotSpec))
-	wantSpec, err := s.sigs.SelectByID(gotSpec.Decl)
+	wantSig, err := s.sigs.SelectByID(gotSpec.Sig)
 	if err != nil {
 		s.log.Error("signature selection failed",
 			slog.Any("reason", err),
-			slog.Any("id", gotSpec.Decl),
+			slog.Any("id", gotSpec.Sig),
+		)
+		return chnl.Root{}, err
+	}
+	wantRole, err := s.roles.SelectByID(wantSig.PE.Role)
+	if err != nil {
+		s.log.Error("role selection failed",
+			slog.Any("reason", err),
+			slog.Any("id", wantSig.PE.Role),
 		)
 		return chnl.Root{}, err
 	}
 	newPE := chnl.Root{
-		ID:   id.New(),
-		Name: wantSpec.PE.Name,
-		StID: &wantSpec.PE.StID,
+		ID:      id.New(),
+		Name:    wantSig.PE.Name,
+		StateID: &wantRole.StateID,
 	}
 	err = s.chnls.Insert(newPE)
 	if err != nil {
@@ -239,7 +253,7 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		PID: newPE.ID,
 		Term: step.CTASpec{
 			AK:  ak.New(),
-			Sig: gotSpec.Decl,
+			Sig: gotSpec.Sig,
 		},
 	}
 	err = s.steps.Insert(newProc)
@@ -304,6 +318,16 @@ func (s *service) Take(spec TranSpec) error {
 		)
 		return err
 	}
+	roleIDs := sig.CollectEnv(maps.Values(sigs))
+	roles, err := s.roles.SelectEnv(roleIDs)
+	if err != nil {
+		s.log.Error("roles selection failed",
+			slog.Any("reason", err),
+			slog.Any("pid", proc.PID),
+			slog.Any("ids", roleIDs),
+		)
+		return err
+	}
 	pe, err := s.chnls.SelectByID(proc.PID)
 	if err != nil {
 		s.log.Error("providable endpoint selection failed",
@@ -312,7 +336,7 @@ func (s *service) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	ceIDs := step.CollectCEs(proc.PID, spec.Term)
+	ceIDs := step.CollectCtx(proc.PID, spec.Term)
 	ces, err := s.chnls.SelectCtx(proc.PID, ceIDs)
 	if err != nil {
 		s.log.Error("consumable endpoints selection failed",
@@ -322,8 +346,8 @@ func (s *service) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	envIDs := sig.CollectStIDs(maps.Values(sigs))
-	ctxIDs := chnl.CollectStIDs(append(ces, pe))
+	envIDs := role.CollectEnv(maps.Values(roles))
+	ctxIDs := chnl.CollectCtx(append(ces, pe))
 	states, err := s.states.SelectEnv(append(envIDs, ctxIDs...))
 	if err != nil {
 		s.log.Error("states selection failed",
@@ -333,9 +357,9 @@ func (s *service) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	env := Environment{sigs, states}
+	env := Environment{sigs, roles, states}
 	ctx := convertToCtx(ces, states)
-	zc := state.EP{Z: pe.ID, St: states[*pe.StID]}
+	zc := state.EP{Z: pe.ID, C: states[*pe.StateID]}
 	// type checking
 	err = s.checkState(env, ctx, zc, spec.Term)
 	if err != nil {
@@ -360,7 +384,7 @@ func (s *service) takeProc(
 		)
 		return err
 	}
-	ceIDs := step.CollectCEs(proc.PID, proc.Term)
+	ceIDs := step.CollectCtx(proc.PID, proc.Term)
 	ces, err := s.chnls.SelectCtx(proc.PID, ceIDs)
 	if err != nil {
 		s.log.Error("consumable endpoints selection failed",
@@ -369,7 +393,7 @@ func (s *service) takeProc(
 		)
 		return err
 	}
-	stIDs := chnl.CollectStIDs(append(ces, pe))
+	stIDs := chnl.CollectCtx(append(ces, pe))
 	states, err := s.states.SelectEnv(stIDs)
 	if err != nil {
 		s.log.Error("states selection failed",
@@ -449,10 +473,10 @@ func (s *service) takeProcWith(
 		}
 		// consume and close channel
 		finVia := chnl.Root{
-			ID:    id.New(),
-			Name:  curVia.Name,
-			PreID: &curVia.ID,
-			StID:  nil,
+			ID:      id.New(),
+			Name:    curVia.Name,
+			PreID:   &curVia.ID,
+			StateID: nil,
 		}
 		err = s.chnls.Insert(finVia)
 		if err != nil {
@@ -526,10 +550,10 @@ func (s *service) takeProcWith(
 		case step.CloseSpec:
 			// consume and close channel
 			finVia := chnl.Root{
-				ID:    id.New(),
-				Name:  curVia.Name,
-				PreID: &curVia.ID,
-				StID:  nil,
+				ID:      id.New(),
+				Name:    curVia.Name,
+				PreID:   &curVia.ID,
+				StateID: nil,
 			}
 			err = s.chnls.Insert(finVia)
 			if err != nil {
@@ -644,10 +668,10 @@ func (s *service) takeProcWith(
 		}
 		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
-			ID:    id.New(),
-			Name:  curVia.Name,
-			PreID: &curVia.ID,
-			StID:  &nextID,
+			ID:      id.New(),
+			Name:    curVia.Name,
+			PreID:   &curVia.ID,
+			StateID: &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -763,10 +787,10 @@ func (s *service) takeProcWith(
 		}
 		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
-			ID:    id.New(),
-			Name:  curVia.Name,
-			PreID: &curVia.ID,
-			StID:  &nextID,
+			ID:      id.New(),
+			Name:    curVia.Name,
+			PreID:   &curVia.ID,
+			StateID: &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -882,10 +906,10 @@ func (s *service) takeProcWith(
 		}
 		nextID := curSt.(state.Sum).Next(term.L)
 		newVia := chnl.Root{
-			ID:    id.New(),
-			Name:  curVia.Name,
-			PreID: &curVia.ID,
-			StID:  &nextID,
+			ID:      id.New(),
+			Name:    curVia.Name,
+			PreID:   &curVia.ID,
+			StateID: &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -973,10 +997,10 @@ func (s *service) takeProcWith(
 		}
 		nextID := curSt.(state.Sum).Next(lab.L)
 		newVia := chnl.Root{
-			ID:    id.New(),
-			Name:  curVia.Name,
-			PreID: &curVia.ID,
-			StID:  &nextID,
+			ID:      id.New(),
+			Name:    curVia.Name,
+			PreID:   &curVia.ID,
+			StateID: &nextID,
 		}
 		err = s.chnls.Insert(newVia)
 		if err != nil {
@@ -994,7 +1018,7 @@ func (s *service) takeProcWith(
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
-		newPE, err := s.Involve(PartSpec{Decl: term.Sig, Owner: proc.PID, TEs: term.CEs})
+		newPE, err := s.Involve(PartSpec{Sig: term.Sig, Owner: proc.PID, TEs: term.CEs})
 		if err != nil {
 			return err
 		}
@@ -1244,8 +1268,8 @@ type kinshipRepo interface {
 
 // Participation aka lightweight Spawn
 type PartSpec struct {
-	Deal  ID
-	Decl  sig.ID
+	Deal  id.ADT
+	Sig   sig.ID
 	Owner chnl.ID
 	// Transferable Endpoints
 	TEs []chnl.ID
@@ -1253,8 +1277,7 @@ type PartSpec struct {
 
 // Transition
 type TranSpec struct {
-	// Deal ID
-	DID ID
+	Deal id.ADT
 	// Process ID
 	PID chnl.ID
 	// Agent Access Key
@@ -1290,16 +1313,16 @@ func (s *service) checkProvider(
 			return err
 		}
 		// check via
-		return state.CheckRoot(pe.St, state.OneRoot{})
+		return state.CheckRoot(pe.C, state.OneRoot{})
 	case step.WaitSpec:
 		err := step.ErrTermTypeMismatch(t, step.CloseSpec{})
 		s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 		return err
 	case step.SendSpec:
 		// check via
-		wantSt, ok := pe.St.(state.TensorRoot)
+		wantSt, ok := pe.C.(state.TensorRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.St, wantSt)
+			err := state.ErrRootTypeMismatch(pe.C, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1316,13 +1339,13 @@ func (s *service) checkProvider(
 		}
 		// no cont to check
 		delete(ctx.Linear, term.B)
-		pe.St = wantSt.C
+		pe.C = wantSt.C
 		return nil
 	case step.RecvSpec:
 		// check via
-		wantSt, ok := pe.St.(state.LolliRoot)
+		wantSt, ok := pe.C.(state.LolliRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.St, wantSt)
+			err := state.ErrRootTypeMismatch(pe.C, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1339,13 +1362,13 @@ func (s *service) checkProvider(
 		}
 		// check cont
 		ctx.Linear[term.Y] = wantSt.Y
-		pe.St = wantSt.Z
+		pe.C = wantSt.Z
 		return s.checkState(env, ctx, pe, term.Cont)
 	case step.LabSpec:
 		// check via
-		wantSt, ok := pe.St.(state.PlusRoot)
+		wantSt, ok := pe.C.(state.PlusRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.St, wantSt)
+			err := state.ErrRootTypeMismatch(pe.C, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1360,9 +1383,9 @@ func (s *service) checkProvider(
 		return nil
 	case step.CaseSpec:
 		// check via
-		wantSt, ok := pe.St.(state.WithRoot)
+		wantSt, ok := pe.C.(state.WithRoot)
 		if !ok {
-			err := state.ErrRootTypeMismatch(pe.St, wantSt)
+			err := state.ErrRootTypeMismatch(pe.C, wantSt)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
@@ -1379,7 +1402,7 @@ func (s *service) checkProvider(
 				s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 				return err
 			}
-			pe.St = wantChoice
+			pe.C = wantChoice
 			err := s.checkState(env, ctx, pe, gotCont)
 			if err != nil {
 				return err
@@ -1398,12 +1421,12 @@ func (s *service) checkProvider(
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		if gotD.Pol() != pe.St.Pol() {
-			err := state.ErrPolarityMismatch(gotD, pe.St)
+		if gotD.Pol() != pe.C.Pol() {
+			err := state.ErrPolarityMismatch(gotD, pe.C)
 			s.log.Error("type checking failed", slog.Any("reason", err), slog.Any("via", t.Via()))
 			return err
 		}
-		return state.CheckRoot(gotD, pe.St)
+		return state.CheckRoot(gotD, pe.C)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))
 	}
@@ -1493,7 +1516,7 @@ func (s *service) checkClient(
 		}
 		// check cont
 		ctx.Linear[got.Y] = wantSt.B
-		pe.St = wantSt.C
+		pe.C = wantSt.C
 		return s.checkState(env, ctx, pe, got.Cont)
 	case step.LabSpec:
 		// check via
@@ -1574,7 +1597,7 @@ func (s *service) checkClient(
 		}
 		for i, gotCE := range got.CEs {
 			gotSt := ctx.Linear[gotCE]
-			err := state.CheckRoot(gotSt, wantCEs[i].St)
+			err := state.CheckRoot(gotSt, wantCEs[i].C)
 			if err != nil {
 				s.log.Error("type checking failed",
 					slog.Any("reason", err),
@@ -1586,7 +1609,7 @@ func (s *service) checkClient(
 			}
 			delete(ctx.Linear, gotCE)
 		}
-		ctx.Linear[got.PE] = env.LookupPE(got.Sig).St
+		ctx.Linear[got.PE] = env.LookupPE(got.Sig).C
 		return s.checkState(env, ctx, pe, got.Cont)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))
@@ -1604,7 +1627,7 @@ func convertToCfg(chnls []chnl.Root) map[chnl.ID]chnl.Root {
 func convertToCtx(chnls []chnl.Root, states map[state.ID]state.Root) state.Context {
 	linear := make(map[ph.ADT]state.Root, len(chnls))
 	for _, ch := range chnls {
-		linear[ch.ID] = states[*ch.StID]
+		linear[ch.ID] = states[*ch.StateID]
 	}
 	return state.Context{Linear: linear}
 }

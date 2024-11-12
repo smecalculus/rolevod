@@ -120,15 +120,8 @@ type DownRef struct {
 
 func (r DownRef) Ident() id.ADT { return r.ID }
 
-type TombRef struct {
-	ID id.ADT
-}
-
-func (r TombRef) Ident() id.ADT { return r.ID }
-
 // aka Stype
 type Root interface {
-	Spec
 	id.Identifiable
 	pol.Polarizable
 }
@@ -241,24 +234,14 @@ func (r DownRoot) Ident() id.ADT { return r.ID }
 
 func (r DownRoot) Pol() pol.ADT { return pol.Zero }
 
-type TombRoot struct {
-	ID id.ADT
-}
-
-func (TombRoot) spec() {}
-
-func (r TombRoot) Ident() id.ADT { return r.ID }
-
-func (r TombRoot) Pol() pol.ADT { return pol.Zero }
-
 type Context struct {
 	Linear map[ph.ADT]Root
 }
 
 // Endpoint aka ChanTp
 type EP struct {
-	Z  ph.ADT
-	St Root
+	Z ph.ADT
+	C Root
 }
 
 type Repo interface {

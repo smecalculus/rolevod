@@ -6,7 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/core"
 )
 
 // Adapter
@@ -24,55 +24,79 @@ func (h *handlerEcho) PostOne(c echo.Context) error {
 	var dto SpecMsg
 	err := c.Bind(&dto)
 	if err != nil {
+		h.log.Error("dto binding failed")
 		return err
 	}
-	h.log.Debug("role posting started", slog.Any("dto", dto))
+	ctx := c.Request().Context()
+	h.log.Log(ctx, core.LevelTrace, "role posting started", slog.Any("dto", dto))
 	err = dto.Validate()
 	if err != nil {
+		h.log.Error("dto validation failed")
 		return err
 	}
 	spec, err := MsgToSpec(dto)
 	if err != nil {
+		h.log.Error("dto mapping failed")
 		return err
 	}
-	root, err := h.api.Create(spec)
+	snap, err := h.api.Create(spec)
 	if err != nil {
+		h.log.Error("role creation failed")
 		return err
 	}
-	return c.JSON(http.StatusCreated, MsgFromRoot(root))
+	h.log.Log(ctx, core.LevelTrace, "role posting succeeded", slog.Any("id", snap.ID))
+	return c.JSON(http.StatusCreated, MsgFromSnap(snap))
 }
 
 func (h *handlerEcho) GetOne(c echo.Context) error {
 	var dto RefMsg
 	err := c.Bind(&dto)
 	if err != nil {
+		h.log.Error("dto binding failed")
 		return err
 	}
-	ident, err := id.ConvertFromString(dto.ID)
+	err = dto.Validate()
 	if err != nil {
+		h.log.Error("dto validation failed")
 		return err
 	}
-	root, err := h.api.RetrieveLatest(ident)
+	ref, err := MsgToRef(dto)
 	if err != nil {
+		h.log.Error("dto mapping failed")
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoot(root))
+	snap, err := h.api.Retrieve(ref.ID)
+	if err != nil {
+		h.log.Error("root retrieval failed")
+		return err
+	}
+	return c.JSON(http.StatusOK, MsgFromSnap(snap))
 }
 
 func (h *handlerEcho) PatchOne(c echo.Context) error {
-	var dto PatchMsg
+	var dto SnapMsg
 	err := c.Bind(&dto)
 	if err != nil {
+		h.log.Error("dto binding failed")
 		return err
 	}
-	h.log.Debug("role patching started", slog.Any("dto", dto))
-	patch, err := MsgToPatch(dto)
+	ctx := c.Request().Context()
+	h.log.Log(ctx, core.LevelTrace, "role patching started", slog.Any("dto", dto))
+	err = dto.Validate()
 	if err != nil {
+		h.log.Error("dto validation failed")
 		return err
 	}
-	err = h.api.Update(patch)
+	reqSnap, err := MsgToSnap(dto)
 	if err != nil {
+		h.log.Error("dto mapping failed")
 		return err
 	}
-	return c.NoContent(http.StatusOK)
+	resSnap, err := h.api.Modify(reqSnap)
+	if err != nil {
+		h.log.Error("role modification failed")
+		return err
+	}
+	h.log.Log(ctx, core.LevelTrace, "role patching succeeded", slog.Any("ref", ConvertSnapToRef(resSnap)))
+	return c.JSON(http.StatusOK, MsgFromSnap(resSnap))
 }

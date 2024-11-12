@@ -24,7 +24,7 @@ func newHandlerEcho(a role.API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 }
 
 func (h *handlerEcho) Home(c echo.Context) error {
-	refs, err := h.api.RetreiveAll()
+	refs, err := h.api.RetreiveRefs()
 	if err != nil {
 		return err
 	}

@@ -220,7 +220,7 @@ func collectEnvRec(t Term, env []id.ADT) []id.ADT {
 	}
 }
 
-func CollectCEs(pe chnl.ID, t Term) []chnl.ID {
+func CollectCtx(pe chnl.ID, t Term) []chnl.ID {
 	return collectCEsRec(pe, t, nil)
 }
 

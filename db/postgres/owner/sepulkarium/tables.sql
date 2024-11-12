@@ -34,7 +34,7 @@ CREATE TABLE channels (
 	id varchar(36),
 	name varchar(64),
 	pre_id varchar(36),
-	st_id varchar(36)
+	state_id varchar(36)
 );
 
 CREATE TABLE steps (

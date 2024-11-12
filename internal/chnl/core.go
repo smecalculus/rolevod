@@ -9,48 +9,49 @@ import (
 	"smecalculus/rolevod/internal/state"
 )
 
-type Name = string
+// for external readability
 type ID = id.ADT
+type Name = string
 
 // aka ChanTp
 type Spec struct {
-	Name Name
-	StID state.ID
+	Name string
+	Role id.ADT
 }
 
 // aka Z
 type Ref struct {
-	ID   ID
-	Name Name
+	ID   id.ADT
+	Name string
 }
 
 type Root struct {
-	ID   ID
-	Name Name
+	ID   id.ADT
+	Name string
 	// Preceding Channel ID
-	PreID *ID
+	PreID *id.ADT
 	// Channel State ID
-	StID *state.ID
+	StateID *state.ID
 }
 
 type Repo interface {
 	Insert(Root) error
 	InsertCtx([]Root) ([]Root, error)
 	SelectAll() ([]Ref, error)
-	SelectByID(ID) (Root, error)
-	SelectByIDs([]ID) ([]Root, error)
-	SelectCtx(ID, []ID) ([]Root, error)
-	SelectCfg([]ID) (map[ID]Root, error)
-	Transfer(from ID, to ID, pids []ID) error
+	SelectByID(id.ADT) (Root, error)
+	SelectByIDs([]id.ADT) ([]Root, error)
+	SelectCtx(id.ADT, []id.ADT) ([]Root, error)
+	SelectCfg([]id.ADT) (map[id.ADT]Root, error)
+	Transfer(from id.ADT, to id.ADT, pids []id.ADT) error
 }
 
-func CollectStIDs(roots []Root) []state.ID {
+func CollectCtx(roots []Root) []state.ID {
 	var stIDs []state.ID
 	for _, r := range roots {
-		if r.StID == nil {
+		if r.StateID == nil {
 			continue
 		}
-		stIDs = append(stIDs, *r.StID)
+		stIDs = append(stIDs, *r.StateID)
 	}
 	return stIDs
 }

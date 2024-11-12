@@ -7,9 +7,9 @@ import (
 )
 
 type Root struct {
-	Sym sym.ADT
 	ID  id.ADT
 	Rev rev.ADT
+	Sym sym.ADT
 }
 
 type Repo interface {

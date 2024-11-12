@@ -26,7 +26,13 @@ func (r *roleRepoStub) SelectAll() ([]Ref, error) {
 func (r *roleRepoStub) SelectByID(id id.ADT) (Root, error) {
 	return Root{}, nil
 }
-func (r *roleRepoStub) SelectChildren(id id.ADT) ([]Ref, error) {
+func (r *roleRepoStub) SelectByIDs(ids []id.ADT) ([]Root, error) {
+	return []Root{}, nil
+}
+func (r *roleRepoStub) SelectEnv([]ID) (map[ID]Root, error) {
+	return nil, nil
+}
+func (r *roleRepoStub) SelectParts(id id.ADT) ([]Ref, error) {
 	return []Ref{}, nil
 }
 func (r *roleRepoStub) SelectState(id id.ADT) (state.Root, error) {

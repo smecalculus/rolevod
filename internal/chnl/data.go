@@ -6,7 +6,7 @@ import (
 
 type SpecData struct {
 	Name string `json:"name"`
-	StID string `json:"st_id"`
+	Role string `json:"role_id"`
 }
 
 type refData struct {
@@ -15,10 +15,10 @@ type refData struct {
 }
 
 type rootData struct {
-	ID    string         `db:"id"`
-	Name  string         `db:"name"`
-	PreID sql.NullString `db:"pre_id"`
-	StID  sql.NullString `db:"st_id"`
+	ID      string         `db:"id"`
+	Name    string         `db:"name"`
+	PreID   sql.NullString `db:"pre_id"`
+	StateID sql.NullString `db:"state_id"`
 }
 
 // goverter:variables

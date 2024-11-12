@@ -35,13 +35,13 @@ func (dto RefMsg) Validate() error {
 	)
 }
 
-type PatchMsg struct {
+type SnapMsg struct {
 	ID    string        `json:"id" param:"id"`
 	Rev   int64         `json:"rev" query:"rev"`
 	State state.SpecMsg `json:"state"`
 }
 
-func (dto PatchMsg) Validate() error {
+func (dto SnapMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
 		validation.Field(&dto.Rev, rev.Optional...),
@@ -70,10 +70,13 @@ var (
 	MsgToRef    func(RefMsg) (Ref, error)
 	MsgFromRefs func([]Ref) []RefMsg
 	MsgToRefs   func([]RefMsg) ([]Ref, error)
-	MsgFromRoot func(Root) RootMsg
+	// MsgFromRoot func(Root) RootMsg
 	// goverter:ignore WholeID
-	MsgToRoot    func(RootMsg) (Root, error)
-	MsgFromRoots func([]Root) []RootMsg
+	MsgToRoot func(RootMsg) (Root, error)
+	// MsgFromRoots func([]Root) []RootMsg
 	MsgToRoots   func([]RootMsg) ([]Root, error)
-	MsgToPatch   func(PatchMsg) (Patch, error)
+	MsgFromSnap  func(Snap) SnapMsg
+	MsgToSnap    func(SnapMsg) (Snap, error)
+	MsgFromSnaps func([]Snap) []SnapMsg
+	MsgToSnaps   func([]SnapMsg) ([]Snap, error)
 )

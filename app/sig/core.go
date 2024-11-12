@@ -8,7 +8,8 @@ import (
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
-	"smecalculus/rolevod/internal/state"
+
+	"smecalculus/rolevod/app/role"
 )
 
 type ID = id.ADT
@@ -17,7 +18,7 @@ type Name = string
 
 type Spec struct {
 	// Fully Qualified Name
-	FQN FQN
+	FQN sym.ADT
 	// Providable Endpoint Spec
 	PE chnl.Spec
 	// Consumable Endpoint Specs
@@ -25,15 +26,14 @@ type Spec struct {
 }
 
 type Ref struct {
-	ID ID
-	// Short Name
-	Name Name
+	ID   id.ADT
+	Name string
 }
 
 // aka ExpDec or ExpDecDef without expression
 type Root struct {
-	ID       ID
-	Name     Name
+	ID       id.ADT
+	Name     string
 	PE       chnl.Spec
 	CEs      []chnl.Spec
 	Children []Ref
@@ -41,7 +41,7 @@ type Root struct {
 
 type API interface {
 	Create(Spec) (Root, error)
-	Retrieve(ID) (Root, error)
+	Retrieve(id.ADT) (Root, error)
 	Establish(KinshipSpec) error
 	RetreiveAll() ([]Ref, error)
 }
@@ -119,15 +119,15 @@ type Repo interface {
 	SelectChildren(ID) ([]Ref, error)
 }
 
-func CollectStIDs(sigs []Root) []state.ID {
-	stIDs := []state.ID{}
+func CollectEnv(sigs []Root) []role.ID {
+	roleIDs := []role.ID{}
 	for _, s := range sigs {
-		stIDs = append(stIDs, s.PE.StID)
+		roleIDs = append(roleIDs, s.PE.Role)
 		for _, v := range s.CEs {
-			stIDs = append(stIDs, v.StID)
+			roleIDs = append(roleIDs, v.Role)
 		}
 	}
-	return stIDs
+	return roleIDs
 }
 
 // Kinship Relation

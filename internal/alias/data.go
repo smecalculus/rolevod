@@ -1,9 +1,9 @@
 package alias
 
 type rootData struct {
-	Sym string
 	ID  string
 	Rev int64
+	Sym string
 }
 
 // goverter:variables

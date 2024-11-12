@@ -4,7 +4,7 @@
             dto: {{.}},
             save() {
                 fetch('/api/v1/roles/{{.ID}}', {
-                    method: 'PUT',
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(this.dto)
                 })
