@@ -256,8 +256,8 @@ type Repo interface {
 	SelectAll() ([]Ref, error)
 	SelectByID(id.ADT) (Root, error)
 	SelectParts(id.ADT) ([]Ref, error)
-	SelectByIDs([]ID) ([]Root, error)
-	SelectEnv([]ID) (map[ID]Root, error)
+	SelectByIDs([]id.ADT) ([]Root, error)
+	SelectEnv([]id.ADT) (map[id.ADT]Root, error)
 }
 
 // goverter:variables

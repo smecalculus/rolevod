@@ -24,11 +24,11 @@ type SpecMsg struct {
 func (dto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.K, kindRequired...),
-		validation.Field(&dto.Link, validation.Required.When(dto.K == Link)),
-		validation.Field(&dto.Tensor, validation.Required.When(dto.K == Tensor)),
-		validation.Field(&dto.Lolli, validation.Required.When(dto.K == Lolli)),
-		validation.Field(&dto.Plus, validation.Required.When(dto.K == Plus)),
-		validation.Field(&dto.With, validation.Required.When(dto.K == With)),
+		validation.Field(&dto.Link, validation.Required.When(dto.K == Link), validation.Skip.When(dto.K != Link)),
+		validation.Field(&dto.Tensor, validation.Required.When(dto.K == Tensor), validation.Skip.When(dto.K != Tensor)),
+		validation.Field(&dto.Lolli, validation.Required.When(dto.K == Lolli), validation.Skip.When(dto.K != Lolli)),
+		validation.Field(&dto.Plus, validation.Required.When(dto.K == Plus), validation.Skip.When(dto.K != Plus)),
+		validation.Field(&dto.With, validation.Required.When(dto.K == With), validation.Skip.When(dto.K != With)),
 	)
 }
 

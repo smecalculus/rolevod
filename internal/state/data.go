@@ -6,6 +6,7 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 type kind int
@@ -38,6 +39,7 @@ type stateData struct {
 }
 
 type specData struct {
+	Link   string    `json:"link,omitempty"`
 	Tensor *prodData `json:"tensor,omitempty"`
 	Lolli  *prodData `json:"lolli,omitempty"`
 	Plus   []sumData `json:"plus,omitempty"`
@@ -144,6 +146,8 @@ func statesToRoot(states map[string]stateData, st stateData) (Root, error) {
 	switch st.K {
 	case one:
 		return OneRoot{ID: stID}, nil
+	case link:
+		return LinkRoot{ID: stID, Role: sym.CovertFromString(st.Spec.Link)}, nil
 	case tensor:
 		b, err := statesToRoot(states, states[st.Spec.Tensor.Val])
 		if err != nil {
@@ -198,6 +202,17 @@ func statesFromRoot(from string, r Root, dto *rootData) (string, error) {
 	switch root := r.(type) {
 	case OneRoot:
 		st := stateData{ID: stID, K: one, FromID: fromID}
+		dto.States = append(dto.States, st)
+		return stID, nil
+	case LinkRoot:
+		st := stateData{
+			ID:     stID,
+			K:      link,
+			FromID: fromID,
+			Spec: specData{
+				Link: sym.ConvertToString(root.Role),
+			},
+		}
 		dto.States = append(dto.States, st)
 		return stID, nil
 	case TensorRoot:

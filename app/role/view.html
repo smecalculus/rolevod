@@ -1,7 +1,9 @@
 {{define "view-one"}}
+    {{$kinds := list "one" "link" "tensor" "lolli" "plus" "with"}}
     <script>
         Alpine.data('root', () => ({
             dto: {{.}},
+            kinds: {{$kinds}},
             save() {
                 fetch('/api/v1/roles/{{.ID}}', {
                     method: 'PATCH',
@@ -14,16 +16,77 @@
                 .catch(() => {
                     console.log("Failure")
                 });
+            },
+            render(kind, path, i = 0) {
+                switch (kind) {
+                    case "tensor":
+                    case "lolli":
+                        let valPath = `${path}.${kind}.value`;
+                        let contPath = `${path}.${kind}.cont`;
+                        return `
+                            <li x-init="${path}.${kind} = {value: {kind: 'one'}, cont: {kind: 'one'}}" class="list-group-item">
+                                <div>
+                                    <select x-model="${valPath}.kind" class="form-select shadow-none">
+                                    {{range $k := $kinds}}
+                                        <option {{if eq $k "one"}}selected{{end}}>{{$k}}</option>
+                                    {{end}}
+                                    </select>
+                                </div>
+                            {{range $k := without $kinds "one"}}
+                                <template x-if="${valPath}.kind == '{{$k}}'">
+                                    <ul x-html="render('{{$k}}', '${valPath}')" class="list-group"></ul>
+                                </template>
+                            {{end}}
+                                <div>
+                                    <select x-model="${contPath}.kind" class="form-select shadow-none">
+                                    {{range $k := $kinds}}
+                                        <option {{if eq $k "one"}}selected{{end}}>{{$k}}</option>
+                                    {{end}}
+                                    </select>
+                                </div>
+                            {{range $k := without $kinds "one"}}
+                                <template x-if="${contPath}.kind == '{{$k}}'">
+                                    <ul x-html="render('{{$k}}', '${contPath}', ${i})" class="list-group"></ul>
+                                </template>
+                            {{end}}
+                            </li>
+                        `
+                    case "with":
+                    case "plus":
+                        let choices = `${path}.${kind}.choices`;
+                        return `
+                            <template x-init="${path}.${kind} = {choices: [{label: '', cont: {kind: 'one'}}]}" x-for="(choice, i) in ${choices}">
+                                <li class="list-group-item">
+                                    <details open>
+                                        <summary onclick="return false">
+                                            <input x-model="choice.label" class="form-control shadow-none">
+                                        </summary>
+                                        <div>
+                                            <select x-model="choice.cont.kind" class="form-select shadow-none">
+                                            {{range $k := $kinds}}
+                                                <option {{if eq $k "one"}}selected{{end}}>{{$k}}</option>
+                                            {{end}}
+                                            </select>
+                                        </div>
+                                    {{range $k := without $kinds "one"}}
+                                        <template x-if="choice.cont.kind == '{{$k}}'">
+                                            <ul x-html="render('{{$k}}', '${choices}[' + i + '].cont')" class="list-group list-group-horizontal"></ul>
+                                        </template>
+                                    {{end}}
+                                    </details>
+                                </li>
+                            </template>
+                            <button type="button" @click="${choices}.push({label: '', cont: {kind: 'one'}})" class="btn btn-primary">Add</button>
+                        `
+                };
             }
         }))
     </script>
     <div id="role" x-data="root">
         <div class="row">
-            <div class="col-auto">
-                <input x-model="dto.name" class="form-control shadow-none" x-bind:readonly="readonly" @click="readonly=false">
-            </div>
+            <input x-model="dto.name" class="form-control shadow-none">
         </div>
-    {{template "st" (dict "St" .State "Root" .ID "Path" "dto.st")}}
+    {{template "st" (dict "St" .State "Root" .ID "Path" "dto.state")}}
         <button type="button" @click="save()" class="btn btn-primary">Save</button>
     </div>
 {{end}}
@@ -60,61 +123,63 @@
 
 {{define "st"}}
     {{$kinds := list "one" "link" "tensor" "lolli" "plus" "with"}}
-    {{if or (eq .St.K "with") (eq .St.K "plus")}}
-        <ul>
-            <li style="list-style-type: '{{.St.K}}';">
-            {{range $i, $ch := .St.Choices}}
+    <div>
+        <select x-model="{{.Path}}.kind" class="form-select shadow-none">
+        {{range $k := $kinds}}
+            <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
+        {{end}}
+        </select>
+    </div>
+    {{if eq .St.K "plus"}}
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal">
+        {{range $i, $ch := .St.Plus.Choices}}
+            <li class="list-group-item">
                 <details open>
-                    <summary class="row" onclick="return false">
-                        <div class="col-auto ms-0">
-                            {{$lp := printf "%v.choices[%v].label" $.Path $i}}
-                            <input x-model="{{$lp}}" type="text" class="form-control">
-                        </div>
+                    <summary onclick="return false">
+                        {{$lp := printf "%v.plus.choices[%v].label" $.Path $i}}
+                        <input x-model="{{$lp}}" type="text" class="form-control shadow-none">
                     </summary>
-                    <ul class="row">
-                        {{$sp := printf "%v.choices[%v].session" $.Path $i}}
-                        {{template "st" (dict "St" $ch.S "Root" $.Root "Path" $sp)}}
-                    </ul>
+                    {{$cp := printf "%v.plus.choices[%v].cont" $.Path $i}}
+                    {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
                 </details>
-            {{end}}
+            </li>
+        {{end}}
+        </ul>
+    {{else if eq .St.K "with"}}
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal">
+        {{range $i, $ch := .St.With.Choices}}
+            <li class="list-group-item">
+                <details open>
+                    <summary onclick="return false">
+                        {{$lp := printf "%v.with.choices[%v].label" $.Path $i}}
+                        <input x-model="{{$lp}}" type="text" class="form-control shadow-none">
+                    </summary>
+                    {{$cp := printf "%v.with.choices[%v].cont" $.Path $i}}
+                    {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
+                </details>
+            </li>
+        {{end}}
+        </ul>
+    {{else if eq .St.K "tensor"}}
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group">
+            <li class="list-group-item">
+            {{template "st" (dict "St" .St.Tensor.Value "Root" .Root "Path" (printf "%v.tensor.value" $.Path))}}             
+            {{template "st" (dict "St" .St.Tensor.Cont "Root" .Root "Path" (printf "%v.tensor.cont" $.Path))}}
             </li>
         </ul>
-    {{else if or (eq .St.K "tensor") (eq .St.K "lolli")}}
-        <ul>
-            <li class="input-group text-center align-items-center gap-2">
-                <div class="col-auto">
-                    {{template "st" (dict "St" .St.M "Root" .Root "Path" (printf "%v.message" $.Path))}}
-                </div>
-                <div class="col-1">
-                    <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
-                    {{range $k := $kinds}}
-                        <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
-                    {{end}}
-                    </select>
-                </div>
-                <div class="col-auto">                
-                    {{template "st" (dict "St" .St.S "Root" .Root "Path" (printf "%v.session" $.Path))}}
-                </div>
+    {{else if eq .St.K "lolli"}}
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group">
+            <li class="list-group-item">
+            {{template "st" (dict "St" .St.Lolli.Value "Root" .Root "Path" (printf "%v.lolli.value" $.Path))}}
+            {{template "st" (dict "St" .St.Lolli.Cont "Root" .Root "Path" (printf "%v.lolli.cont" $.Path))}}
             </li>
-            {{if ne .St.S.K "link"}}
-            <div class="col-auto">
-                {{template "st" (dict "St" .St.S "Root" .Root)}}
-            </div>
-            {{end}}
         </ul>
     {{else if eq .St.K "link"}}
-        {{if eq .St.ID .Root}}
-            <span x-text="dto.name"></span>
-        {{else}}
-            <a x-text="{{printf "%v.name" .Path}}" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
-        {{end}}
-    {{else}}
-        <div class="col-1">
-            <select x-model="{{printf "%v.kind" .Path}}" class="form-select">
-            {{range $k := $kinds}}
-                <option {{if eq $k $.St.K}}selected{{end}}>{{$k}}</option>
-            {{end}}
-            </select>
-        </div>
+        <a x-text="{{.Path}}.fqn" href="/ssr/roles/{{.St.ID}}" hx-target="#role" hx-swap="outerHTML" hx-boost="true"></a>
+    {{end}}
+    {{range $k := without $kinds "one" (trim (toString .St.K))}}
+        <template x-if="{{$.Path}}.kind == '{{$k}}'">
+            <ul x-html="render('{{$k}}', '{{$.Path}}')" class="list-group list-group-horizontal"></ul>
+        </template>
     {{end}}
 {{end}}
