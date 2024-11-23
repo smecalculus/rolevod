@@ -10,11 +10,10 @@ type refData struct {
 }
 
 type rootData struct {
-	ID       string          `db:"id"`
-	Name     string          `db:"name"`
-	PE       chnl.SpecData   `db:"pe"`
-	CEs      []chnl.SpecData `db:"ces"`
-	Children []refData       `db:"-"`
+	ID   string          `db:"id"`
+	Name string          `db:"name"`
+	PE   chnl.SpecData   `db:"pe"`
+	CEs  []chnl.SpecData `db:"ces"`
 }
 
 // goverter:variables

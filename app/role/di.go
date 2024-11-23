@@ -32,10 +32,10 @@ var Module = fx.Module("app/role",
 )
 
 //go:embed *.html
-var formFs embed.FS
+var viewFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("role").Funcs(sprig.FuncMap()).ParseFS(formFs, "*.html")
+	t, err := template.New("role").Funcs(sprig.FuncMap()).ParseFS(viewFs, "*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,9 @@ func cfgApiEcho(e *echo.Echo, h *handlerEcho) error {
 	return nil
 }
 
-func cfgSsrEcho(e *echo.Echo, h *presenterEcho) error {
-	e.POST("/ssr/roles", h.PostOne)
-	e.GET("/ssr/roles", h.GetMany)
-	e.GET("/ssr/roles/:id", h.GetOne)
+func cfgSsrEcho(e *echo.Echo, p *presenterEcho) error {
+	e.POST("/ssr/roles", p.PostOne)
+	e.GET("/ssr/roles", p.GetMany)
+	e.GET("/ssr/roles/:id", p.GetOne)
 	return nil
 }

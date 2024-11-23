@@ -1,0 +1,82 @@
+{{define "view-many"}}
+    <div id="signatures">
+        <table class="table">
+            <tbody>
+                {{range .}}
+                <tr>
+                    <td>
+                        <a href="/ssr/signatures/{{ .ID }}" hx-target="#signatures" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSigModal">New</button>
+        <div class="modal fade" id="newSigModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5">New signature</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                <div class="modal-body">
+                    <form id="newSigForm" hx-post="/ssr/signatures" hx-target="#signatures" hx-swap="outerHTML" hx-boost="true">
+                        <div class="mb-3">
+                            <input class="form-control" name="ns" placeholder="Namespace">
+                        </div>
+                        <div class="mb-3">
+                            <input class="form-control" name="name" placeholder="Name">
+                        </div>
+                    </form>
+                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="newSigForm" class="btn btn-primary" data-bs-dismiss="modal">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{end}}
+
+{{define "view-one"}}
+    <script>
+        Alpine.data('root', () => ({
+            dto: {{.}},
+
+            save() {
+                fetch('/api/v1/signatures/{{.ID}}', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.dto)
+                })
+                .then(() => {
+                    console.log("Success")
+                })
+                .catch(() => {
+                    console.log("Failure")
+                });
+            }
+        }))
+    </script>
+    <div id="signature" x-data="root">
+        <input x-model="dto.name" class="form-control shadow-none">
+        <fieldset>
+            <legend>pe</legend>
+            {{template "ep" (dict "Ep" .PE "Path" "dto.pe")}}
+        </fieldset>
+    {{if .CEs}}
+        <fieldset>
+            <legend>ces</legend>
+        {{range $i, $ce := .CEs}}
+            {{template "ep" (dict "Ep" $ce "Path" (printf "dto.ces[%v]" $i))}}
+        {{end}}
+        </fieldset>
+    {{end}}
+        <button type="button" @click="save()" class="btn btn-primary">Save</button>
+    </div>
+{{end}}
+
+{{define "ep"}}
+    <input x-model="{{.Path}}.name" class="form-control shadow-none">
+{{end}}

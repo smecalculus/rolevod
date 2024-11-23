@@ -5,8 +5,10 @@ import (
 	"log/slog"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
 
+	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/chnl"
 
 	"smecalculus/rolevod/app/role"
@@ -30,35 +32,78 @@ type Ref struct {
 	Name string
 }
 
+type Snap struct {
+	ID id.ADT
+	// Rev  rev.ADT
+	Name string
+	PE   chnl.Spec
+	CEs  []chnl.Spec
+}
+
 // aka ExpDec or ExpDecDef without expression
 type Root struct {
-	ID       id.ADT
-	Name     string
-	PE       chnl.Spec
-	CEs      []chnl.Spec
-	Children []Ref
+	ID id.ADT
+	// Rev      rev.ADT
+	Name string
+	PE   chnl.Spec
+	CEs  []chnl.Spec
 }
 
 type API interface {
+	Incept(FQN) (Ref, error)
 	Create(Spec) (Root, error)
 	Retrieve(id.ADT) (Root, error)
 	Establish(KinshipSpec) error
-	RetreiveAll() ([]Ref, error)
+	RetreiveRefs() ([]Ref, error)
 }
 
 type service struct {
 	sigs     Repo
+	aliases  alias.Repo
 	kinships kinshipRepo
 	log      *slog.Logger
 }
 
-func newService(sigs Repo, kinships kinshipRepo, l *slog.Logger) *service {
+func newService(sigs Repo, aliases alias.Repo, kinships kinshipRepo, l *slog.Logger) *service {
 	name := slog.String("name", "sigService")
-	return &service{sigs, kinships, l.With(name)}
+	return &service{sigs, aliases, kinships, l.With(name)}
+}
+
+// for compilation purposes
+func newAPI() API {
+	return &service{}
+}
+
+func (s *service) Incept(fqn sym.ADT) (Ref, error) {
+	s.log.Debug("signature inception started", slog.Any("fqn", fqn))
+	newAlias := alias.Root{Sym: fqn, ID: id.New(), Rev: rev.Initial()}
+	err := s.aliases.Insert(newAlias)
+	if err != nil {
+		s.log.Error("alias insertion failed",
+			slog.Any("reason", err),
+			slog.Any("root", newAlias),
+		)
+		return Ref{}, err
+	}
+	newRoot := Root{
+		ID: newAlias.ID,
+		// Rev:  newAlias.Rev,
+		Name: newAlias.Sym.Name(),
+	}
+	err = s.sigs.Insert(newRoot)
+	if err != nil {
+		s.log.Error("signature insertion failed",
+			slog.Any("reason", err),
+			slog.Any("root", newRoot),
+		)
+		return Ref{}, err
+	}
+	s.log.Debug("signature inception succeeded", slog.Any("root", newRoot))
+	return ConvertRootToRef(newRoot), nil
 }
 
 func (s *service) Create(spec Spec) (Root, error) {
-	s.log.Debug("sig creation started", slog.Any("spec", spec))
+	s.log.Debug("signature creation started", slog.Any("spec", spec))
 	root := Root{
 		ID:   id.New(),
 		Name: spec.FQN.Name(),
@@ -67,22 +112,18 @@ func (s *service) Create(spec Spec) (Root, error) {
 	}
 	err := s.sigs.Insert(root)
 	if err != nil {
-		s.log.Error("sig insertion failed",
+		s.log.Error("signature insertion failed",
 			slog.Any("reason", err),
 			slog.Any("sig", root),
 		)
 		return root, err
 	}
-	s.log.Debug("sig creation succeeded", slog.Any("root", root))
+	s.log.Debug("signature creation succeeded", slog.Any("root", root))
 	return root, nil
 }
 
 func (s *service) Retrieve(rid ID) (Root, error) {
 	root, err := s.sigs.SelectByID(rid)
-	if err != nil {
-		return Root{}, err
-	}
-	root.Children, err = s.sigs.SelectChildren(rid)
 	if err != nil {
 		return Root{}, err
 	}
@@ -106,7 +147,7 @@ func (s *service) Establish(spec KinshipSpec) error {
 	return nil
 }
 
-func (s *service) RetreiveAll() ([]Ref, error) {
+func (s *service) RetreiveRefs() ([]Ref, error) {
 	return s.sigs.SelectAll()
 }
 

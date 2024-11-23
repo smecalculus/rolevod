@@ -22,13 +22,17 @@ func NewAPI() API {
 	return newClientResty()
 }
 
+func (cl *clientResty) Incept(fqn FQN) (Ref, error) {
+	return Ref{}, nil
+}
+
 func (cl *clientResty) Create(spec Spec) (Root, error) {
 	req := MsgFromSpec(spec)
 	var res RootMsg
 	resp, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
-		Post("/sigs")
+		Post("/signatures")
 	if err != nil {
 		return Root{}, err
 	}
@@ -43,7 +47,7 @@ func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
 	resp, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", id.String()).
-		Get("/sigs/{id}")
+		Get("/signatures/{id}")
 	if err != nil {
 		return Root{}, err
 	}
@@ -53,7 +57,7 @@ func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) RetreiveAll() ([]Ref, error) {
+func (c *clientResty) RetreiveRefs() ([]Ref, error) {
 	refs := []Ref{}
 	return refs, nil
 }
@@ -63,7 +67,7 @@ func (c *clientResty) Establish(spec KinshipSpec) error {
 	resp, err := c.resty.R().
 		SetBody(&req).
 		SetPathParam("id", req.ParentID).
-		Post("/sigs/{id}/kinships")
+		Post("/signatures/{id}/kinships")
 	if err != nil {
 		return err
 	}

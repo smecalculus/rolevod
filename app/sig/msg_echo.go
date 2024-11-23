@@ -22,7 +22,7 @@ func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
 	return &handlerEcho{a, r, l.With(name)}
 }
 
-func (h *handlerEcho) ApiPostOne(c echo.Context) error {
+func (h *handlerEcho) PostOne(c echo.Context) error {
 	var dto SpecMsg
 	err := c.Bind(&dto)
 	if err != nil {
@@ -46,8 +46,8 @@ func (h *handlerEcho) ApiPostOne(c echo.Context) error {
 	return c.JSON(http.StatusCreated, MsgFromRoot(root))
 }
 
-func (h *handlerEcho) ApiGetOne(c echo.Context) error {
-	var dto RefMsg
+func (h *handlerEcho) GetOne(c echo.Context) error {
+	var dto SigRefMsg
 	err := c.Bind(&dto)
 	if err != nil {
 		return err
@@ -56,59 +56,9 @@ func (h *handlerEcho) ApiGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	root, err := h.api.Retrieve(id)
+	snap, err := h.api.Retrieve(id)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoot(root))
-}
-
-func (h *handlerEcho) SsrGetOne(c echo.Context) error {
-	var dto RefMsg
-	err := c.Bind(&dto)
-	if err != nil {
-		return err
-	}
-	id, err := id.ConvertFromString(dto.ID)
-	if err != nil {
-		return err
-	}
-	root, err := h.api.Retrieve(id)
-	if err != nil {
-		return err
-	}
-	html, err := h.ssr.Render("sig", MsgFromRoot(root))
-	if err != nil {
-		return err
-	}
-	return c.HTMLBlob(http.StatusOK, html)
-}
-
-// Adapter
-type kinshipHandlerEcho struct {
-	api API
-	ssr msg.Renderer
-	log *slog.Logger
-}
-
-func newKinshipHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *kinshipHandlerEcho {
-	name := slog.String("name", "kinshipHandlerEcho")
-	return &kinshipHandlerEcho{a, r, l.With(name)}
-}
-
-func (h *kinshipHandlerEcho) ApiPostOne(c echo.Context) error {
-	var dto KinshipSpecMsg
-	err := c.Bind(&dto)
-	if err != nil {
-		return err
-	}
-	spec, err := MsgToKinshipSpec(dto)
-	if err != nil {
-		return err
-	}
-	err = h.api.Establish(spec)
-	if err != nil {
-		return err
-	}
-	return c.NoContent(http.StatusCreated)
+	return c.JSON(http.StatusOK, MsgFromRoot(snap))
 }

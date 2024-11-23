@@ -1,13 +1,11 @@
-package role
+package sig
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
-	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
-
-	"smecalculus/rolevod/internal/state"
 )
 
 type SpecView struct {
@@ -23,30 +21,31 @@ func (dto SpecView) Validate() error {
 }
 
 type RefView struct {
-	ID   string `form:"id" json:"id" param:"id"`
-	Rev  int64  `form:"rev" json:"rev"`
+	ID string `form:"id" json:"id" param:"id"`
+	// Rev  int64  `form:"rev" json:"rev"`
 	Name string `form:"name" json:"name"`
 }
 
 func (dto RefView) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
-		validation.Field(&dto.Rev, rev.Optional...),
+		// validation.Field(&dto.Rev, rev.Optional...),
 		validation.Field(&dto.Name, sym.Required...),
 	)
 }
 
 type RootView struct {
-	ID    string        `json:"id"`
-	Name  string        `json:"name"`
-	State state.SpecMsg `json:"state"`
+	ID string `json:"id"`
+	// Rev  int64  `json:"rev"`
+	Name string         `json:"name"`
+	PE   chnl.SpecMsg   `json:"pe"`
+	CEs  []chnl.SpecMsg `json:"ces"`
 }
 
 type SnapView struct {
-	ID    string        `json:"id"`
-	Rev   int64         `json:"rev"`
-	Name  string        `json:"name"`
-	State state.SpecMsg `json:"state"`
+	ID string `json:"id"`
+	// Rev  int64  `json:"rev"`
+	Name string `json:"name"`
 }
 
 // goverter:variables
@@ -61,4 +60,5 @@ var (
 	ViewFromRefs func([]Ref) []RefView
 	ViewToRefs   func([]RefView) ([]Ref, error)
 	ViewFromSnap func(Snap) SnapView
+	ViewFromRoot func(Root) RootView
 )

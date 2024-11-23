@@ -17,19 +17,25 @@ func TestKinshipEstalish(t *testing.T) {
 type roleRepoStub struct {
 }
 
-func (r *roleRepoStub) Insert(rr Root) error {
+func (r *roleRepoStub) Insert(root Root) error {
 	return nil
 }
-func (r *roleRepoStub) SelectAll() ([]Ref, error) {
+func (r *roleRepoStub) Update(root Root) error {
+	return nil
+}
+func (r *roleRepoStub) SelectRefs() ([]Ref, error) {
 	return []Ref{}, nil
 }
 func (r *roleRepoStub) SelectByID(id id.ADT) (Root, error) {
 	return Root{}, nil
 }
+func (r *roleRepoStub) SelectByRef(ref Ref) (Snap, error) {
+	return Snap{}, nil
+}
 func (r *roleRepoStub) SelectByIDs(ids []id.ADT) ([]Root, error) {
 	return []Root{}, nil
 }
-func (r *roleRepoStub) SelectEnv([]ID) (map[ID]Root, error) {
+func (r *roleRepoStub) SelectEnv(ids []ID) (map[ID]Root, error) {
 	return nil, nil
 }
 func (r *roleRepoStub) SelectParts(id id.ADT) ([]Ref, error) {

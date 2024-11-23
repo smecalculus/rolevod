@@ -62,7 +62,7 @@ type testCase struct {
 }
 
 func (tc *testCase) Setup(t *testing.T) {
-	tables := []string{"aliases", "roles", "signatures", "states", "channels", "steps", "clientships"}
+	tables := []string{"aliases", "role_roots", "role_snaps", "signatures", "states", "channels", "steps", "clientships"}
 	for _, table := range tables {
 		_, err := tc.db.Exec(fmt.Sprintf("truncate table %v", table))
 		if err != nil {

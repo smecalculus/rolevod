@@ -167,7 +167,23 @@ func (r *repoPgx) SelectChildren(id ID) ([]Ref, error) {
 }
 
 func (r *repoPgx) SelectAll() ([]Ref, error) {
-	return []Ref{}, nil
+	query := `
+		select
+			id, name
+		from signatures`
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return nil, err
+	}
+	defer rows.Close()
+	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return nil, err
+	}
+	return DataToRefs(dtos)
 }
 
 // Adapter

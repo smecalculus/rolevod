@@ -1,4 +1,4 @@
-package role
+package sig
 
 import (
 	"log/slog"
@@ -9,8 +9,6 @@ import (
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/msg"
 	"smecalculus/rolevod/lib/sym"
-
-	"smecalculus/rolevod/internal/state"
 )
 
 // Adapter
@@ -21,7 +19,7 @@ type presenterEcho struct {
 }
 
 func newPresenterEcho(a API, r msg.Renderer, l *slog.Logger) *presenterEcho {
-	name := slog.String("name", "rolePresenterEcho")
+	name := slog.String("name", "sigPresenterEcho")
 	return &presenterEcho{a, r, l.With(name)}
 }
 
@@ -33,24 +31,24 @@ func (p *presenterEcho) PostOne(c echo.Context) error {
 		return err
 	}
 	ctx := c.Request().Context()
-	p.log.Log(ctx, core.LevelTrace, "role posting started", slog.Any("dto", dto))
+	p.log.Log(ctx, core.LevelTrace, "root posting started", slog.Any("dto", dto))
 	err = dto.Validate()
 	if err != nil {
 		p.log.Error("dto validation failed")
 		return err
 	}
 	fqn := sym.CovertFromString(dto.NS).New(dto.Name)
-	snap, err := p.api.Create(Spec{FQN: fqn, State: state.OneSpec{}})
+	ref, err := p.api.Incept(fqn)
 	if err != nil {
-		p.log.Error("role creation failed")
+		p.log.Error("root creation failed")
 		return err
 	}
-	html, err := p.ssr.Render("view-one", ViewFromSnap(snap))
+	html, err := p.ssr.Render("view-one", ViewFromRef(ref))
 	if err != nil {
 		p.log.Error("view rendering failed")
 		return err
 	}
-	p.log.Log(ctx, core.LevelTrace, "role posting succeeded", slog.Any("ref", ConvertSnapToRef(snap)))
+	p.log.Log(ctx, core.LevelTrace, "root posting succeeded", slog.Any("ref", ref))
 	return c.HTMLBlob(http.StatusOK, html)
 }
 
@@ -69,7 +67,7 @@ func (p *presenterEcho) GetMany(c echo.Context) error {
 }
 
 func (p *presenterEcho) GetOne(c echo.Context) error {
-	var dto RefMsg
+	var dto SigRefMsg
 	err := c.Bind(&dto)
 	if err != nil {
 		p.log.Error("dto binding failed")
@@ -89,10 +87,10 @@ func (p *presenterEcho) GetOne(c echo.Context) error {
 	}
 	snap, err := p.api.Retrieve(ref.ID)
 	if err != nil {
-		p.log.Error("root retrieval failed")
+		p.log.Error("snap retrieval failed")
 		return err
 	}
-	html, err := p.ssr.Render("view-one", ViewFromSnap(snap))
+	html, err := p.ssr.Render("view-one", ViewFromRoot(snap))
 	if err != nil {
 		p.log.Error("view rendering failed")
 		return err

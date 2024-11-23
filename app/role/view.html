@@ -1,9 +1,50 @@
+{{define "view-many"}}
+    <div id="roles">
+        <table class="table">
+            <tbody>
+            {{range .}}
+                <tr>
+                    <td>
+                        <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRoleModal">New</button>
+        <div class="modal fade" id="newRoleModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5">New role</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                <div class="modal-body">
+                    <form id="newRoleForm" hx-post="/ssr/roles" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">
+                        <div class="mb-3">
+                            <input class="form-control" name="ns" placeholder="Namespace">
+                        </div>
+                        <div class="mb-3">
+                            <input class="form-control" name="name" placeholder="Name">
+                        </div>
+                    </form>
+                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="newRoleForm" class="btn btn-primary" data-bs-dismiss="modal">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{end}}
+
 {{define "view-one"}}
     {{$kinds := list "one" "link" "tensor" "lolli" "plus" "with"}}
     <script>
         Alpine.data('root', () => ({
             dto: {{.}},
-            kinds: {{$kinds}},
+
             save() {
                 fetch('/api/v1/roles/{{.ID}}', {
                     method: 'PATCH',
@@ -17,7 +58,8 @@
                     console.log("Failure")
                 });
             },
-            render(kind, path, i = 0) {
+
+            render(kind, path) {
                 switch (kind) {
                     case "tensor":
                     case "lolli":
@@ -34,7 +76,7 @@
                                 </div>
                             {{range $k := without $kinds "one"}}
                                 <template x-if="${valPath}.kind == '{{$k}}'">
-                                    <ul x-html="render('{{$k}}', '${valPath}')" class="list-group"></ul>
+                                    <ul x-html="render('{{$k}}', '${valPath}')" class="list-group list-group-horizontal list-group-flush"></ul>
                                 </template>
                             {{end}}
                                 <div>
@@ -46,7 +88,7 @@
                                 </div>
                             {{range $k := without $kinds "one"}}
                                 <template x-if="${contPath}.kind == '{{$k}}'">
-                                    <ul x-html="render('{{$k}}', '${contPath}', ${i})" class="list-group"></ul>
+                                    <ul x-html="render('{{$k}}', '${contPath}')" class="list-group list-group-horizontal list-group-flush"></ul>
                                 </template>
                             {{end}}
                             </li>
@@ -70,55 +112,26 @@
                                         </div>
                                     {{range $k := without $kinds "one"}}
                                         <template x-if="choice.cont.kind == '{{$k}}'">
-                                            <ul x-html="render('{{$k}}', '${choices}[' + i + '].cont')" class="list-group list-group-horizontal"></ul>
+                                            <ul x-html="render('{{$k}}', '${choices}[' + i + '].cont')" class="list-group list-group-horizontal list-group-flush"></ul>
                                         </template>
                                     {{end}}
                                     </details>
                                 </li>
                             </template>
-                            <button type="button" @click="${choices}.push({label: '', cont: {kind: 'one'}})" class="btn btn-primary">Add</button>
+                            <button type="button" @click="${choices}.push({label: '', cont: {kind: 'one'}})" class="btn btn-secondary">Add</button>
                         `
                 };
             }
         }))
     </script>
-    <div id="role" x-data="root">
-        <div class="row">
+        <div id="role" x-data="root">
             <input x-model="dto.name" class="form-control shadow-none">
+            <fieldset>
+                <legend>state</legend>
+                {{template "st" (dict "St" .State "Root" .ID "Path" "dto.state")}}
+            </fieldset>
+            <button type="button" @click="save()" class="btn btn-primary">Save</button>
         </div>
-    {{template "st" (dict "St" .State "Root" .ID "Path" "dto.state")}}
-        <button type="button" @click="save()" class="btn btn-primary">Save</button>
-    </div>
-{{end}}
-
-{{define "view-many"}}
-    <div id="roles" x-data="{ open: false }">
-        <table class="table">
-            <tbody>
-            {{range .}}
-                <tr>
-                    <td>
-                        <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
-                    </td>
-                </tr>
-            {{end}}
-            </tbody>
-        </table>
-        <button x-on:click="open = true">New</button>
-        <div x-show="open" class="modal-dialog modal-dialog-centered">
-            <form >
-                <div class="mb-3">
-                  <label for="ns" class="form-label">Namespace</label>
-                  <input class="form-control" id="ns" name="ns">
-                </div>
-                <div class="mb-3">
-                  <label for="name" class="form-label">Name</label>
-                  <input class="form-control" id="name" name="name">
-                </div>
-                <button type="submit" class="btn btn-primary" hx-post="/ssr/roles" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">Create</button>
-            </form>
-        </div>
-    </div>
 {{end}}
 
 {{define "st"}}
@@ -131,47 +144,51 @@
         </select>
     </div>
     {{if eq .St.K "plus"}}
-        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal">
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal list-group-flush">
         {{range $i, $ch := .St.Plus.Choices}}
             <li class="list-group-item">
                 <details open>
-                    <summary onclick="return false">
+                    <summary>
                         {{$lp := printf "%v.plus.choices[%v].label" $.Path $i}}
                         <input x-model="{{$lp}}" type="text" class="form-control shadow-none">
                     </summary>
-                    {{$cp := printf "%v.plus.choices[%v].cont" $.Path $i}}
-                    {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
+                    <div>
+                        {{$cp := printf "%v.plus.choices[%v].cont" $.Path $i}}
+                        {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
+                    </div>
                 </details>
             </li>
         {{end}}
         </ul>
     {{else if eq .St.K "with"}}
-        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal">
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal list-group-flush">
         {{range $i, $ch := .St.With.Choices}}
             <li class="list-group-item">
                 <details open>
-                    <summary onclick="return false">
+                    <summary>
                         {{$lp := printf "%v.with.choices[%v].label" $.Path $i}}
                         <input x-model="{{$lp}}" type="text" class="form-control shadow-none">
                     </summary>
-                    {{$cp := printf "%v.with.choices[%v].cont" $.Path $i}}
-                    {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
+                    <div>
+                        {{$cp := printf "%v.with.choices[%v].cont" $.Path $i}}
+                        {{template "st" (dict "St" $ch.Cont "Root" $.Root "Path" $cp)}}
+                    </div>
                 </details>
             </li>
         {{end}}
         </ul>
     {{else if eq .St.K "tensor"}}
-        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group">
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal list-group-flush">
             <li class="list-group-item">
-            {{template "st" (dict "St" .St.Tensor.Value "Root" .Root "Path" (printf "%v.tensor.value" $.Path))}}             
-            {{template "st" (dict "St" .St.Tensor.Cont "Root" .Root "Path" (printf "%v.tensor.cont" $.Path))}}
+                {{template "st" (dict "St" .St.Tensor.Value "Root" .Root "Path" (printf "%v.tensor.value" $.Path))}}             
+                {{template "st" (dict "St" .St.Tensor.Cont "Root" .Root "Path" (printf "%v.tensor.cont" $.Path))}}
             </li>
         </ul>
     {{else if eq .St.K "lolli"}}
-        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group">
+        <ul x-show="{{.Path}}.kind == '{{.St.K}}'" class="list-group list-group-horizontal list-group-flush">
             <li class="list-group-item">
-            {{template "st" (dict "St" .St.Lolli.Value "Root" .Root "Path" (printf "%v.lolli.value" $.Path))}}
-            {{template "st" (dict "St" .St.Lolli.Cont "Root" .Root "Path" (printf "%v.lolli.cont" $.Path))}}
+                {{template "st" (dict "St" .St.Lolli.Value "Root" .Root "Path" (printf "%v.lolli.value" $.Path))}}
+                {{template "st" (dict "St" .St.Lolli.Cont "Root" .Root "Path" (printf "%v.lolli.cont" $.Path))}}
             </li>
         </ul>
     {{else if eq .St.K "link"}}
@@ -179,7 +196,7 @@
     {{end}}
     {{range $k := without $kinds "one" (trim (toString .St.K))}}
         <template x-if="{{$.Path}}.kind == '{{$k}}'">
-            <ul x-html="render('{{$k}}', '{{$.Path}}')" class="list-group list-group-horizontal"></ul>
+            <ul x-html="render('{{$k}}', '{{$.Path}}')" class="list-group list-group-horizontal list-group-flush"></ul>
         </template>
     {{end}}
 {{end}}

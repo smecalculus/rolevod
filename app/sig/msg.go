@@ -35,16 +35,28 @@ func (dto RefMsg) Validate() error {
 }
 
 type SigRefMsg struct {
-	ID   string `param:"id" json:"id"`
-	Name string `query:"name" json:"name"`
+	ID   string `json:"id" param:"id"`
+	Name string `json:"name" query:"name"`
+}
+
+func (dto SigRefMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+	)
 }
 
 type RootMsg struct {
-	ID       string         `json:"id"`
-	Name     string         `json:"name"`
-	PE       chnl.SpecMsg   `json:"pe"`
-	CEs      []chnl.SpecMsg `json:"ces"`
-	Children []SigRefMsg    `json:"children"`
+	ID   string         `json:"id"`
+	Name string         `json:"name"`
+	PE   chnl.SpecMsg   `json:"pe"`
+	CEs  []chnl.SpecMsg `json:"ces"`
+}
+
+type SnapMsg struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name"`
+	PE   chnl.SpecMsg   `json:"pe"`
+	CEs  []chnl.SpecMsg `json:"ces"`
 }
 
 // goverter:variables
@@ -62,6 +74,8 @@ var (
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoot  func(Root) RootMsg
 	MsgFromRoots func([]Root) []RootMsg
+	MsgToSnap    func(SnapMsg) (Snap, error)
+	MsgFromSnap  func(Snap) SnapMsg
 )
 
 type KinshipSpecMsg struct {

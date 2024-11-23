@@ -6,6 +6,21 @@ CREATE TABLE roles (
 	whole_id varchar(36)
 );
 
+CREATE TABLE role_roots (
+	role_id varchar(36),
+	role_rev bigint,
+	role_name varchar(64),
+	state_id varchar(36),
+	whole_id varchar(36)
+);
+
+CREATE TABLE role_snaps (
+	role_id varchar(36),
+	role_rev bigint,
+	state_id varchar(36),
+	whole_id varchar(36)
+);
+
 CREATE TABLE signatures (
 	id varchar(36),
 	name varchar(64),
@@ -13,7 +28,27 @@ CREATE TABLE signatures (
 	ces jsonb
 );
 
+CREATE TABLE sig_roots (
+	sig_id varchar(36),
+	sig_rev bigint,
+	sig_name varchar(64),
+	pe jsonb,
+	ces jsonb
+);
+
+CREATE TABLE sig_snaps (
+	sig_id varchar(36),
+	sig_rev bigint,
+	pe jsonb,
+	ces jsonb
+);
+
 CREATE TABLE agents (
+	id varchar(36),
+	name varchar(64)
+);
+
+CREATE TABLE teams (
 	id varchar(36),
 	name varchar(64)
 );

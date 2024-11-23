@@ -1,13 +1,17 @@
 package rev
 
-import (
-	"time"
-)
-
 type ADT int64
 
-func New() ADT {
-	return ADT(time.Now().Unix())
+func Initial() ADT {
+	return ADT(1)
+}
+
+func Next(rev ADT) ADT {
+	return rev + 1
+}
+
+func (rev ADT) Inc() ADT {
+	return rev + 1
 }
 
 func ConvertToInt(a ADT) int64 {
