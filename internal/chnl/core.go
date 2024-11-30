@@ -5,29 +5,30 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/state"
 )
 
 // for external readability
 type ID = id.ADT
-type Name = string
+type Key = string
 
 // aka ChanTp
 type Spec struct {
-	Name string
-	Role id.ADT
+	Key  string
+	Link sym.ADT
 }
 
 // aka Z
 type Ref struct {
-	ID   id.ADT
-	Name string
+	ID  id.ADT
+	Key string
 }
 
 type Root struct {
-	ID   id.ADT
-	Name string
+	ID  id.ADT
+	Key string
 	// Preceding Channel ID
 	PreID *id.ADT
 	// Channel State ID

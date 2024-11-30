@@ -5,15 +5,17 @@ import (
 )
 
 type refData struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
+	ID    string `db:"sig_id"`
+	Rev   int64  `db:"rev"`
+	Title string `db:"title"`
 }
 
 type rootData struct {
-	ID   string          `db:"id"`
-	Name string          `db:"name"`
-	PE   chnl.SpecData   `db:"pe"`
-	CEs  []chnl.SpecData `db:"ces"`
+	ID    string          `db:"sig_id"`
+	Rev   int64           `db:"rev"`
+	Title string          `db:"title"`
+	CEs   []chnl.SpecData `db:"ces"`
+	PE    chnl.SpecData   `db:"pe"`
 }
 
 // goverter:variables
@@ -29,17 +31,4 @@ var (
 	DataFromRoot  func(Root) (rootData, error)
 	DataToRoots   func([]rootData) ([]Root, error)
 	DataFromRoots func([]Root) ([]rootData, error)
-)
-
-type kinshipRootData struct {
-	Parent   refData
-	Children []refData
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Convert.*
-var (
-	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
-	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
 )

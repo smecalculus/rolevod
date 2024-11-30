@@ -23,7 +23,6 @@ var Module = fx.Module("app/sig",
 		fx.Private,
 		newHandlerEcho,
 		newPresenterEcho,
-		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(

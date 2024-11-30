@@ -21,31 +21,31 @@ func (dto SpecView) Validate() error {
 }
 
 type RefView struct {
-	ID string `form:"id" json:"id" param:"id"`
-	// Rev  int64  `form:"rev" json:"rev"`
-	Name string `form:"name" json:"name"`
+	ID    string `form:"id" json:"id" param:"id"`
+	Rev   int64  `form:"rev" json:"rev"`
+	Title string `form:"name" json:"name"`
 }
 
 func (dto RefView) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
 		// validation.Field(&dto.Rev, rev.Optional...),
-		validation.Field(&dto.Name, sym.Required...),
+		validation.Field(&dto.Title, sym.Required...),
 	)
 }
 
 type RootView struct {
-	ID string `json:"id"`
-	// Rev  int64  `json:"rev"`
-	Name string         `json:"name"`
-	PE   chnl.SpecMsg   `json:"pe"`
-	CEs  []chnl.SpecMsg `json:"ces"`
+	ID    string         `json:"id"`
+	Rev   int64          `json:"rev"`
+	Title string         `json:"name"`
+	PE    chnl.SpecMsg   `json:"pe"`
+	CEs   []chnl.SpecMsg `json:"ces"`
 }
 
 type SnapView struct {
-	ID string `json:"id"`
-	// Rev  int64  `json:"rev"`
-	Name string `json:"name"`
+	ID    string `json:"id"`
+	Rev   int64  `json:"rev"`
+	Title string `json:"name"`
 }
 
 // goverter:variables

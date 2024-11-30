@@ -10,6 +10,7 @@ CREATE TABLE role_roots (
 	role_id varchar(36),
 	role_rev bigint,
 	role_name varchar(64),
+	role_desc varchar(64),
 	state_id varchar(36),
 	whole_id varchar(36)
 );
@@ -17,8 +18,23 @@ CREATE TABLE role_roots (
 CREATE TABLE role_snaps (
 	role_id varchar(36),
 	role_rev bigint,
+	role_name varchar(64),
 	state_id varchar(36),
 	whole_id varchar(36)
+);
+
+CREATE TABLE role_states (
+	role_id varchar(36),
+	rev_from bigint,
+	rev_to bigint,
+	state_id varchar(36)
+);
+
+CREATE TABLE role_fqns (
+	role_id varchar(36),
+	rev_from bigint,
+	rev_to bigint,
+	fqn ltree
 );
 
 CREATE TABLE signatures (
@@ -30,17 +46,31 @@ CREATE TABLE signatures (
 
 CREATE TABLE sig_roots (
 	sig_id varchar(36),
-	sig_rev bigint,
-	sig_name varchar(64),
-	pe jsonb,
-	ces jsonb
+	rev bigint,
+	title text
 );
 
 CREATE TABLE sig_snaps (
 	sig_id varchar(36),
-	sig_rev bigint,
+	rev bigint,
 	pe jsonb,
 	ces jsonb
+);
+
+CREATE TABLE sig_pes (
+	sig_id varchar(36),
+	rev_from bigint,
+	rev_to bigint,
+	chnl_key varchar(64),
+	role_fqn ltree
+);
+
+CREATE TABLE sig_ces (
+	sig_id varchar(36),
+	rev_from bigint,
+	rev_to bigint,
+	chnl_key varchar(64),
+	role_fqn ltree
 );
 
 CREATE TABLE agents (
@@ -92,9 +122,10 @@ CREATE TABLE clientships (
 );
 
 CREATE TABLE aliases (
-	sym ltree UNIQUE,
 	id varchar(36),
-	rev bigint,
+	rev_from bigint,
+	rev_to bigint,
+	sym ltree UNIQUE,
 	kind smallint
 );
 

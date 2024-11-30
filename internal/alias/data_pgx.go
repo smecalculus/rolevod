@@ -31,15 +31,15 @@ func (r *repoPgx) Insert(root Root) error {
 		return err
 	}
 	query := `
-		INSERT INTO aliases (
-			sym, id, rev
-		) VALUES (
-			@sym, @id, @rev
+		insert into aliases (
+			id, rev_from, sym
+		) values (
+			@id, @rev_from, @sym
 		)`
 	args := pgx.NamedArgs{
-		"sym": dto.Sym,
-		"id":  dto.ID,
-		"rev": dto.Rev,
+		"id":       dto.ID,
+		"rev_from": dto.Rev,
+		"sym":      dto.Sym,
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {

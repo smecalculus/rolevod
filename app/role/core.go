@@ -33,6 +33,7 @@ type Snap struct {
 	ID    id.ADT
 	Rev   rev.ADT
 	Name  string
+	FQN   sym.ADT
 	State state.Spec
 	// Parts   []Ref
 }
@@ -147,6 +148,7 @@ func (s *service) Create(spec Spec) (Snap, error) {
 		ID:    newRoot.ID,
 		Rev:   newRoot.Rev,
 		Name:  newRoot.Name,
+		FQN:   newAlias.Sym,
 		State: state.ConvertRootToSpec(newState),
 	}, nil
 }
@@ -257,9 +259,11 @@ type Repo interface {
 	SelectRefs() ([]Ref, error)
 	SelectByID(id.ADT) (Root, error)
 	SelectByIDs([]id.ADT) ([]Root, error)
+	SelectByFQN(sym.ADT) (Root, error)
+	SelectByFQNs([]sym.ADT) ([]Root, error)
 	// SelectByRef(Ref) (Snap, error)
 	SelectParts(id.ADT) ([]Ref, error)
-	SelectEnv([]id.ADT) (map[id.ADT]Root, error)
+	SelectEnv([]sym.ADT) (map[sym.ADT]Root, error)
 }
 
 // goverter:variables

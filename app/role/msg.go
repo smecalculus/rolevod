@@ -39,6 +39,7 @@ type SnapMsg struct {
 	ID    string        `json:"id" param:"id"`
 	Rev   int64         `json:"rev" query:"rev"`
 	Name  string        `json:"name"`
+	FQN   string        `json:"fqn"`
 	State state.SpecMsg `json:"state"`
 }
 

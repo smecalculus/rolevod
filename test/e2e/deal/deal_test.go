@@ -62,7 +62,11 @@ type testCase struct {
 }
 
 func (tc *testCase) Setup(t *testing.T) {
-	tables := []string{"aliases", "role_roots", "role_snaps", "signatures", "states", "channels", "steps", "clientships"}
+	tables := []string{
+		"aliases",
+		"role_roots", "role_snaps",
+		"sig_roots", "sig_pes", "sig_ces",
+		"states", "channels", "steps", "clientships"}
 	for _, table := range tables {
 		_, err := tc.db.Exec(fmt.Sprintf("truncate table %v", table))
 		if err != nil {
@@ -123,8 +127,8 @@ func TestTake(t *testing.T) {
 		closerSigSpec := sig.Spec{
 			FQN: "closer",
 			PE: chnl.Spec{
-				Name: "closing-1",
-				Role: oneRole.ID,
+				Key:  "closing-1",
+				Link: oneRole.FQN,
 			},
 		}
 		closerSig, err := sigAPI.Create(closerSigSpec)
@@ -135,8 +139,8 @@ func TestTake(t *testing.T) {
 		waiterSigSpec := sig.Spec{
 			FQN: "waiter",
 			PE: chnl.Spec{
-				Name: "closing-2",
-				Role: oneRole.ID,
+				Key:  "closing-2",
+				Link: oneRole.FQN,
 			},
 			CEs: []chnl.Spec{
 				closerSig.PE,
@@ -235,8 +239,8 @@ func TestTake(t *testing.T) {
 		lolliSigSpec := sig.Spec{
 			FQN: "sig-1",
 			PE: chnl.Spec{
-				Name: "chnl-1",
-				Role: lolliRole.ID,
+				Key:  "chnl-1",
+				Link: lolliRole.FQN,
 			},
 		}
 		lolliSig, err := sigAPI.Create(lolliSigSpec)
@@ -247,8 +251,8 @@ func TestTake(t *testing.T) {
 		oneSigSpec1 := sig.Spec{
 			FQN: "sig-2",
 			PE: chnl.Spec{
-				Name: "chnl-2",
-				Role: oneRole.ID,
+				Key:  "chnl-2",
+				Link: oneRole.FQN,
 			},
 		}
 		oneSig1, err := sigAPI.Create(oneSigSpec1)
@@ -259,8 +263,8 @@ func TestTake(t *testing.T) {
 		oneSigSpec2 := sig.Spec{
 			FQN: "sig-3",
 			PE: chnl.Spec{
-				Name: "chnl-3",
-				Role: oneRole.ID,
+				Key:  "chnl-3",
+				Link: oneRole.FQN,
 			},
 			CEs: []chnl.Spec{
 				lolliSigSpec.PE,
@@ -378,8 +382,8 @@ func TestTake(t *testing.T) {
 		withSigSpec := sig.Spec{
 			FQN: "sig-1",
 			PE: chnl.Spec{
-				Name: "chnl-1",
-				Role: withRole.ID,
+				Key:  "chnl-1",
+				Link: withRole.FQN,
 			},
 		}
 		withSig, err := sigAPI.Create(withSigSpec)
@@ -390,8 +394,8 @@ func TestTake(t *testing.T) {
 		oneSigSpec := sig.Spec{
 			FQN: "sig-2",
 			PE: chnl.Spec{
-				Name: "chnl-2",
-				Role: oneRole.ID,
+				Key:  "chnl-2",
+				Link: oneRole.FQN,
 			},
 			CEs: []chnl.Spec{
 				withSig.PE,
@@ -483,8 +487,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-1",
 				PE: chnl.Spec{
-					Name: "chnl-1",
-					Role: oneRole.ID,
+					Key:  "chnl-1",
+					Link: oneRole.FQN,
 				},
 			},
 		)
@@ -496,8 +500,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-2",
 				PE: chnl.Spec{
-					Name: "chnl-2",
-					Role: oneRole.ID,
+					Key:  "chnl-2",
+					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -512,8 +516,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-3",
 				PE: chnl.Spec{
-					Name: "chnl-3",
-					Role: oneRole.ID,
+					Key:  "chnl-3",
+					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -600,8 +604,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-1",
 				PE: chnl.Spec{
-					Name: "chnl-1",
-					Role: oneRole.ID,
+					Key:  "chnl-1",
+					Link: oneRole.FQN,
 				},
 			},
 		)
@@ -613,8 +617,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-2",
 				PE: chnl.Spec{
-					Name: "chnl-2",
-					Role: oneRole.ID,
+					Key:  "chnl-2",
+					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,
@@ -629,8 +633,8 @@ func TestTake(t *testing.T) {
 			sig.Spec{
 				FQN: "sig-3",
 				PE: chnl.Spec{
-					Name: "chnl-3",
-					Role: oneRole.ID,
+					Key:  "chnl-3",
+					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
 					oneSig1.PE,

@@ -10,13 +10,6 @@ type refData struct {
 	Name string `db:"role_name"`
 }
 
-type snapData struct {
-	ID      string         `db:"role_id"`
-	Rev     int64          `db:"role_rev"`
-	StateID string         `db:"state_id"`
-	WholeID sql.NullString `db:"whole_id"`
-}
-
 type rootData struct {
 	ID      string         `db:"role_id"`
 	Rev     int64          `db:"role_rev"`

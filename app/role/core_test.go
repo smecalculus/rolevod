@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/alias"
 	"smecalculus/rolevod/internal/state"
@@ -29,20 +30,23 @@ func (r *roleRepoStub) SelectRefs() ([]Ref, error) {
 func (r *roleRepoStub) SelectByID(id id.ADT) (Root, error) {
 	return Root{}, nil
 }
-func (r *roleRepoStub) SelectByRef(ref Ref) (Snap, error) {
-	return Snap{}, nil
-}
 func (r *roleRepoStub) SelectByIDs(ids []id.ADT) ([]Root, error) {
 	return []Root{}, nil
 }
-func (r *roleRepoStub) SelectEnv(ids []ID) (map[ID]Root, error) {
+func (r *roleRepoStub) SelectByRef(ref Ref) (Snap, error) {
+	return Snap{}, nil
+}
+func (r *roleRepoStub) SelectByFQN(fqn sym.ADT) (Root, error) {
+	return Root{}, nil
+}
+func (r *roleRepoStub) SelectByFQNs(fqns []sym.ADT) ([]Root, error) {
+	return []Root{}, nil
+}
+func (r *roleRepoStub) SelectEnv(fqns []sym.ADT) (map[sym.ADT]Root, error) {
 	return nil, nil
 }
 func (r *roleRepoStub) SelectParts(id id.ADT) ([]Ref, error) {
 	return []Ref{}, nil
-}
-func (r *roleRepoStub) SelectState(id id.ADT) (state.Root, error) {
-	return nil, nil
 }
 
 type stateRepoStub struct {

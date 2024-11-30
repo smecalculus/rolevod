@@ -10,7 +10,6 @@ import (
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/pol"
-	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/state"
@@ -42,7 +41,7 @@ type Root struct {
 
 type Environment struct {
 	sigs   map[sig.ID]sig.Root
-	roles  map[role.ID]role.Root
+	roles  map[role.FQN]role.Root
 	states map[state.ID]state.Root
 }
 
@@ -53,16 +52,16 @@ func (e Environment) Contains(id sig.ID) bool {
 
 func (e Environment) LookupPE(id sig.ID) state.EP {
 	decl := e.sigs[id]
-	role := e.roles[decl.PE.Role]
-	return state.EP{Z: sym.New(decl.PE.Name), C: e.states[role.StateID]}
+	role := e.roles[decl.PE.Link]
+	return state.EP{Z: decl.PE.Link, C: e.states[role.StateID]}
 }
 
 func (e Environment) LookupCEs(id sig.ID) []state.EP {
 	decl := e.sigs[id]
 	ces := []state.EP{}
 	for _, ce := range decl.CEs {
-		role := e.roles[decl.PE.Role]
-		ces = append(ces, state.EP{Z: sym.New(ce.Name), C: e.states[role.StateID]})
+		role := e.roles[decl.PE.Link]
+		ces = append(ces, state.EP{Z: ce.Link, C: e.states[role.StateID]})
 	}
 	return ces
 }
@@ -215,17 +214,17 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		)
 		return chnl.Root{}, err
 	}
-	wantRole, err := s.roles.SelectByID(wantSig.PE.Role)
+	wantRole, err := s.roles.SelectByFQN(wantSig.PE.Link)
 	if err != nil {
 		s.log.Error("role selection failed",
 			slog.Any("reason", err),
-			slog.Any("id", wantSig.PE.Role),
+			slog.Any("fqn", wantSig.PE.Link),
 		)
 		return chnl.Root{}, err
 	}
 	newPE := chnl.Root{
 		ID:      id.New(),
-		Name:    wantSig.PE.Name,
+		Key:     wantSig.PE.Key,
 		StateID: &wantRole.StateID,
 	}
 	err = s.chnls.Insert(newPE)
@@ -318,13 +317,13 @@ func (s *service) Take(spec TranSpec) error {
 		)
 		return err
 	}
-	roleIDs := sig.CollectEnv(maps.Values(sigs))
-	roles, err := s.roles.SelectEnv(roleIDs)
+	roleFQNs := sig.CollectEnv(maps.Values(sigs))
+	roles, err := s.roles.SelectEnv(roleFQNs)
 	if err != nil {
 		s.log.Error("roles selection failed",
 			slog.Any("reason", err),
 			slog.Any("pid", proc.PID),
-			slog.Any("ids", roleIDs),
+			slog.Any("fqns", roleFQNs),
 		)
 		return err
 	}
@@ -474,7 +473,7 @@ func (s *service) takeProcWith(
 		// consume and close channel
 		finVia := chnl.Root{
 			ID:      id.New(),
-			Name:    curVia.Name,
+			Key:     curVia.Key,
 			PreID:   &curVia.ID,
 			StateID: nil,
 		}
@@ -551,7 +550,7 @@ func (s *service) takeProcWith(
 			// consume and close channel
 			finVia := chnl.Root{
 				ID:      id.New(),
-				Name:    curVia.Name,
+				Key:     curVia.Key,
 				PreID:   &curVia.ID,
 				StateID: nil,
 			}
@@ -669,7 +668,7 @@ func (s *service) takeProcWith(
 		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
 			ID:      id.New(),
-			Name:    curVia.Name,
+			Key:     curVia.Key,
 			PreID:   &curVia.ID,
 			StateID: &nextID,
 		}
@@ -788,7 +787,7 @@ func (s *service) takeProcWith(
 		nextID := curSt.(state.Prod).Next()
 		newVia := chnl.Root{
 			ID:      id.New(),
-			Name:    curVia.Name,
+			Key:     curVia.Key,
 			PreID:   &curVia.ID,
 			StateID: &nextID,
 		}
@@ -907,7 +906,7 @@ func (s *service) takeProcWith(
 		nextID := curSt.(state.Sum).Next(term.L)
 		newVia := chnl.Root{
 			ID:      id.New(),
-			Name:    curVia.Name,
+			Key:     curVia.Key,
 			PreID:   &curVia.ID,
 			StateID: &nextID,
 		}
@@ -998,7 +997,7 @@ func (s *service) takeProcWith(
 		nextID := curSt.(state.Sum).Next(lab.L)
 		newVia := chnl.Root{
 			ID:      id.New(),
-			Name:    curVia.Name,
+			Key:     curVia.Key,
 			PreID:   &curVia.ID,
 			StateID: &nextID,
 		}

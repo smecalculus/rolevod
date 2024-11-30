@@ -5,35 +5,36 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 type SpecMsg struct {
-	Name string `json:"name"`
-	Role string `json:"role"`
+	Key  string `json:"name"`
+	Link string `json:"role_fqn"`
 }
 
 func (dto SpecMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
-		validation.Field(&dto.Name, core.NameRequired...),
-		validation.Field(&dto.Role, id.Required...),
+		validation.Field(&dto.Key, core.NameRequired...),
+		validation.Field(&dto.Link, sym.Required...),
 	)
 }
 
 type RefMsg struct {
-	ID   string `json:"id" param:"id"`
-	Name string `json:"name"`
+	ID  string `json:"id" param:"id"`
+	Key string `json:"name"`
 }
 
 func (dto RefMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
-		validation.Field(&dto.Name, core.NameRequired...),
+		validation.Field(&dto.Key, core.NameRequired...),
 	)
 }
 
 type RootMsg struct {
 	ID      string  `json:"id" param:"id"`
-	Name    string  `json:"name"`
+	Key     string  `json:"name"`
 	PreID   *string `json:"pre_id"`
 	StateID *string `json:"state_id"`
 }
@@ -52,22 +53,22 @@ var (
 	MsgFromRoot func(Root) RootMsg
 )
 
-func MsgFromRefMap(refs map[Name]ID) []RefMsg {
+func MsgFromRefMap(refs map[Key]ID) []RefMsg {
 	var mtos []RefMsg
-	for name, rid := range refs {
-		mtos = append(mtos, RefMsg{rid.String(), name})
+	for key, rid := range refs {
+		mtos = append(mtos, RefMsg{rid.String(), key})
 	}
 	return mtos
 }
 
-func MsgToRefMap(mtos []RefMsg) (map[Name]ID, error) {
-	refs := make(map[Name]ID, len(mtos))
+func MsgToRefMap(mtos []RefMsg) (map[Key]ID, error) {
+	refs := make(map[Key]ID, len(mtos))
 	for _, dto := range mtos {
 		mtoID, err := id.ConvertFromString(dto.ID)
 		if err != nil {
 			return nil, err
 		}
-		refs[dto.Name] = mtoID
+		refs[dto.Key] = mtoID
 	}
 	return refs, nil
 }

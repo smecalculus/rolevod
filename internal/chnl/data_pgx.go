@@ -47,7 +47,7 @@ func (r *repoPgx) Insert(root Root) error {
 		)`
 	args := pgx.NamedArgs{
 		"id":       dto.ID,
-		"name":     dto.Name,
+		"name":     dto.Key,
 		"pre_id":   dto.PreID,
 		"state_id": dto.StateID,
 	}

@@ -21,52 +21,51 @@ type Name = string
 type Spec struct {
 	// Fully Qualified Name
 	FQN sym.ADT
-	// Providable Endpoint Spec
+	// Providable Endpoint
 	PE chnl.Spec
-	// Consumable Endpoint Specs
+	// Consumable Endpoints
 	CEs []chnl.Spec
 }
 
 type Ref struct {
-	ID   id.ADT
-	Name string
+	ID    id.ADT
+	Rev   rev.ADT
+	Title string
 }
 
 type Snap struct {
-	ID id.ADT
-	// Rev  rev.ADT
-	Name string
-	PE   chnl.Spec
-	CEs  []chnl.Spec
+	ID    id.ADT
+	Rev   rev.ADT
+	Title string
+	CEs   []chnl.Spec
+	PE    chnl.Spec
 }
 
 // aka ExpDec or ExpDecDef without expression
 type Root struct {
-	ID id.ADT
-	// Rev      rev.ADT
-	Name string
-	PE   chnl.Spec
-	CEs  []chnl.Spec
+	ID    id.ADT
+	Rev   rev.ADT
+	Title string
+	CEs   []chnl.Spec
+	PE    chnl.Spec
 }
 
 type API interface {
 	Incept(FQN) (Ref, error)
 	Create(Spec) (Root, error)
 	Retrieve(id.ADT) (Root, error)
-	Establish(KinshipSpec) error
 	RetreiveRefs() ([]Ref, error)
 }
 
 type service struct {
-	sigs     Repo
-	aliases  alias.Repo
-	kinships kinshipRepo
-	log      *slog.Logger
+	sigs    Repo
+	aliases alias.Repo
+	log     *slog.Logger
 }
 
-func newService(sigs Repo, aliases alias.Repo, kinships kinshipRepo, l *slog.Logger) *service {
+func newService(sigs Repo, aliases alias.Repo, l *slog.Logger) *service {
 	name := slog.String("name", "sigService")
-	return &service{sigs, aliases, kinships, l.With(name)}
+	return &service{sigs, aliases, l.With(name)}
 }
 
 // for compilation purposes
@@ -86,9 +85,9 @@ func (s *service) Incept(fqn sym.ADT) (Ref, error) {
 		return Ref{}, err
 	}
 	newRoot := Root{
-		ID: newAlias.ID,
-		// Rev:  newAlias.Rev,
-		Name: newAlias.Sym.Name(),
+		ID:    newAlias.ID,
+		Rev:   newAlias.Rev,
+		Title: newAlias.Sym.Name(),
 	}
 	err = s.sigs.Insert(newRoot)
 	if err != nil {
@@ -105,10 +104,11 @@ func (s *service) Incept(fqn sym.ADT) (Ref, error) {
 func (s *service) Create(spec Spec) (Root, error) {
 	s.log.Debug("signature creation started", slog.Any("spec", spec))
 	root := Root{
-		ID:   id.New(),
-		Name: spec.FQN.Name(),
-		PE:   spec.PE,
-		CEs:  spec.CEs,
+		ID:    id.New(),
+		Rev:   rev.Initial(),
+		Title: spec.FQN.Name(),
+		PE:    spec.PE,
+		CEs:   spec.CEs,
 	}
 	err := s.sigs.Insert(root)
 	if err != nil {
@@ -130,23 +130,6 @@ func (s *service) Retrieve(rid ID) (Root, error) {
 	return root, nil
 }
 
-func (s *service) Establish(spec KinshipSpec) error {
-	var children []Ref
-	for _, id := range spec.ChildIDs {
-		children = append(children, Ref{ID: id})
-	}
-	root := KinshipRoot{
-		Parent:   Ref{ID: spec.ParentID},
-		Children: children,
-	}
-	err := s.kinships.Insert(root)
-	if err != nil {
-		return err
-	}
-	s.log.Debug("establishment succeeded", slog.Any("kinship", root))
-	return nil
-}
-
 func (s *service) RetreiveRefs() ([]Ref, error) {
 	return s.sigs.SelectAll()
 }
@@ -160,15 +143,15 @@ type Repo interface {
 	SelectChildren(ID) ([]Ref, error)
 }
 
-func CollectEnv(sigs []Root) []role.ID {
-	roleIDs := []role.ID{}
-	for _, s := range sigs {
-		roleIDs = append(roleIDs, s.PE.Role)
-		for _, v := range s.CEs {
-			roleIDs = append(roleIDs, v.Role)
+func CollectEnv(sigs []Root) []role.FQN {
+	roleFQNs := []role.FQN{}
+	for _, sig := range sigs {
+		roleFQNs = append(roleFQNs, sig.PE.Link)
+		for _, ce := range sig.CEs {
+			roleFQNs = append(roleFQNs, ce.Link)
 		}
 	}
-	return roleIDs
+	return roleFQNs
 }
 
 // Kinship Relation

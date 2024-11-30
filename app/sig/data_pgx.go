@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,19 +34,69 @@ func (r *repoPgx) Insert(root Root) error {
 	if err != nil {
 		return err
 	}
-	query := `
-		INSERT INTO signatures (
-			id, name, pe, ces
+	insertRoot := `
+		insert into sig_roots (
+			sig_id, rev, title
 		) VALUES (
-			@id, @name, @pe, @ces
+			@sig_id, @rev, @title
 		)`
-	args := pgx.NamedArgs{
-		"id":   dto.ID,
-		"name": dto.Name,
-		"pe":   dto.PE,
-		"ces":  dto.CEs,
+	rootArgs := pgx.NamedArgs{
+		"sig_id": dto.ID,
+		"rev":    dto.Rev,
+		"title":  dto.Title,
 	}
-	_, err = tx.Exec(ctx, query, args)
+	_, err = tx.Exec(ctx, insertRoot, rootArgs)
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	insertPE := `
+		insert into sig_pes (
+			sig_id, rev_from, rev_to, chnl_key, role_fqn
+		) VALUES (
+			@sig_id, @rev_from, @rev_to, @chnl_key, @role_fqn
+		)`
+	peArgs := pgx.NamedArgs{
+		"sig_id":   dto.ID,
+		"rev_from": dto.Rev,
+		"rev_to":   math.MaxInt64,
+		"chnl_key": dto.PE.Key,
+		"role_fqn": dto.PE.Link,
+	}
+	_, err = tx.Exec(ctx, insertPE, peArgs)
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	insertCE := `
+		insert into sig_ces (
+			sig_id, rev_from, rev_to, chnl_key, role_fqn
+		) VALUES (
+			@sig_id, @rev_from, @rev_to, @chnl_key, @role_fqn
+		)`
+	batch := pgx.Batch{}
+	for _, ce := range dto.CEs {
+		args := pgx.NamedArgs{
+			"sig_id":   dto.ID,
+			"rev_from": dto.Rev,
+			"rev_to":   math.MaxInt64,
+			"chnl_key": ce.Key,
+			"role_fqn": ce.Link,
+		}
+		batch.Queue(insertCE, args)
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	for _, ce := range dto.CEs {
+		_, err = br.Exec()
+		if err != nil {
+			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("ce", ce))
+		}
+	}
+	if err != nil {
+		return errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
 	if err != nil {
 		return errors.Join(err, tx.Rollback(ctx))
 	}
@@ -53,13 +104,8 @@ func (r *repoPgx) Insert(root Root) error {
 }
 
 func (r *repoPgx) SelectByID(rid ID) (Root, error) {
-	query := `
-		SELECT
-			id, name, pe, ces
-		FROM signatures
-		WHERE id = $1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
+	rows, err := r.pool.Query(ctx, selectById, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return Root{}, err
@@ -90,11 +136,6 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	if len(ids) == 0 {
 		return []Root{}, nil
 	}
-	query := `
-		SELECT
-			id, name, pe, ces
-		FROM signatures
-		WHERE id = $1`
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -105,7 +146,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 		if rid.IsEmpty() {
 			return nil, id.ErrEmpty
 		}
-		batch.Queue(query, rid.String())
+		batch.Queue(selectById, rid.String())
 	}
 	br := tx.SendBatch(ctx, &batch)
 	defer func() {
@@ -169,8 +210,8 @@ func (r *repoPgx) SelectChildren(id ID) ([]Ref, error) {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		select
-			id, name
-		from signatures`
+			sig_id, title
+		from sig_roots`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
@@ -186,59 +227,23 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-// Adapter
-type kinshipRepoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
-}
-
-func newKinshipRepoPgx(p *pgxpool.Pool, l *slog.Logger) *kinshipRepoPgx {
-	name := slog.String("name", "kinshipRepoPgx")
-	return &kinshipRepoPgx{p, l.With(name)}
-}
-
-func (r *kinshipRepoPgx) Insert(root KinshipRoot) error {
-	query := `
-		INSERT INTO kinships (
-			parent_id,
-			child_id
-		) values (
-			@parent_id,
-			@child_id
-		)`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	batch := pgx.Batch{}
-	dto := DataFromKinshipRoot(root)
-	for _, child := range dto.Children {
-		args := pgx.NamedArgs{
-			"parent_id": dto.Parent.ID,
-			"child_id":  child.ID,
-		}
-		batch.Queue(query, args)
-	}
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	for _, child := range dto.Children {
-		_, err = br.Exec()
-		if err != nil {
-			r.log.Error("insert failed",
-				slog.Any("reason", err),
-				slog.Any("parent", dto.Parent),
-				slog.Any("child", child))
-		}
-	}
-	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	err = br.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
-}
+const (
+	selectById = `
+		select
+			sr.sig_id,
+			sr.rev,
+			(array_agg(sr.title))[1] as title,
+			(jsonb_agg(to_jsonb((select ep from (select sp.chnl_key, sp.role_fqn) ep))))[0] as pe,
+			jsonb_agg(to_jsonb((select ep from (select sc.chnl_key, sc.role_fqn) ep))) filter (where sc.sig_id is not null) as ces
+		from sig_roots sr
+		left join sig_pes sp
+			on sp.sig_id = sr.sig_id
+			and sp.rev_from >= sr.rev
+			and sp.rev_to > sr.rev
+		left join sig_ces sc
+			on sc.sig_id = sr.sig_id
+			and sc.rev_from >= sr.rev
+			and sc.rev_to > sr.rev
+		where sr.sig_id = $1
+		group by sr.sig_id, sr.rev`
+)

@@ -5,18 +5,18 @@ import (
 )
 
 type SpecData struct {
-	Name string `json:"name"`
-	Role string `json:"role_id"`
+	Key  string `json:"chnl_key"`
+	Link string `json:"role_fqn"`
 }
 
 type refData struct {
-	ID   string `db:"id" json:"id,omitempty"`
-	Name string `db:"name" json:"name,omitempty"`
+	ID  string `db:"id" json:"id,omitempty"`
+	Key string `db:"name" json:"name,omitempty"`
 }
 
 type rootData struct {
 	ID      string         `db:"id"`
-	Name    string         `db:"name"`
+	Key     string         `db:"name"`
 	PreID   sql.NullString `db:"pre_id"`
 	StateID sql.NullString `db:"state_id"`
 }

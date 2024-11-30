@@ -10,6 +10,7 @@ import (
 
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/sym"
 )
 
 // Adapter
@@ -48,9 +49,9 @@ func (r *repoPgx) Insert(root Root) error {
 		)`
 	snapQuery := `
 		insert into role_snaps (
-			role_id, role_rev, state_id, whole_id
+			role_id, role_rev, role_name, state_id, whole_id
 		) values (
-			@role_id, @role_rev, @state_id, @whole_id
+			@role_id, @role_rev, @role_name, @state_id, @whole_id
 		)`
 	args := pgx.NamedArgs{
 		"role_id":   dto.ID,
@@ -93,9 +94,9 @@ func (r *repoPgx) Update(root Root) error {
 			and role_rev = @role_rev - 1`
 	snapQuery := `
 		insert into role_snaps (
-			role_id, role_rev, state_id, whole_id
+			role_id, role_rev, role_name, state_id, whole_id
 		) values (
-			@role_id, @role_rev, @state_id, @whole_id
+			@role_id, @role_rev, @role_name, @state_id, @whole_id
 		)`
 	args := pgx.NamedArgs{
 		"role_id":   dto.ID,
@@ -165,16 +166,21 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
-	roots, err := r.SelectByIDs(ids)
+func (r *repoPgx) SelectByFQN(fqn sym.ADT) (Root, error) {
+	ctx := context.Background()
+	rows, err := r.pool.Query(ctx, selectByFQN, sym.ConvertToString(fqn))
 	if err != nil {
-		return nil, err
+		r.log.Error("query execution failed", slog.Any("reason", err))
+		return Root{}, err
 	}
-	env := make(map[ID]Root, len(roots))
-	for _, root := range roots {
-		env[root.ID] = root
+	defer rows.Close()
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	if err != nil {
+		r.log.Error("row collection failed", slog.Any("reason", err))
+		return Root{}, err
 	}
-	return env, nil
+	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("role_fqn", fqn))
+	return DataToRoot(dto)
 }
 
 func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
@@ -235,6 +241,68 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	return DataToRoots(dtos)
 }
 
+func (r *repoPgx) SelectEnv(fqns []sym.ADT) (map[sym.ADT]Root, error) {
+	roots, err := r.SelectByFQNs(fqns)
+	if err != nil {
+		return nil, err
+	}
+	env := make(map[sym.ADT]Root, len(roots))
+	for i, root := range roots {
+		env[fqns[i]] = root
+	}
+	return env, nil
+}
+
+func (r *repoPgx) SelectByFQNs(fqns []sym.ADT) ([]Root, error) {
+	if len(fqns) == 0 {
+		return []Root{}, nil
+	}
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	batch := pgx.Batch{}
+	for _, fqn := range fqns {
+		batch.Queue(selectByFQN, sym.ConvertToString(fqn))
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	var dtos []rootData
+	for _, fqn := range fqns {
+		rows, err := br.Query()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("role_fqn", fqn),
+			)
+		}
+		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+		if err != nil {
+			r.log.Error("row collection failed",
+				slog.Any("reason", err),
+				slog.Any("role_fqn", fqn),
+			)
+		}
+		dtos = append(dtos, dto)
+	}
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return nil, errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "roots selection succeeded", slog.Any("dtos", dtos))
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	return DataToRoots(dtos)
+}
+
 func (r *repoPgx) SelectParts(rid id.ADT) ([]Ref, error) {
 	query := `
 		SELECT
@@ -257,3 +325,14 @@ func (r *repoPgx) SelectParts(rid id.ADT) ([]Ref, error) {
 	}
 	return DataToRefs(dtos)
 }
+
+const (
+	selectByFQN = `
+		select 
+			rs.*
+		from role_snaps rs
+		left join aliases a
+			on a.id = rs.role_id
+			and a.rev_from = rs.role_rev
+		where a.sym = $1`
+)

@@ -25,7 +25,8 @@ func (dto SpecMsg) Validate() error {
 }
 
 type RefMsg struct {
-	ID string `json:"id" param:"id"`
+	ID  string `json:"id" param:"id"`
+	Rev int64  `json:"rev"`
 }
 
 func (dto RefMsg) Validate() error {
@@ -35,8 +36,9 @@ func (dto RefMsg) Validate() error {
 }
 
 type SigRefMsg struct {
-	ID   string `json:"id" param:"id"`
-	Name string `json:"name" query:"name"`
+	ID    string `json:"id" param:"id"`
+	Rev   int64  `json:"rev"`
+	Title string `json:"name" query:"name"`
 }
 
 func (dto SigRefMsg) Validate() error {
@@ -46,17 +48,19 @@ func (dto SigRefMsg) Validate() error {
 }
 
 type RootMsg struct {
-	ID   string         `json:"id"`
-	Name string         `json:"name"`
-	PE   chnl.SpecMsg   `json:"pe"`
-	CEs  []chnl.SpecMsg `json:"ces"`
+	ID    string         `json:"id"`
+	Rev   int64          `json:"rev"`
+	Title string         `json:"name"`
+	PE    chnl.SpecMsg   `json:"pe"`
+	CEs   []chnl.SpecMsg `json:"ces"`
 }
 
 type SnapMsg struct {
-	ID   string         `json:"id"`
-	Name string         `json:"name"`
-	PE   chnl.SpecMsg   `json:"pe"`
-	CEs  []chnl.SpecMsg `json:"ces"`
+	ID    string         `json:"id"`
+	Rev   int64          `json:"rev"`
+	Title string         `json:"name"`
+	PE    chnl.SpecMsg   `json:"pe"`
+	CEs   []chnl.SpecMsg `json:"ces"`
 }
 
 // goverter:variables
@@ -76,24 +80,4 @@ var (
 	MsgFromRoots func([]Root) []RootMsg
 	MsgToSnap    func(SnapMsg) (Snap, error)
 	MsgFromSnap  func(Snap) SnapMsg
-)
-
-type KinshipSpecMsg struct {
-	ParentID string   `json:"parent_id" param:"id"`
-	ChildIDs []string `json:"child_ids"`
-}
-
-type KinshipRootMsg struct {
-	Parent   SigRefMsg   `json:"parent"`
-	Children []SigRefMsg `json:"children"`
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Convert.*
-var (
-	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
-	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
-	MsgFromKinshipRoot func(KinshipRoot) KinshipRootMsg
-	MsgToKinshipRoot   func(KinshipRootMsg) (KinshipRoot, error)
 )
