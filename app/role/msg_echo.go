@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
@@ -49,7 +50,7 @@ func (h *handlerEcho) PostOne(c echo.Context) error {
 }
 
 func (h *handlerEcho) GetOne(c echo.Context) error {
-	var dto RefMsg
+	var dto IdentMsg
 	err := c.Bind(&dto)
 	if err != nil {
 		h.log.Error("dto binding failed")
@@ -60,12 +61,12 @@ func (h *handlerEcho) GetOne(c echo.Context) error {
 		h.log.Error("dto validation failed")
 		return err
 	}
-	ref, err := MsgToRef(dto)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		h.log.Error("dto mapping failed")
 		return err
 	}
-	snap, err := h.api.Retrieve(ref.ID)
+	snap, err := h.api.Retrieve(id)
 	if err != nil {
 		h.log.Error("root retrieval failed")
 		return err

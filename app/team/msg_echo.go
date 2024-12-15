@@ -1,4 +1,4 @@
-package sig
+package team
 
 import (
 	"log/slog"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 )
@@ -18,7 +19,7 @@ type handlerEcho struct {
 }
 
 func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
-	name := slog.String("name", "sigHandlerEcho")
+	name := slog.String("name", "teamHandlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
 
@@ -29,6 +30,8 @@ func (h *handlerEcho) PostOne(c echo.Context) error {
 		h.log.Error("dto binding failed", slog.Any("reason", err))
 		return err
 	}
+	ctx := c.Request().Context()
+	h.log.Log(ctx, core.LevelTrace, "posting started", slog.Any("dto", dto))
 	err = dto.Validate()
 	if err != nil {
 		h.log.Error("dto validation failed", slog.Any("reason", err), slog.Any("dto", dto))
@@ -60,5 +63,5 @@ func (h *handlerEcho) GetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, MsgFromRoot(snap))
+	return c.JSON(http.StatusOK, MsgFromSnap(snap))
 }

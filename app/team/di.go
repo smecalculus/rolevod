@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package crew
+package team
 
 import (
 	"embed"
@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/crew",
+var Module = fx.Module("app/team",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
 	),
@@ -22,35 +22,26 @@ var Module = fx.Module("app/crew",
 		fx.Private,
 		newHandlerEcho,
 		fx.Annotate(newRepoPgx, fx.As(new(repo))),
-		newKinshipHandlerEcho,
-		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(
-		cfgAgentEcho,
-		cfgKinshipEcho,
+		cfgEcho,
 	),
 )
 
-//go:embed all:view
+//go:embed *.html
 var viesFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("crew").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
+	t, err := template.New("team").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*.html")
 	if err != nil {
 		return nil, err
 	}
 	return msg.NewRendererStdlib(t, l), nil
 }
 
-func cfgAgentEcho(e *echo.Echo, h *handlerEcho) error {
-	e.POST("/api/v1/agents", h.ApiPostOne)
-	e.GET("/api/v1/agents/:id", h.ApiGetOne)
-	e.GET("/ssr/agents/:id", h.SsrGetOne)
-	return nil
-}
-
-func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
-	e.POST("/api/v1/agents/:id/kinships", h.ApiPostOne)
+func cfgEcho(e *echo.Echo, h *handlerEcho) error {
+	e.POST("/api/v1/teams", h.PostOne)
+	e.GET("/api/v1/teams/:id", h.GetOne)
 	return nil
 }

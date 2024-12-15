@@ -45,10 +45,10 @@ func (dto DealRefMsg) Validate() error {
 }
 
 type RootMsg struct {
-	ID       string          `json:"id"`
-	Name     string          `json:"name"`
-	Sigs     []sig.SigRefMsg `json:"sigs"`
-	Children []DealRefMsg    `json:"children"`
+	ID       string       `json:"id"`
+	Name     string       `json:"name"`
+	Sigs     []sig.RefMsg `json:"sigs"`
+	Children []DealRefMsg `json:"children"`
 }
 
 // goverter:variables

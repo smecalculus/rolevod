@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
-	"smecalculus/rolevod/app/crew"
+	"smecalculus/rolevod/app/team"
 	"smecalculus/rolevod/app/deal"
 	"smecalculus/rolevod/app/role"
 	"smecalculus/rolevod/app/sig"
@@ -33,7 +33,7 @@ func main() {
 		state.Module,
 		step.Module,
 		// app
-		crew.Module,
+		team.Module,
 		deal.Module,
 		role.Module,
 		sig.Module,

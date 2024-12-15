@@ -47,29 +47,30 @@ CREATE TABLE sig_subs (
 	rev_to bigint
 );
 
-CREATE TABLE crew_roots (
-	crew_id varchar(36),
+CREATE TABLE team_roots (
+	team_id varchar(36),
 	rev bigint,
-	title varchar(64)
+	title varchar(64),
+	sup_id varchar(64)
 );
 
-CREATE TABLE crew_caps (
-	crew_id varchar(36),
+CREATE TABLE team_caps (
+	team_id varchar(36),
 	sig_fqn ltree,
 	rev_from bigint,
 	rev_to bigint
 );
 
-CREATE TABLE crew_deps (
-	crew_id varchar(36),
+CREATE TABLE team_deps (
+	team_id varchar(36),
 	sig_fqn ltree,
 	rev_from bigint,
 	rev_to bigint
 );
 
-CREATE TABLE crew_subs (
-	crew_id varchar(36),
-	crew_fqn ltree,
+CREATE TABLE team_subs (
+	team_id varchar(36),
+	sub_id varchar(36),
 	rev_from bigint,
 	rev_to bigint
 );

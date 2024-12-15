@@ -47,6 +47,7 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	_, err = tx.Exec(ctx, insertRoot, rootArgs)
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	insertPE := `
@@ -64,6 +65,7 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	_, err = tx.Exec(ctx, insertPE, peArgs)
 	if err != nil {
+		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	insertCE := `
@@ -103,7 +105,7 @@ func (r *repoPgx) Insert(root Root) error {
 	return tx.Commit(ctx)
 }
 
-func (r *repoPgx) SelectByID(rid ID) (Root, error) {
+func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, selectById, rid.String())
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"smecalculus/rolevod/lib/core"
+	id "smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
 	"smecalculus/rolevod/lib/sym"
 )
@@ -67,7 +68,7 @@ func (p *presenterEcho) GetMany(c echo.Context) error {
 }
 
 func (p *presenterEcho) GetOne(c echo.Context) error {
-	var dto SigRefMsg
+	var dto IdentMsg
 	err := c.Bind(&dto)
 	if err != nil {
 		p.log.Error("dto binding failed")
@@ -80,12 +81,12 @@ func (p *presenterEcho) GetOne(c echo.Context) error {
 		p.log.Error("dto validation failed")
 		return err
 	}
-	ref, err := MsgToRef(dto)
+	id, err := id.ConvertFromString(dto.ID)
 	if err != nil {
 		p.log.Error("dto mapping failed")
 		return err
 	}
-	snap, err := p.api.Retrieve(ref.ID)
+	snap, err := p.api.Retrieve(id)
 	if err != nil {
 		p.log.Error("snap retrieval failed")
 		return err

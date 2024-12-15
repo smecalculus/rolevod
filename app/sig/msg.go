@@ -24,24 +24,23 @@ func (dto SpecMsg) Validate() error {
 	)
 }
 
-type RefMsg struct {
-	ID  string `json:"id" param:"id"`
-	Rev int64  `json:"rev"`
+type IdentMsg struct {
+	ID string `json:"id" param:"id"`
 }
 
-func (dto RefMsg) Validate() error {
+func (dto IdentMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
 	)
 }
 
-type SigRefMsg struct {
+type RefMsg struct {
 	ID    string `json:"id" param:"id"`
 	Rev   int64  `json:"rev"`
-	Title string `json:"title" query:"name"`
+	Title string `json:"title"`
 }
 
-func (dto SigRefMsg) Validate() error {
+func (dto RefMsg) Validate() error {
 	return validation.ValidateStruct(&dto,
 		validation.Field(&dto.ID, id.Required...),
 	)
@@ -73,8 +72,8 @@ var (
 	MsgFromID    func(id.ADT) string
 	MsgToSpec    func(SpecMsg) (Spec, error)
 	MsgFromSpec  func(Spec) SpecMsg
-	MsgToRef     func(SigRefMsg) (Ref, error)
-	MsgFromRef   func(Ref) SigRefMsg
+	MsgToRef     func(RefMsg) (Ref, error)
+	MsgFromRef   func(Ref) RefMsg
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoot  func(Root) RootMsg
 	MsgFromRoots func([]Root) []RootMsg

@@ -22,6 +22,16 @@ func (dto SpecMsg) Validate() error {
 	)
 }
 
+type IdentMsg struct {
+	ID string `json:"id" param:"id"`
+}
+
+func (dto IdentMsg) Validate() error {
+	return validation.ValidateStruct(&dto,
+		validation.Field(&dto.ID, id.Required...),
+	)
+}
+
 type RefMsg struct {
 	ID    string `json:"id" param:"id"`
 	Rev   int64  `json:"rev" query:"rev"`

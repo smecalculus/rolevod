@@ -1,4 +1,4 @@
-package crew
+package team
 
 import (
 	"github.com/go-resty/resty/v2"
@@ -26,35 +26,26 @@ func (cl *clientResty) Create(spec Spec) (Root, error) {
 	_, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
-		Post("/agents")
+		Post("/teams")
 	if err != nil {
 		return Root{}, err
 	}
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) Retrieve(id id.ADT) (Root, error) {
-	var res RootMsg
+func (c *clientResty) Retrieve(rid id.ADT) (Snap, error) {
+	var res SnapMsg
 	_, err := c.resty.R().
 		SetResult(&res).
-		SetPathParam("id", id.String()).
-		Get("/agents/{id}")
+		SetPathParam("id", rid.String()).
+		Get("/teams/{id}")
 	if err != nil {
-		return Root{}, err
+		return Snap{}, err
 	}
-	return MsgToRoot(res)
+	return MsgToSnap(res)
 }
 
 func (c *clientResty) RetreiveAll() ([]Ref, error) {
 	refs := []Ref{}
 	return refs, nil
-}
-
-func (c *clientResty) Establish(spec KinshipSpec) error {
-	req := MsgFromKinshipSpec(spec)
-	_, err := c.resty.R().
-		SetBody(&req).
-		SetPathParam("id", req.ParentID).
-		Post("/agents/{id}/kinships")
-	return err
 }

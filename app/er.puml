@@ -1,5 +1,5 @@
-@startuml
-' left to right direction
+@startuml er
+
 skinparam nodesep 40
 hide empty methods
 
