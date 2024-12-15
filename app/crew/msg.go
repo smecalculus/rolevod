@@ -1,4 +1,4 @@
-package agent
+package crew
 
 type SpecMsg struct {
 	Name string `json:"name"`
@@ -33,7 +33,7 @@ type KinshipRootMsg struct {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
-	// agent
+	// crew
 	MsgToSpec    func(SpecMsg) (Spec, error)
 	MsgFromSpec  func(Spec) SpecMsg
 	MsgToRoot    func(RootMsg) (Root, error)

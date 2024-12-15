@@ -210,7 +210,7 @@ func (r *repoPgx) SelectChildren(id ID) ([]Ref, error) {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		select
-			sig_id, title
+			sig_id, rev, title
 		from sig_roots`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)

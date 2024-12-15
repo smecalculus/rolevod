@@ -1,4 +1,4 @@
-package agent
+package crew
 
 import (
 	"log/slog"
@@ -70,7 +70,7 @@ func (h *handlerEcho) SsrGetOne(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	html, err := h.ssr.Render("agent", MsgFromRoot(root))
+	html, err := h.ssr.Render("crew", MsgFromRoot(root))
 	if err != nil {
 		return err
 	}

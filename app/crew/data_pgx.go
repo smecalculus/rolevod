@@ -1,4 +1,4 @@
-package agent
+package crew
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type repoPgx struct {
 }
 
 func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "agentRepoPgx")
+	name := slog.String("name", "crewRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
 
@@ -42,7 +42,7 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	_, err = tx.Exec(ctx, query, args)
 	if err != nil {
-		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("agent", args))
+		r.log.Error("insert failed", slog.Any("reason", err), slog.Any("crew", args))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
 	return tx.Commit(ctx)

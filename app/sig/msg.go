@@ -11,7 +11,7 @@ import (
 )
 
 type SpecMsg struct {
-	FQN string         `json:"name"`
+	FQN string         `json:"fqn"`
 	PE  chnl.SpecMsg   `json:"pe"`
 	CEs []chnl.SpecMsg `json:"ces"`
 }
@@ -38,7 +38,7 @@ func (dto RefMsg) Validate() error {
 type SigRefMsg struct {
 	ID    string `json:"id" param:"id"`
 	Rev   int64  `json:"rev"`
-	Title string `json:"name" query:"name"`
+	Title string `json:"title" query:"name"`
 }
 
 func (dto SigRefMsg) Validate() error {
@@ -50,7 +50,7 @@ func (dto SigRefMsg) Validate() error {
 type RootMsg struct {
 	ID    string         `json:"id"`
 	Rev   int64          `json:"rev"`
-	Title string         `json:"name"`
+	Title string         `json:"title"`
 	PE    chnl.SpecMsg   `json:"pe"`
 	CEs   []chnl.SpecMsg `json:"ces"`
 }
@@ -58,7 +58,7 @@ type RootMsg struct {
 type SnapMsg struct {
 	ID    string         `json:"id"`
 	Rev   int64          `json:"rev"`
-	Title string         `json:"name"`
+	Title string         `json:"title"`
 	PE    chnl.SpecMsg   `json:"pe"`
 	CEs   []chnl.SpecMsg `json:"ces"`
 }

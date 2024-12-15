@@ -1,4 +1,4 @@
-package agent
+package crew
 
 import (
 	"github.com/go-resty/resty/v2"

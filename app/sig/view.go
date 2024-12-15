@@ -23,7 +23,7 @@ func (dto SpecView) Validate() error {
 type RefView struct {
 	ID    string `form:"id" json:"id" param:"id"`
 	Rev   int64  `form:"rev" json:"rev"`
-	Title string `form:"name" json:"name"`
+	Title string `form:"name" json:"title"`
 }
 
 func (dto RefView) Validate() error {
@@ -37,7 +37,7 @@ func (dto RefView) Validate() error {
 type RootView struct {
 	ID    string         `json:"id"`
 	Rev   int64          `json:"rev"`
-	Title string         `json:"name"`
+	Title string         `json:"title"`
 	PE    chnl.SpecMsg   `json:"pe"`
 	CEs   []chnl.SpecMsg `json:"ces"`
 }
@@ -45,7 +45,7 @@ type RootView struct {
 type SnapView struct {
 	ID    string `json:"id"`
 	Rev   int64  `json:"rev"`
-	Title string `json:"name"`
+	Title string `json:"title"`
 }
 
 // goverter:variables

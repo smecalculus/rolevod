@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,31 +42,35 @@ func (r *repoPgx) Insert(root Root) error {
 		r.log.Error("dto mapping failed", slog.Any("reason", err))
 		return err
 	}
-	rootQuery := `
+	insertRoot := `
 		insert into role_roots (
-			role_id, role_rev, role_name, state_id, whole_id
+			role_id, rev, title
 		) values (
-			@role_id, @role_rev, @role_name, @state_id, @whole_id
+			@role_id, @rev, @title
 		)`
-	snapQuery := `
-		insert into role_snaps (
-			role_id, role_rev, role_name, state_id, whole_id
-		) values (
-			@role_id, @role_rev, @role_name, @state_id, @whole_id
-		)`
-	args := pgx.NamedArgs{
-		"role_id":   dto.ID,
-		"role_rev":  dto.Rev,
-		"role_name": dto.Name,
-		"state_id":  dto.StateID,
-		"whole_id":  dto.WholeID,
+	rootArgs := pgx.NamedArgs{
+		"role_id": dto.ID,
+		"rev":     dto.Rev,
+		"title":   dto.Title,
 	}
-	_, err = tx.Exec(ctx, rootQuery, args)
+	_, err = tx.Exec(ctx, insertRoot, rootArgs)
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
 	}
-	_, err = tx.Exec(ctx, snapQuery, args)
+	insertState := `
+		insert into role_states (
+			role_id, state_id, rev_from, rev_to
+		) values (
+			@role_id, @state_id, @rev_from, @rev_to
+		)`
+	stateArgs := pgx.NamedArgs{
+		"role_id":  dto.ID,
+		"rev_from": dto.Rev,
+		"rev_to":   math.MaxInt64,
+		"state_id": dto.StateID,
+	}
+	_, err = tx.Exec(ctx, insertState, stateArgs)
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return errors.Join(err, tx.Rollback(ctx))
@@ -88,22 +93,22 @@ func (r *repoPgx) Update(root Root) error {
 	}
 	rootQuery := `
 		update role_roots
-		set role_rev = @role_rev,
+		set rev = @rev,
 			state_id = @state_id
 		where role_id = @role_id
-			and role_rev = @role_rev - 1`
+			and rev = @rev - 1`
 	snapQuery := `
 		insert into role_snaps (
-			role_id, role_rev, role_name, state_id, whole_id
+			role_id, rev, title, state_id, whole_id
 		) values (
-			@role_id, @role_rev, @role_name, @state_id, @whole_id
+			@role_id, @rev, @title, @state_id, @whole_id
 		)`
 	args := pgx.NamedArgs{
-		"role_id":   dto.ID,
-		"role_rev":  dto.Rev,
-		"role_name": dto.Name,
-		"state_id":  dto.StateID,
-		"whole_id":  dto.WholeID,
+		"role_id":  dto.ID,
+		"rev":      dto.Rev,
+		"title":    dto.Title,
+		"state_id": dto.StateID,
+		"whole_id": dto.WholeID,
 	}
 	ct, err := tx.Exec(ctx, rootQuery, args)
 	if err != nil {
@@ -127,7 +132,7 @@ func (r *repoPgx) Update(root Root) error {
 func (r *repoPgx) SelectRefs() ([]Ref, error) {
 	query := `
 		SELECT
-			role_id, role_rev, role_name
+			role_id, rev, title
 		FROM role_roots`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
@@ -145,13 +150,8 @@ func (r *repoPgx) SelectRefs() ([]Ref, error) {
 }
 
 func (r *repoPgx) SelectByID(rid ID) (Root, error) {
-	query := `
-		select
-			role_id, role_rev, role_name, state_id, whole_id
-		from role_roots
-		where role_id = $1`
 	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
+	rows, err := r.pool.Query(ctx, selectById, rid.String())
 	if err != nil {
 		r.log.Error("query execution failed", slog.Any("reason", err))
 		return Root{}, err
@@ -179,7 +179,7 @@ func (r *repoPgx) SelectByFQN(fqn sym.ADT) (Root, error) {
 		r.log.Error("row collection failed", slog.Any("reason", err))
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("role_fqn", fqn))
+	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("fqn", fqn))
 	return DataToRoot(dto)
 }
 
@@ -189,7 +189,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	}
 	query := `
 		select
-			role_id, role_rev, role_name, state_id, whole_id
+			role_id, rev, title, state_id, whole_id
 		from role_roots
 		where role_id = $1`
 	ctx := context.Background()
@@ -276,14 +276,14 @@ func (r *repoPgx) SelectByFQNs(fqns []sym.ADT) ([]Root, error) {
 		if err != nil {
 			r.log.Error("query execution failed",
 				slog.Any("reason", err),
-				slog.Any("role_fqn", fqn),
+				slog.Any("fqn", fqn),
 			)
 		}
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
 			r.log.Error("row collection failed",
 				slog.Any("reason", err),
-				slog.Any("role_fqn", fqn),
+				slog.Any("fqn", fqn),
 			)
 		}
 		dtos = append(dtos, dto)
@@ -328,11 +328,34 @@ func (r *repoPgx) SelectParts(rid id.ADT) ([]Ref, error) {
 
 const (
 	selectByFQN = `
-		select 
-			rs.*
-		from role_snaps rs
+		select
+			rr.role_id,
+			rr.rev,
+			rr.title,
+			rs.state_id,
+			null as whole_id
+		from role_roots rr
 		left join aliases a
-			on a.id = rs.role_id
-			and a.rev_from = rs.role_rev
+			on a.id = rr.role_id
+			and a.rev_from >= rr.rev
+			and a.rev_to > rr.rev
+		left join role_states rs
+			on rs.role_id = rr.role_id
+			and rs.rev_from >= rr.rev
+			and rs.rev_to > rr.rev
 		where a.sym = $1`
+
+	selectById = `
+		select
+			rr.role_id,
+			rr.rev,
+			rr.title,
+			rs.state_id,
+			null as whole_id
+		from role_roots rr
+		left join role_states rs
+			on rs.role_id = rr.role_id
+			and rs.rev_from >= rr.rev
+			and rs.rev_to > rr.rev
+		where rr.role_id = $1`
 )

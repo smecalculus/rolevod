@@ -23,9 +23,9 @@ func (dto SpecMsg) Validate() error {
 }
 
 type RefMsg struct {
-	ID   string `json:"id" param:"id"`
-	Rev  int64  `json:"rev" query:"rev"`
-	Name string `json:"name"`
+	ID    string `json:"id" param:"id"`
+	Rev   int64  `json:"rev" query:"rev"`
+	Title string `json:"title"`
 }
 
 func (dto RefMsg) Validate() error {
@@ -38,7 +38,7 @@ func (dto RefMsg) Validate() error {
 type SnapMsg struct {
 	ID    string        `json:"id" param:"id"`
 	Rev   int64         `json:"rev" query:"rev"`
-	Name  string        `json:"name"`
+	Title string        `json:"title"`
 	FQN   string        `json:"fqn"`
 	State state.SpecMsg `json:"state"`
 }
@@ -54,7 +54,7 @@ func (dto SnapMsg) Validate() error {
 type RootMsg struct {
 	ID      string        `json:"id" param:"id"`
 	Rev     int64         `json:"rev"`
-	Name    string        `json:"name"`
+	Title   string        `json:"title"`
 	StateID string        `json:"state_id"`
 	State   state.SpecMsg `json:"state"`
 	Parts   []RefMsg      `json:"parts"`

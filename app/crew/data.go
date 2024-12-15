@@ -1,4 +1,4 @@
-package agent
+package crew
 
 type rootData struct {
 	ID       string    `db:"id"`
@@ -20,7 +20,7 @@ type kinshipRootData struct {
 // goverter:output:format assign-variable
 // goverter:extend smecalculus/rolevod/lib/id:Convert.*
 var (
-	// agent
+	// crew
 	DataToRef    func(refData) (Ref, error)
 	DataFromRef  func(Ref) refData
 	DataToRefs   func([]refData) ([]Ref, error)

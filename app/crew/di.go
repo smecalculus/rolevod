@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package agent
+package crew
 
 import (
 	"embed"
@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/agent",
+var Module = fx.Module("app/crew",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
 	),
@@ -36,7 +36,7 @@ var Module = fx.Module("app/agent",
 var viesFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("agent").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
+	t, err := template.New("crew").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*/*.html")
 	if err != nil {
 		return nil, err
 	}

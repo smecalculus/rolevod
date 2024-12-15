@@ -1,47 +1,21 @@
-CREATE TABLE roles (
-	id varchar(36),
-	rev bigint,
-	name varchar(64),
-	state_id varchar(36),
-	whole_id varchar(36)
-);
-
 CREATE TABLE role_roots (
 	role_id varchar(36),
-	role_rev bigint,
-	role_name varchar(64),
-	role_desc varchar(64),
-	state_id varchar(36),
-	whole_id varchar(36)
-);
-
-CREATE TABLE role_snaps (
-	role_id varchar(36),
-	role_rev bigint,
-	role_name varchar(64),
-	state_id varchar(36),
-	whole_id varchar(36)
+	rev bigint,
+	title varchar(64)
 );
 
 CREATE TABLE role_states (
 	role_id varchar(36),
+	state_id varchar(36),
 	rev_from bigint,
-	rev_to bigint,
-	state_id varchar(36)
+	rev_to bigint
 );
 
-CREATE TABLE role_fqns (
+CREATE TABLE role_subs (
 	role_id varchar(36),
+	role_fqn ltree,
 	rev_from bigint,
-	rev_to bigint,
-	fqn ltree
-);
-
-CREATE TABLE signatures (
-	id varchar(36),
-	name varchar(64),
-	pe jsonb,
-	ces jsonb
+	rev_to bigint
 );
 
 CREATE TABLE sig_roots (
@@ -50,37 +24,54 @@ CREATE TABLE sig_roots (
 	title text
 );
 
-CREATE TABLE sig_snaps (
-	sig_id varchar(36),
-	rev bigint,
-	pe jsonb,
-	ces jsonb
-);
-
 CREATE TABLE sig_pes (
 	sig_id varchar(36),
-	rev_from bigint,
-	rev_to bigint,
 	chnl_key varchar(64),
-	role_fqn ltree
+	role_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
 );
 
 CREATE TABLE sig_ces (
 	sig_id varchar(36),
-	rev_from bigint,
-	rev_to bigint,
 	chnl_key varchar(64),
-	role_fqn ltree
+	role_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
 );
 
-CREATE TABLE agents (
-	id varchar(36),
-	name varchar(64)
+CREATE TABLE sig_subs (
+	sig_id varchar(36),
+	sig_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
 );
 
-CREATE TABLE teams (
-	id varchar(36),
-	name varchar(64)
+CREATE TABLE crew_roots (
+	crew_id varchar(36),
+	rev bigint,
+	title varchar(64)
+);
+
+CREATE TABLE crew_caps (
+	crew_id varchar(36),
+	sig_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
+);
+
+CREATE TABLE crew_deps (
+	crew_id varchar(36),
+	sig_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
+);
+
+CREATE TABLE crew_subs (
+	crew_id varchar(36),
+	crew_fqn ltree,
+	rev_from bigint,
+	rev_to bigint
 );
 
 CREATE TABLE deals (
@@ -123,9 +114,9 @@ CREATE TABLE clientships (
 
 CREATE TABLE aliases (
 	id varchar(36),
+	sym ltree UNIQUE,
 	rev_from bigint,
 	rev_to bigint,
-	sym ltree UNIQUE,
 	kind smallint
 );
 

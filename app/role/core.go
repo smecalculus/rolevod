@@ -16,7 +16,7 @@ import (
 type ID = id.ADT
 type Rev = rev.ADT
 type FQN = sym.ADT
-type Name = string
+type Title = string
 
 type Spec struct {
 	FQN   sym.ADT
@@ -24,15 +24,15 @@ type Spec struct {
 }
 
 type Ref struct {
-	ID   id.ADT
-	Rev  rev.ADT
-	Name string
+	ID    id.ADT
+	Rev   rev.ADT
+	Title string
 }
 
 type Snap struct {
 	ID    id.ADT
 	Rev   rev.ADT
-	Name  string
+	Title string
 	FQN   sym.ADT
 	State state.Spec
 	// Parts   []Ref
@@ -40,9 +40,9 @@ type Snap struct {
 
 // aka TpDef
 type Root struct {
-	ID   id.ADT
-	Rev  rev.ADT
-	Name string
+	ID    id.ADT
+	Rev   rev.ADT
+	Title string
 	// specification relation
 	StateID state.ID
 	// composition relation
@@ -93,9 +93,9 @@ func (s *service) Incept(fqn sym.ADT) (Ref, error) {
 		return Ref{}, err
 	}
 	newRoot := Root{
-		ID:   newAlias.ID,
-		Rev:  newAlias.Rev,
-		Name: newAlias.Sym.Name(),
+		ID:    newAlias.ID,
+		Rev:   newAlias.Rev,
+		Title: newAlias.Sym.Name(),
 	}
 	err = s.roles.Insert(newRoot)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *service) Create(spec Spec) (Snap, error) {
 	newRoot := Root{
 		ID:      newAlias.ID,
 		Rev:     newAlias.Rev,
-		Name:    newAlias.Sym.Name(),
+		Title:   newAlias.Sym.Name(),
 		StateID: newState.Ident(),
 	}
 	err = s.roles.Insert(newRoot)
@@ -147,7 +147,7 @@ func (s *service) Create(spec Spec) (Snap, error) {
 	return Snap{
 		ID:    newRoot.ID,
 		Rev:   newRoot.Rev,
-		Name:  newRoot.Name,
+		Title: newRoot.Title,
 		FQN:   newAlias.Sym,
 		State: state.ConvertRootToSpec(newState),
 	}, nil
@@ -236,7 +236,7 @@ func (s *service) RetrieveSnap(root Root) (Snap, error) {
 	return Snap{
 		ID:    root.ID,
 		Rev:   root.Rev,
-		Name:  root.Name,
+		Title: root.Title,
 		State: state.ConvertRootToSpec(curState),
 	}, nil
 }
@@ -272,7 +272,6 @@ type Repo interface {
 // goverter:extend smecalculus/rolevod/internal/state:Convert.*
 var (
 	ConvertRootToRef func(Root) Ref
-	// goverter:ignore Name
 	ConvertSnapToRef func(Snap) Ref
 )
 

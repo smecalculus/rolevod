@@ -5,15 +5,15 @@ import (
 )
 
 type refData struct {
-	ID   string `db:"role_id"`
-	Rev  int64  `db:"role_rev"`
-	Name string `db:"role_name"`
+	ID    string `db:"role_id"`
+	Rev   int64  `db:"rev"`
+	Title string `db:"title"`
 }
 
 type rootData struct {
 	ID      string         `db:"role_id"`
-	Rev     int64          `db:"role_rev"`
-	Name    string         `db:"role_name"`
+	Rev     int64          `db:"rev"`
+	Title   string         `db:"title"`
 	StateID string         `db:"state_id"`
 	WholeID sql.NullString `db:"whole_id"`
 }

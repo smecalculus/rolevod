@@ -7,11 +7,11 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 
-	"smecalculus/rolevod/app/agent"
+	"smecalculus/rolevod/app/crew"
 )
 
 var (
-	api = agent.NewAPI()
+	api = crew.NewAPI()
 )
 
 func TestMain(m *testing.M) {
@@ -21,19 +21,19 @@ func TestMain(m *testing.M) {
 
 func TestEstablish(t *testing.T) {
 	// given
-	ps := agent.Spec{Name: "parent-agent"}
+	ps := crew.Spec{Name: "parent-agent"}
 	pr, err := api.Create(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// and
-	cs := agent.Spec{Name: "child-agent"}
+	cs := crew.Spec{Name: "child-agent"}
 	cr, err := api.Create(cs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// when
-	ks := agent.KinshipSpec{
+	ks := crew.KinshipSpec{
 		ParentID: pr.ID,
 		ChildIDs: []id.ADT{cr.ID},
 	}
@@ -47,7 +47,7 @@ func TestEstablish(t *testing.T) {
 		t.Fatal(err)
 	}
 	// then
-	expectedChild := agent.ToAgentRef(cr)
+	expectedChild := crew.ToAgentRef(cr)
 	if !slices.Contains(actual.Children, expectedChild) {
 		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
 	}

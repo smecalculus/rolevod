@@ -5,7 +5,7 @@
             {{range .}}
                 <tr>
                     <td>
-                        <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Name }}</a>
+                        <a href="/ssr/roles/{{ .ID }}" hx-target="#roles" hx-swap="outerHTML" hx-boost="true">{{ .Title }}</a>
                     </td>
                 </tr>
             {{end}}
@@ -125,7 +125,7 @@
         }))
     </script>
         <div id="role" x-data="root">
-            <input x-model="dto.name" class="form-control shadow-none">
+            <input x-model="dto.title" class="form-control shadow-none">
             <fieldset>
                 <legend>state</legend>
                 {{template "st" (dict "St" .State "Root" .ID "Path" "dto.state")}}

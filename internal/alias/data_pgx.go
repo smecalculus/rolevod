@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,13 +33,14 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	query := `
 		insert into aliases (
-			id, rev_from, sym
+			id, rev_from, rev_to, sym
 		) values (
-			@id, @rev_from, @sym
+			@id, @rev_from, @rev_to, @sym
 		)`
 	args := pgx.NamedArgs{
 		"id":       dto.ID,
 		"rev_from": dto.Rev,
+		"rev_to":   math.MaxInt64,
 		"sym":      dto.Sym,
 	}
 	_, err = tx.Exec(ctx, query, args)

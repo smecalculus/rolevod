@@ -1,4 +1,4 @@
-package agent
+package crew
 
 import (
 	"log/slog"
@@ -38,7 +38,7 @@ type service struct {
 }
 
 func newService(agents repo, kinships kinshipRepo, l *slog.Logger) *service {
-	name := slog.String("name", "agentService")
+	name := slog.String("name", "crewService")
 	return &service{agents, kinships, l.With(name)}
 }
 
