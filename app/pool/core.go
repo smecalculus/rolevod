@@ -1,8 +1,9 @@
-package team
+package pool
 
 import (
 	"log/slog"
 
+	"smecalculus/rolevod/app/sig"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
 )
@@ -12,8 +13,9 @@ type Rev = rev.ADT
 type Title = string
 
 type Spec struct {
-	Title string
-	SupID id.ADT
+	Title  string
+	SupID  id.ADT
+	DepIDs []sig.ID
 }
 
 type Ref struct {
@@ -24,7 +26,6 @@ type Ref struct {
 
 type Snap struct {
 	ID    id.ADT
-	Rev   rev.ADT
 	Title string
 	Subs  []Ref
 }
@@ -40,7 +41,7 @@ type Root struct {
 type API interface {
 	Create(Spec) (Root, error)
 	Retrieve(id.ADT) (Snap, error)
-	RetreiveAll() ([]Ref, error)
+	RetreiveRefs() ([]Ref, error)
 }
 
 // for compilation purposes
@@ -49,13 +50,13 @@ func newAPI() API {
 }
 
 type service struct {
-	teams repo
+	pools repo
 	log   *slog.Logger
 }
 
-func newService(teams repo, l *slog.Logger) *service {
-	name := slog.String("name", "teamService")
-	return &service{teams, l.With(name)}
+func newService(pools repo, l *slog.Logger) *service {
+	name := slog.String("name", "poolService")
+	return &service{pools, l.With(name)}
 }
 
 func (s *service) Create(spec Spec) (Root, error) {
@@ -65,7 +66,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 		Title: spec.Title,
 		SupID: spec.SupID,
 	}
-	err := s.teams.Insert(root)
+	err := s.pools.Insert(root)
 	if err != nil {
 		return root, err
 	}
@@ -73,21 +74,21 @@ func (s *service) Create(spec Spec) (Root, error) {
 }
 
 func (s *service) Retrieve(rid id.ADT) (Snap, error) {
-	snap, err := s.teams.SelectByID(rid)
+	snap, err := s.pools.SelectByID(rid)
 	if err != nil {
 		return Snap{}, err
 	}
 	return snap, nil
 }
 
-func (s *service) RetreiveAll() ([]Ref, error) {
-	return s.teams.SelectAll()
+func (s *service) RetreiveRefs() ([]Ref, error) {
+	return s.pools.SelectAll()
 }
 
 // Port
 type repo interface {
 	Insert(Root) error
-	SelectByID(ID) (Snap, error)
+	SelectByID(id.ADT) (Snap, error)
 	SelectAll() ([]Ref, error)
 }
 

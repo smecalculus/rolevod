@@ -47,29 +47,29 @@ CREATE TABLE sig_subs (
 	rev_to bigint
 );
 
-CREATE TABLE team_roots (
-	team_id varchar(36),
+CREATE TABLE pool_roots (
+	pool_id varchar(36),
 	rev bigint,
 	title varchar(64),
 	sup_id varchar(64)
 );
 
-CREATE TABLE team_caps (
-	team_id varchar(36),
+CREATE TABLE pool_caps (
+	pool_id varchar(36),
 	sig_fqn ltree,
 	rev_from bigint,
 	rev_to bigint
 );
 
-CREATE TABLE team_deps (
-	team_id varchar(36),
+CREATE TABLE pool_deps (
+	pool_id varchar(36),
 	sig_fqn ltree,
 	rev_from bigint,
 	rev_to bigint
 );
 
-CREATE TABLE team_subs (
-	team_id varchar(36),
+CREATE TABLE pool_subs (
+	pool_id varchar(36),
 	sub_id varchar(36),
 	rev_from bigint,
 	rev_to bigint
@@ -102,9 +102,16 @@ CREATE TABLE steps (
 	spec jsonb
 );
 
-CREATE TABLE kinships (
-	parent_id varchar(36),
-	child_id varchar(36)
+CREATE TABLE producers (
+	giver_id varchar(36),
+	taker_id varchar(36),
+	chnl_id varchar(36)
+);
+
+CREATE TABLE consumers (
+	giver_id varchar(36),
+	taker_id varchar(36),
+	chnl_id varchar(36)
 );
 
 CREATE TABLE clientships (

@@ -64,7 +64,7 @@ type testCase struct {
 func (tc *testCase) Setup(t *testing.T) {
 	tables := []string{
 		"aliases",
-		"team_roots",
+		"pool_roots",
 		"sig_roots", "sig_pes", "sig_ces",
 		"role_roots", "role_states",
 		"states", "channels", "steps", "clientships"}

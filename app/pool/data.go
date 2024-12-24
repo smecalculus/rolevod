@@ -1,24 +1,23 @@
-package team
+package pool
 
 import (
 	"database/sql"
 )
 
 type refData struct {
-	ID    string `json:"team_id"`
+	ID    string `json:"pool_id"`
 	Rev   int64  `json:"rev"`
 	Title string `json:"title"`
 }
 
 type snapData struct {
-	ID    string    `db:"team_id"`
-	Rev   int64     `db:"rev"`
+	ID    string    `db:"pool_id"`
 	Title string    `db:"title"`
 	Subs  []refData `db:"subs"`
 }
 
 type rootData struct {
-	ID    string         `db:"team_id"`
+	ID    string         `db:"pool_id"`
 	Rev   int64          `db:"rev"`
 	Title string         `db:"title"`
 	SupID sql.NullString `db:"sup_id"`

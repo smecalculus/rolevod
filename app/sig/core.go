@@ -140,7 +140,6 @@ type Repo interface {
 	SelectByID(ID) (Root, error)
 	SelectByIDs([]ID) ([]Root, error)
 	SelectEnv([]ID) (map[ID]Root, error)
-	SelectChildren(ID) ([]Ref, error)
 }
 
 func CollectEnv(sigs []Root) []role.FQN {
@@ -152,21 +151,6 @@ func CollectEnv(sigs []Root) []role.FQN {
 		}
 	}
 	return roleFQNs
-}
-
-// Kinship Relation
-type KinshipSpec struct {
-	ParentID ID
-	ChildIDs []ID
-}
-
-type KinshipRoot struct {
-	Parent   Ref
-	Children []Ref
-}
-
-type kinshipRepo interface {
-	Insert(KinshipRoot) error
 }
 
 // goverter:variables

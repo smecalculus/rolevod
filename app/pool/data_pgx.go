@@ -1,4 +1,4 @@
-package team
+package pool
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type repoPgx struct {
 }
 
 func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
-	name := slog.String("name", "teamRepoPgx")
+	name := slog.String("name", "poolRepoPgx")
 	return &repoPgx{p, l.With(name)}
 }
 
@@ -31,13 +31,13 @@ func (r *repoPgx) Insert(root Root) error {
 	}
 	dto := DataFromRoot(root)
 	insertRoot := `
-		INSERT INTO team_roots (
-			team_id, rev, title, sup_id
-		) VALUES (
-			@team_id, @rev, @title, @sup_id
+		insert into pool_roots (
+			pool_id, rev, title, sup_id
+		) values (
+			@pool_id, @rev, @title, @sup_id
 		)`
 	rootArgs := pgx.NamedArgs{
-		"team_id": dto.ID,
+		"pool_id": dto.ID,
 		"rev":     dto.Rev,
 		"title":   dto.Title,
 		"sup_id":  dto.SupID,
@@ -71,8 +71,8 @@ func (r *repoPgx) SelectByID(rid id.ADT) (Snap, error) {
 func (r *repoPgx) SelectAll() ([]Ref, error) {
 	query := `
 		select
-			team_id, rev, title
-		from team_roots`
+			pool_id, rev, title
+		from pool_roots`
 	ctx := context.Background()
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
@@ -91,13 +91,12 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 const (
 	selectById = `
 		select
-			tr.team_id,
-			tr.rev,
+			tr.pool_id,
 			(array_agg(tr.title))[1] as title,
-			jsonb_agg(to_jsonb((select sub from (select ts.team_id, ts.rev, ts.title) sub))) filter (where ts.team_id is not null) as subs
-		from team_roots tr
-		left join team_roots ts
-			on ts.sup_id = tr.team_id
-		where tr.team_id = $1
-		group by tr.team_id, tr.rev`
+			jsonb_agg(to_jsonb((select sub from (select ts.pool_id, ts.rev, ts.title) sub))) filter (where ts.pool_id is not null) as subs
+		from pool_roots tr
+		left join pool_roots ts
+			on ts.sup_id = tr.pool_id
+		where tr.pool_id = $1
+		group by tr.pool_id`
 )

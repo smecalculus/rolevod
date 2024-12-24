@@ -1,4 +1,4 @@
-package team
+package pool
 
 import (
 	"log/slog"
@@ -19,7 +19,7 @@ type handlerEcho struct {
 }
 
 func newHandlerEcho(a API, r msg.Renderer, l *slog.Logger) *handlerEcho {
-	name := slog.String("name", "teamHandlerEcho")
+	name := slog.String("name", "poolHandlerEcho")
 	return &handlerEcho{a, r, l.With(name)}
 }
 

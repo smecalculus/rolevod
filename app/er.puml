@@ -3,14 +3,14 @@
 skinparam nodesep 40
 hide empty methods
 
-package team {
+package pool {
     entity Root {
         owner: agent.Root
         members: Set<agent.Root>
-        subteams: Set<team.Root>
+        subpools: Set<pool.Root>
         ..
-        deps: Set<signature.Root>
-        caps: Set<signature.Root>
+        deps: Set<sig.Root>
+        caps: Set<sig.Root>
     }
     
     Root o-- Root
@@ -20,20 +20,20 @@ package agent {
     entity Root
 }
 
-package signature as sig {
+package sig as sig {
     entity Root {
         owner: agent.Root
-        subsigs: Set<signature.Root>
+        subsigs: Set<sig.Root>
         ..
         fqns: Set<fqn.Root>
-        ces: List<channel.Spec>
-        pe: channel.Spec
+        ces: List<chnl.Spec>
+        pe: chnl.Spec
     }
 
     Root o-- Root
 }
 
-package channel as chnl {
+package chnl as chnl {
     entity Spec <<(V,lightblue)>> {
         key: String
         role: fqn.Root
@@ -92,11 +92,11 @@ package "fqn" as fqn1 {
     entity Root <<(V,lightblue)>>
 }
 
-team.Root o-d- agent.Root
+pool.Root o-d- agent.Root
 sig.Root o-l- agent.Root
 role.Root o-u- agent.Root
 
-team.Root o-d- sig.Root
+pool.Root o-d- sig.Root
 sig.Root o-d- chnl.Spec
 role.Root o-d- state.Root
 

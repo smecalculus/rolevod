@@ -1,4 +1,4 @@
-package team
+package pool
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -7,8 +7,9 @@ import (
 )
 
 type SpecMsg struct {
-	Title string `json:"title"`
-	SupID string `json:"sup_id"`
+	Title  string   `json:"title"`
+	SupID  string   `json:"sup_id"`
+	DepIDs []string `json:"dep_ids"`
 }
 
 func (dto SpecMsg) Validate() error {
@@ -29,7 +30,6 @@ type RefMsg struct {
 
 type SnapMsg struct {
 	ID    string   `json:"id"`
-	Rev   int64    `json:"rev"`
 	Title string   `json:"title"`
 	Subs  []RefMsg `json:"subs"`
 }

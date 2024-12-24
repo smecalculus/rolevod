@@ -1,4 +1,4 @@
-package team
+package pool
 
 import (
 	"github.com/go-resty/resty/v2"
@@ -26,7 +26,7 @@ func (cl *clientResty) Create(spec Spec) (Root, error) {
 	_, err := cl.resty.R().
 		SetResult(&res).
 		SetBody(&req).
-		Post("/teams")
+		Post("/pools")
 	if err != nil {
 		return Root{}, err
 	}
@@ -38,14 +38,14 @@ func (c *clientResty) Retrieve(rid id.ADT) (Snap, error) {
 	_, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", rid.String()).
-		Get("/teams/{id}")
+		Get("/pools/{id}")
 	if err != nil {
 		return Snap{}, err
 	}
 	return MsgToSnap(res)
 }
 
-func (c *clientResty) RetreiveAll() ([]Ref, error) {
+func (c *clientResty) RetreiveRefs() ([]Ref, error) {
 	refs := []Ref{}
 	return refs, nil
 }

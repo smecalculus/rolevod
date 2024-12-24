@@ -1,6 +1,6 @@
 //go:build !goverter
 
-package team
+package pool
 
 import (
 	"embed"
@@ -14,7 +14,7 @@ import (
 	"smecalculus/rolevod/lib/msg"
 )
 
-var Module = fx.Module("app/team",
+var Module = fx.Module("app/pool",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
 	),
@@ -33,7 +33,7 @@ var Module = fx.Module("app/team",
 var viesFs embed.FS
 
 func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
-	t, err := template.New("team").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*.html")
+	t, err := template.New("pool").Funcs(sprig.FuncMap()).ParseFS(viesFs, "*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func newRenderer(l *slog.Logger) (*msg.RendererStdlib, error) {
 }
 
 func cfgEcho(e *echo.Echo, h *handlerEcho) error {
-	e.POST("/api/v1/teams", h.PostOne)
-	e.GET("/api/v1/teams/:id", h.GetOne)
+	e.POST("/api/v1/pools", h.PostOne)
+	e.GET("/api/v1/pools/:id", h.GetOne)
 	return nil
 }

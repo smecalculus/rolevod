@@ -24,6 +24,11 @@ func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
 	return &repoPgx{p, l.With(name)}
 }
 
+// for compilation purposes
+func newRepo() Repo {
+	return &repoPgx{}
+}
+
 func (r *repoPgx) Insert(root Root) error {
 	ctx := context.Background()
 	tx, err := r.pool.Begin(ctx)
@@ -185,28 +190,6 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
 	}
 	return DataToRoots(dtos)
-}
-
-func (r *repoPgx) SelectChildren(id ID) ([]Ref, error) {
-	query := `
-		SELECT
-			s.id,
-			s.name
-		FROM signatures s
-		LEFT JOIN kinships k
-			ON s.id = k.child_id
-		WHERE k.parent_id = $1`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, id.String())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
-	if err != nil {
-		return nil, err
-	}
-	return DataToRefs(dtos)
 }
 
 func (r *repoPgx) SelectAll() ([]Ref, error) {
