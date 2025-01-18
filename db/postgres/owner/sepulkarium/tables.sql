@@ -1,7 +1,7 @@
 CREATE TABLE role_roots (
 	role_id varchar(36),
-	rev bigint,
-	title varchar(64)
+	title varchar(64),
+	rev bigint
 );
 
 CREATE TABLE role_states (
@@ -20,8 +20,8 @@ CREATE TABLE role_subs (
 
 CREATE TABLE sig_roots (
 	sig_id varchar(36),
-	rev bigint,
-	title text
+	title text,
+	rev bigint
 );
 
 CREATE TABLE sig_pes (
@@ -49,9 +49,9 @@ CREATE TABLE sig_subs (
 
 CREATE TABLE pool_roots (
 	pool_id varchar(36),
-	rev bigint,
 	title varchar(64),
-	sup_id varchar(64)
+	sup_id varchar(36),
+	rev bigint,
 );
 
 CREATE TABLE pool_caps (
@@ -75,6 +75,27 @@ CREATE TABLE pool_subs (
 	rev_to bigint
 );
 
+CREATE TABLE pool_acts (
+	pool_id varchar(36),
+	act_key varchar(36), -- ключ распоряжения, пользования...
+	kind smallint,
+	spec jsonb,
+	rev_at bigint
+);
+
+CREATE TABLE chnl_roots (
+	chnl_id varchar(36),
+	title varchar(64),
+	rev bigint
+);
+
+CREATE TABLE chnl_states (
+	chnl_id varchar(36),
+	state_id varchar(36),
+	act_key varchar(36),
+	rev_at bigint
+);
+
 CREATE TABLE deals (
 	id varchar(36),
 	name varchar(64)
@@ -82,8 +103,8 @@ CREATE TABLE deals (
 
 CREATE TABLE states (
 	id varchar(36),
-	kind smallint,
 	from_id varchar(36),
+	kind smallint,
 	spec jsonb
 );
 

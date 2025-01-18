@@ -23,14 +23,11 @@ var Module = fx.Module("app/deal",
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 		newHandlerEcho,
 		fx.Annotate(newRepoPgx, fx.As(new(repo))),
-		newKinshipHandlerEcho,
-		fx.Annotate(newKinshipRepoPgx, fx.As(new(kinshipRepo))),
 		newPartHandlerEcho,
 		newStepHandlerEcho,
 	),
 	fx.Invoke(
 		cfgDealEcho,
-		cfgKinshipEcho,
 		cfgPartEcho,
 		cfgStepEcho,
 	),
@@ -51,11 +48,6 @@ func cfgDealEcho(e *echo.Echo, h *handlerEcho) error {
 	e.POST("/api/v1/deals", h.ApiPostOne)
 	e.GET("/api/v1/deals/:id", h.ApiGetOne)
 	e.GET("/ssr/deals/:id", h.SsrGetOne)
-	return nil
-}
-
-func cfgKinshipEcho(e *echo.Echo, h *kinshipHandlerEcho) error {
-	e.POST("/api/v1/deals/:id/kinships", h.ApiPostOne)
 	return nil
 }
 

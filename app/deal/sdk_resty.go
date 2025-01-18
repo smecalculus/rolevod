@@ -60,21 +60,6 @@ func (c *clientResty) RetreiveAll() ([]Ref, error) {
 	return refs, nil
 }
 
-func (c *clientResty) Establish(spec KinshipSpec) error {
-	req := MsgFromKinshipSpec(spec)
-	resp, err := c.resty.R().
-		SetBody(&req).
-		SetPathParam("id", req.ParentID).
-		Post("/deals/{id}/kinships")
-	if err != nil {
-		return err
-	}
-	if resp.IsError() {
-		return fmt.Errorf("received: %v", string(resp.Body()))
-	}
-	return nil
-}
-
 func (c *clientResty) Involve(spec PartSpec) (chnl.Root, error) {
 	req := MsgFromPartSpec(spec)
 	var res chnl.RootMsg

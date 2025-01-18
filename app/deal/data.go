@@ -23,16 +23,3 @@ var (
 	DataToRoot   func(rootData) (Root, error)
 	DataFromRoot func(Root) rootData
 )
-
-type kinshipRootData struct {
-	Parent   refData
-	Children []refData
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Convert.*
-var (
-	DataToKinshipRoot   func(kinshipRootData) (KinshipRoot, error)
-	DataFromKinshipRoot func(KinshipRoot) kinshipRootData
-)

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"smecalculus/rolevod/app/sig"
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
 )
@@ -50,11 +51,11 @@ func newAPI() API {
 }
 
 type service struct {
-	pools repo
+	pools Repo
 	log   *slog.Logger
 }
 
-func newService(pools repo, l *slog.Logger) *service {
+func newService(pools Repo, l *slog.Logger) *service {
 	name := slog.String("name", "poolService")
 	return &service{pools, l.With(name)}
 }
@@ -68,7 +69,7 @@ func (s *service) Create(spec Spec) (Root, error) {
 	}
 	err := s.pools.Insert(root)
 	if err != nil {
-		return root, err
+		return Root{}, err
 	}
 	return root, nil
 }
@@ -86,10 +87,11 @@ func (s *service) RetreiveRefs() ([]Ref, error) {
 }
 
 // Port
-type repo interface {
+type Repo interface {
 	Insert(Root) error
 	SelectByID(id.ADT) (Snap, error)
 	SelectAll() ([]Ref, error)
+	Transfer(giver id.ADT, taker id.ADT, pids []chnl.ID) error
 }
 
 // goverter:variables

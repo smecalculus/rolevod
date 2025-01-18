@@ -2,12 +2,14 @@ package pool
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 )
@@ -86,6 +88,55 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 		return nil, err
 	}
 	return DataToRefs(dtos)
+}
+
+func (r *repoPgx) Transfer(giver id.ADT, taker id.ADT, pids []chnl.ID) (err error) {
+	query := `
+		insert into consumers (
+			giver_id, taker_id, chnl_id
+		) values (
+			@giver_id, @taker_id, @chnl_id
+		)`
+	ctx := context.Background()
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	batch := pgx.Batch{}
+	for _, pid := range pids {
+		args := pgx.NamedArgs{
+			"giver_id": sql.NullString{String: giver.String(), Valid: !giver.IsEmpty()},
+			"taker_id": taker.String(),
+			"chnl_id":  pid.String(),
+		}
+		batch.Queue(query, args)
+	}
+	br := tx.SendBatch(ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	for _, pid := range pids {
+		_, err := br.Exec()
+		if err != nil {
+			r.log.Error("query execution failed",
+				slog.Any("reason", err),
+				slog.Any("id", pid),
+			)
+		}
+	}
+	if err != nil {
+		return errors.Join(err, br.Close(), tx.Rollback(ctx))
+	}
+	err = br.Close()
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return errors.Join(err, tx.Rollback(ctx))
+	}
+	r.log.Log(ctx, core.LevelTrace, "context transfer succeeded")
+	return nil
 }
 
 const (

@@ -65,35 +65,6 @@ var (
 	MsgFromRoots func([]Root) []RootMsg
 )
 
-type KinshipSpecMsg struct {
-	ParentID string   `json:"parent_id" param:"id"`
-	ChildIDs []string `json:"child_ids"`
-}
-
-func (dto KinshipSpecMsg) Validate() error {
-	return validation.ValidateStruct(&dto,
-		validation.Field(&dto.ParentID, id.Required...),
-		validation.Field(&dto.ChildIDs,
-			validation.Required, validation.Length(0, 10),
-			validation.Each(id.Required...)),
-	)
-}
-
-type KinshipRootMsg struct {
-	Parent   DealRefMsg   `json:"parent"`
-	Children []DealRefMsg `json:"children"`
-}
-
-// goverter:variables
-// goverter:output:format assign-variable
-// goverter:extend smecalculus/rolevod/lib/id:Convert.*
-var (
-	MsgFromKinshipSpec func(KinshipSpec) KinshipSpecMsg
-	MsgToKinshipSpec   func(KinshipSpecMsg) (KinshipSpec, error)
-	MsgFromKinshipRoot func(KinshipRoot) KinshipRootMsg
-	MsgToKinshipRoot   func(KinshipRootMsg) (KinshipRoot, error)
-)
-
 type PartSpecMsg struct {
 	Deal  string   `json:"deal_id" param:"id"`
 	Sig   string   `json:"sig_id"`

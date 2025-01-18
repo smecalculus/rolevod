@@ -19,22 +19,22 @@ type Ref interface {
 }
 
 type ProcRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r ProcRef) Ident() ID { return r.ID }
+func (r ProcRef) Ident() id.ADT { return r.ID }
 
 type MsgRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r MsgRef) Ident() ID { return r.ID }
+func (r MsgRef) Ident() id.ADT { return r.ID }
 
 type SrvRef struct {
-	ID ID
+	ID id.ADT
 }
 
-func (r SrvRef) Ident() ID { return r.ID }
+func (r SrvRef) Ident() id.ADT { return r.ID }
 
 type Root interface {
 	step()
@@ -42,7 +42,7 @@ type Root interface {
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID   ID
+	ID   id.ADT
 	PID  chnl.ID
 	Term Term
 }
@@ -51,7 +51,7 @@ func (ProcRoot) step() {}
 
 // aka exec.Msg
 type MsgRoot struct {
-	ID  ID
+	ID  id.ADT
 	PID chnl.ID
 	VID chnl.ID
 	Val Value
@@ -60,7 +60,7 @@ type MsgRoot struct {
 func (MsgRoot) step() {}
 
 type SrvRoot struct {
-	ID   ID
+	ID   id.ADT
 	PID  chnl.ID
 	VID  chnl.ID
 	Cont Continuation
@@ -69,7 +69,7 @@ type SrvRoot struct {
 func (SrvRoot) step() {}
 
 type TbdRoot struct {
-	ID  ID
+	ID  id.ADT
 	PID chnl.ID
 	VID chnl.ID
 	Act Action
@@ -186,8 +186,9 @@ func (s FwdSpec) Via() ph.ADT { return s.C }
 type SpawnSpec struct {
 	PE   ph.ADT
 	CEs  []chnl.ID
+	Sig  id.ADT // TODO ссылаться по FQN
+	Pool sym.ADT
 	Cont Term
-	Sig  id.ADT
 }
 
 func (s SpawnSpec) Via() ph.ADT { return s.PE }
@@ -195,7 +196,7 @@ func (s SpawnSpec) Via() ph.ADT { return s.PE }
 type Repo interface {
 	Insert(Root) error
 	SelectAll() ([]Ref, error)
-	SelectByID(ID) (Root, error)
+	SelectByID(id.ADT) (Root, error)
 	SelectByPID(chnl.ID) (Root, error)
 	SelectByVID(chnl.ID) (Root, error)
 }

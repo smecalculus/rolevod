@@ -4,13 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"slices"
 	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"smecalculus/rolevod/lib/core"
-	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/chnl"
@@ -76,41 +74,6 @@ func (tc *testCase) Setup(t *testing.T) {
 	}
 }
 
-func TestEstablishKinship(t *testing.T) {
-	tc.Setup(t)
-	// given
-	ps := deal.Spec{Name: "parent-deal"}
-	pr, err := dealAPI.Create(ps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// and
-	cs := deal.Spec{Name: "child-deal"}
-	cr, err := dealAPI.Create(cs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// when
-	ks := deal.KinshipSpec{
-		ParentID: pr.ID,
-		ChildIDs: []id.ADT{cr.ID},
-	}
-	err = dealAPI.Establish(ks)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// and
-	actual, err := dealAPI.Retrieve(pr.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// then
-	expectedChild := deal.ConvertRootToRef(cr)
-	if !slices.Contains(actual.Children, expectedChild) {
-		t.Errorf("unexpected children in %q; want: %+v, got: %+v", pr.Name, expectedChild, actual.Children)
-	}
-}
-
 func TestTake(t *testing.T) {
 
 	t.Run("WaitClose", func(t *testing.T) {
@@ -161,8 +124,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closerSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  closerSig.ID,
+			Deal:    bigDeal.ID,
+			Service: closerSig.ID,
 		}
 		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
@@ -170,9 +133,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waiterSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  waiterSig.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: waiterSig.ID,
+			Resources: []chnl.ID{
 				closer.ID,
 			},
 		}
@@ -286,8 +249,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		receiverSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  lolliSig.ID,
+			Deal:    bigDeal.ID,
+			Service: lolliSig.ID,
 		}
 		receiver, err := dealAPI.Involve(receiverSpec)
 		if err != nil {
@@ -295,8 +258,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		messageSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig1.ID,
+			Deal:    bigDeal.ID,
+			Service: oneSig1.ID,
 		}
 		message, err := dealAPI.Involve(messageSpec)
 		if err != nil {
@@ -304,9 +267,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		senderSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig2.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: oneSig2.ID,
+			Resources: []chnl.ID{
 				receiver.ID,
 				message.ID,
 			},
@@ -416,8 +379,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		followerSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  withSig.ID,
+			Deal:    bigDeal.ID,
+			Service: withSig.ID,
 		}
 		follower, err := dealAPI.Involve(followerSpec)
 		if err != nil {
@@ -425,9 +388,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		deciderSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: oneSig.ID,
+			Resources: []chnl.ID{
 				follower.ID,
 			},
 		}
@@ -540,8 +503,8 @@ func TestTake(t *testing.T) {
 		// and
 		injectee, err := dealAPI.Involve(
 			deal.PartSpec{
-				Deal: bigDeal.ID,
-				Sig:  oneSig1.ID,
+				Deal:    bigDeal.ID,
+				Service: oneSig1.ID,
 			},
 		)
 		if err != nil {
@@ -549,9 +512,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		spawnerSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig2.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: oneSig2.ID,
+			Resources: []chnl.ID{
 				injectee.ID,
 			},
 		}
@@ -656,8 +619,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closerSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig1.ID,
+			Deal:    bigDeal.ID,
+			Service: oneSig1.ID,
 		}
 		closer, err := dealAPI.Involve(closerSpec)
 		if err != nil {
@@ -665,9 +628,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		forwarderSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig2.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: oneSig2.ID,
+			Resources: []chnl.ID{
 				closer.ID,
 			},
 		}
@@ -677,9 +640,9 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waiterSpec := deal.PartSpec{
-			Deal: bigDeal.ID,
-			Sig:  oneSig3.ID,
-			TEs: []chnl.ID{
+			Deal:    bigDeal.ID,
+			Service: oneSig3.ID,
+			Resources: []chnl.ID{
 				forwarder.ID,
 			},
 		}

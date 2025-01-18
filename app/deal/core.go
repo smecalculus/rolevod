@@ -15,6 +15,7 @@ import (
 	"smecalculus/rolevod/internal/state"
 	"smecalculus/rolevod/internal/step"
 
+	"smecalculus/rolevod/app/pool"
 	"smecalculus/rolevod/app/role"
 	"smecalculus/rolevod/app/sig"
 )
@@ -115,20 +116,19 @@ type API interface {
 	Create(Spec) (Root, error)
 	Retrieve(ID) (Root, error)
 	RetreiveAll() ([]Ref, error)
-	Establish(KinshipSpec) error
 	Involve(PartSpec) (chnl.Root, error)
 	Take(TranSpec) error
 }
 
 type service struct {
-	deals    repo
-	roles    role.Repo
-	sigs     sig.Repo
-	chnls    chnl.Repo
-	steps    step.Repo
-	states   state.Repo
-	kinships kinshipRepo
-	log      *slog.Logger
+	deals  repo
+	roles  role.Repo
+	sigs   sig.Repo
+	chnls  chnl.Repo
+	pools  pool.Repo
+	steps  step.Repo
+	states state.Repo
+	log    *slog.Logger
 }
 
 // for compilation purposes
@@ -141,14 +141,14 @@ func newService(
 	roles role.Repo,
 	sigs sig.Repo,
 	chnls chnl.Repo,
+	pools pool.Repo,
 	steps step.Repo,
 	states state.Repo,
-	kinships kinshipRepo,
 	l *slog.Logger,
 ) *service {
 	name := slog.String("name", "dealService")
 	return &service{
-		deals, roles, sigs, chnls, steps, states, kinships, l.With(name),
+		deals, roles, sigs, chnls, pools, steps, states, l.With(name),
 	}
 }
 
@@ -175,10 +175,6 @@ func (s *service) Retrieve(id ID) (Root, error) {
 	if err != nil {
 		return Root{}, err
 	}
-	root.Children, err = s.deals.SelectChildren(id)
-	if err != nil {
-		return Root{}, err
-	}
 	return root, nil
 }
 
@@ -186,31 +182,13 @@ func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.deals.SelectAll()
 }
 
-func (s *service) Establish(spec KinshipSpec) error {
-	s.log.Debug("kinship establishment started", slog.Any("spec", spec))
-	var children []Ref
-	for _, id := range spec.ChildIDs {
-		children = append(children, Ref{ID: id})
-	}
-	root := KinshipRoot{
-		Parent:   Ref{ID: spec.ParentID},
-		Children: children,
-	}
-	err := s.kinships.Insert(root)
-	if err != nil {
-		return err
-	}
-	s.log.Debug("kinship establishment succeeded", slog.Any("root", root))
-	return nil
-}
-
 func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
-	s.log.Debug("sig involvement started", slog.Any("spec", gotSpec))
-	wantSig, err := s.sigs.SelectByID(gotSpec.Sig)
+	s.log.Debug("signature involvement started", slog.Any("spec", gotSpec))
+	wantSig, err := s.sigs.SelectByID(gotSpec.Service)
 	if err != nil {
 		s.log.Error("signature selection failed",
 			slog.Any("reason", err),
-			slog.Any("id", gotSpec.Sig),
+			slog.Any("id", gotSpec.Service),
 		)
 		return chnl.Root{}, err
 	}
@@ -235,14 +213,14 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		)
 		return chnl.Root{}, err
 	}
-	if len(gotSpec.TEs) > 0 {
-		err = s.chnls.Transfer(gotSpec.Owner, newPE.ID, gotSpec.TEs)
+	if len(gotSpec.Resources) > 0 {
+		err = s.pools.Transfer(gotSpec.Steward, gotSpec.Servant, gotSpec.Resources)
 		if err != nil {
 			s.log.Error("context transfer failed",
 				slog.Any("reason", err),
-				slog.Any("from", gotSpec.Owner),
-				slog.Any("to", newPE.ID),
-				slog.Any("tes", gotSpec.TEs),
+				slog.Any("producer", gotSpec.Steward),
+				slog.Any("consumer", gotSpec.Servant),
+				slog.Any("resources", gotSpec.Resources),
 			)
 			return chnl.Root{}, err
 		}
@@ -252,7 +230,7 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 		PID: newPE.ID,
 		Term: step.CTASpec{
 			AK:  ak.New(),
-			Sig: gotSpec.Sig,
+			Sig: gotSpec.Service,
 		},
 	}
 	err = s.steps.Insert(newProc)
@@ -1017,17 +995,22 @@ func (s *service) takeProcWith(
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
-		newPE, err := s.Involve(PartSpec{Sig: term.Sig, Owner: proc.PID, TEs: term.CEs})
+		newPE, err := s.Involve(PartSpec{
+			Steward:   proc.PID,
+			Servant:   term.Pool,
+			Service:   term.Sig,
+			Resources: term.CEs,
+		})
 		if err != nil {
 			return err
 		}
-		err = s.chnls.Transfer(id.Empty(), proc.PID, []chnl.ID{newPE.ID})
+		err = s.pools.Transfer(id.Empty(), proc.PID, []chnl.ID{newPE.ID})
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
 				slog.Any("from", id.Empty()),
 				slog.Any("to", proc.PID),
-				slog.Any("id", newPE.ID),
+				slog.Any("pid", newPE.ID),
 			)
 			return err
 		}
@@ -1250,28 +1233,14 @@ type repo interface {
 	SelectSigs(ID) ([]sig.Ref, error)
 }
 
-// Kinship Relation
-type KinshipSpec struct {
-	ParentID ID
-	ChildIDs []ID
-}
-
-type KinshipRoot struct {
-	Parent   Ref
-	Children []Ref
-}
-
-type kinshipRepo interface {
-	Insert(KinshipRoot) error
-}
-
 // Participation aka lightweight Spawn
 type PartSpec struct {
-	Deal  id.ADT
-	Sig   sig.ID
-	Owner chnl.ID
-	// Transferable Endpoints
-	TEs []chnl.ID
+	Deal      id.ADT
+	Owner     chnl.ID
+	Steward   pool.ID
+	Servant   pool.ID
+	Service   sig.ID
+	Resources []chnl.ID
 }
 
 // Transition

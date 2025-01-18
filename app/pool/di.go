@@ -21,7 +21,7 @@ var Module = fx.Module("app/pool",
 	fx.Provide(
 		fx.Private,
 		newHandlerEcho,
-		fx.Annotate(newRepoPgx, fx.As(new(repo))),
+		fx.Annotate(newRepoPgx, fx.As(new(Repo))),
 		fx.Annotate(newRenderer, fx.As(new(msg.Renderer))),
 	),
 	fx.Invoke(

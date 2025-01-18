@@ -5,6 +5,7 @@ import (
 
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
+	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
 
 	"smecalculus/rolevod/internal/state"
@@ -27,11 +28,10 @@ type Ref struct {
 }
 
 type Root struct {
-	ID  id.ADT
-	Key string
-	// Preceding Channel ID
-	PreID *id.ADT
-	// Channel State ID
+	ID      id.ADT
+	Key     string
+	Rev     rev.ADT
+	PreID   *id.ADT
 	StateID *state.ID
 }
 
