@@ -1,9 +1,11 @@
 package role
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
@@ -60,10 +62,11 @@ type API interface {
 }
 
 type service struct {
-	roles   Repo
-	states  state.Repo
-	aliases alias.Repo
-	log     *slog.Logger
+	roles    Repo
+	states   state.Repo
+	aliases  alias.Repo
+	operator data.Operator
+	log      *slog.Logger
 }
 
 // for compilation purposes
@@ -75,75 +78,70 @@ func newService(
 	roles Repo,
 	states state.Repo,
 	aliases alias.Repo,
+	operator data.Operator,
 	l *slog.Logger,
 ) *service {
 	name := slog.String("name", "roleService")
-	return &service{roles, states, aliases, l.With(name)}
+	return &service{roles, states, aliases, operator, l.With(name)}
 }
 
-func (s *service) Incept(fqn sym.ADT) (Ref, error) {
-	s.log.Debug("role inception started", slog.Any("fqn", fqn))
+func (s *service) Incept(fqn sym.ADT) (_ Ref, err error) {
+	ctx := context.Background()
+	fqnAttr := slog.Any("fqn", fqn)
+	s.log.Debug("inception started", fqnAttr)
 	newAlias := alias.Root{Sym: fqn, ID: id.New(), Rev: rev.Initial()}
-	err := s.aliases.Insert(newAlias)
+	newRoot := Root{ID: newAlias.ID, Rev: newAlias.Rev, Title: newAlias.Sym.Name()}
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.aliases.Insert(ds, newAlias)
+		if err != nil {
+			return err
+		}
+		err = s.roles.Insert(ds, newRoot)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.log.Error("alias insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newAlias),
-		)
+		s.log.Error("inception failed", fqnAttr)
 		return Ref{}, err
 	}
-	newRoot := Root{
-		ID:    newAlias.ID,
-		Rev:   newAlias.Rev,
-		Title: newAlias.Sym.Name(),
-	}
-	err = s.roles.Insert(newRoot)
-	if err != nil {
-		s.log.Error("role insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newRoot),
-		)
-		return Ref{}, err
-	}
-	s.log.Debug("role inception succeeded", slog.Any("id", newRoot.ID))
+	s.log.Debug("inception succeeded", fqnAttr, slog.Any("id", newRoot.ID))
 	return ConvertRootToRef(newRoot), nil
 }
 
-func (s *service) Create(spec Spec) (Snap, error) {
-	s.log.Debug("role creation started", slog.Any("spec", spec))
+func (s *service) Create(spec Spec) (_ Snap, err error) {
+	ctx := context.Background()
+	fqnAttr := slog.Any("fqn", spec.FQN)
+	s.log.Debug("creation started", fqnAttr, slog.Any("spec", spec))
 	newAlias := alias.Root{Sym: spec.FQN, ID: id.New(), Rev: rev.Initial()}
-	err := s.aliases.Insert(newAlias)
-	if err != nil {
-		s.log.Error("alias insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newAlias),
-		)
-		return Snap{}, err
-	}
 	newState := state.ConvertSpecToRoot(spec.State)
-	err = s.states.Insert(newState)
-	if err != nil {
-		s.log.Error("state insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newState),
-		)
-		return Snap{}, err
-	}
 	newRoot := Root{
 		ID:      newAlias.ID,
 		Rev:     newAlias.Rev,
 		Title:   newAlias.Sym.Name(),
 		StateID: newState.Ident(),
 	}
-	err = s.roles.Insert(newRoot)
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.aliases.Insert(ds, newAlias)
+		if err != nil {
+			return err
+		}
+		err = s.states.Insert(ds, newState)
+		if err != nil {
+			return err
+		}
+		err = s.roles.Insert(ds, newRoot)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.log.Error("role insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newRoot),
-		)
+		s.log.Error("creation failed", fqnAttr)
 		return Snap{}, err
 	}
-	s.log.Debug("role creation succeeded", slog.Any("id", newRoot.ID))
+	s.log.Debug("creation succeeded", fqnAttr, slog.Any("id", newRoot.ID))
 	return Snap{
 		ID:    newRoot.ID,
 		Rev:   newRoot.Rev,
@@ -153,84 +151,88 @@ func (s *service) Create(spec Spec) (Snap, error) {
 	}, nil
 }
 
-func (s *service) Modify(newSnap Snap) (Snap, error) {
-	s.log.Debug("role modification started", slog.Any("snap", newSnap))
-	curRoot, err := s.roles.SelectByID(newSnap.ID)
+func (s *service) Modify(newSnap Snap) (_ Snap, err error) {
+	ctx := context.Background()
+	idAttr := slog.Any("id", newSnap.ID)
+	s.log.Debug("modification started", idAttr)
+	var curRoot Root
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		curRoot, err = s.roles.SelectByID(ds, newSnap.ID)
+	})
 	if err != nil {
-		s.log.Error("root selection failed",
-			slog.Any("reason", err),
-			slog.Any("id", newSnap.ID),
-		)
+		s.log.Error("modification failed", idAttr)
 		return Snap{}, err
 	}
 	if newSnap.Rev != curRoot.Rev {
-		err := errConcurrentModification(newSnap.Rev, curRoot.Rev)
-		s.log.Error("role modification failed",
-			slog.Any("reason", err),
-			slog.Any("id", curRoot.ID),
-		)
-		return Snap{}, err
+		s.log.Error("modification failed", idAttr)
+		return Snap{}, errConcurrentModification(newSnap.Rev, curRoot.Rev)
 	} else {
 		newSnap.Rev = rev.Next(newSnap.Rev)
 	}
 	curSnap, err := s.RetrieveSnap(curRoot)
 	if err != nil {
-		s.log.Error("snapshot retrieval failed",
-			slog.Any("reason", err),
-			slog.Any("root", curRoot),
-		)
+		s.log.Error("modification failed", idAttr)
 		return Snap{}, err
 	}
-	diff := state.CheckSpec(newSnap.State, curSnap.State)
-	if diff != nil {
-		newState := state.ConvertSpecToRoot(newSnap.State)
-		err := s.states.Insert(newState)
-		if err != nil {
-			s.log.Error("state insertion failed",
-				slog.Any("reason", err),
-				slog.Any("root", newState),
-			)
-			return Snap{}, err
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		if state.CheckSpec(newSnap.State, curSnap.State) != nil {
+			newState := state.ConvertSpecToRoot(newSnap.State)
+			err = s.states.Insert(ds, newState)
+			if err != nil {
+				return err
+			}
+			curRoot.StateID = newState.Ident()
+			curRoot.Rev = newSnap.Rev
 		}
-		curRoot.StateID = newState.Ident()
-		curRoot.Rev = newSnap.Rev
-	}
-	if curRoot.Rev == newSnap.Rev {
-		err := s.roles.Update(curRoot)
-		if err != nil {
-			s.log.Error("root update failed",
-				slog.Any("reason", err),
-				slog.Any("root", curRoot),
-			)
-			return Snap{}, err
+		if curRoot.Rev == newSnap.Rev {
+			err = s.roles.Update(ds, curRoot)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		s.log.Error("modification failed", idAttr)
+		return Snap{}, err
 	}
-	s.log.Debug("role modification succeeded", slog.Any("id", curRoot.ID))
+	s.log.Debug("modification succeeded", idAttr)
 	return newSnap, nil
 }
 
-func (s *service) Retrieve(rid ID) (Snap, error) {
-	root, err := s.roles.SelectByID(rid)
+func (s *service) Retrieve(rid ID) (_ Snap, err error) {
+	ctx := context.Background()
+	var root Root
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		root, err = s.roles.SelectByID(ds, rid)
+	})
 	if err != nil {
-		s.log.Error("root selection failed", slog.Any("reason", err))
+		s.log.Error("retrieval failed", slog.Any("id", rid))
 		return Snap{}, err
 	}
 	return s.RetrieveSnap(root)
 }
 
-func (s *service) RetrieveRoot(rid ID) (Root, error) {
-	root, err := s.roles.SelectByID(rid)
+func (s *service) RetrieveRoot(rid ID) (root Root, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		root, err = s.roles.SelectByID(ds, rid)
+	})
 	if err != nil {
-		s.log.Error("root selection failed", slog.Any("reason", err))
+		s.log.Error("retrieval failed", slog.Any("id", rid))
 		return Root{}, err
 	}
 	return root, nil
 }
 
-func (s *service) RetrieveSnap(root Root) (Snap, error) {
-	curState, err := s.states.SelectByID(root.StateID)
+func (s *service) RetrieveSnap(root Root) (_ Snap, err error) {
+	ctx := context.Background()
+	var curState state.Root
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		curState, err = s.states.SelectByID(ds, root.StateID)
+	})
 	if err != nil {
-		s.log.Error("state selection failed", slog.Any("reason", err))
+		s.log.Error("retrieval failed", slog.Any("id", root.ID))
 		return Snap{}, err
 	}
 	return Snap{
@@ -241,8 +243,16 @@ func (s *service) RetrieveSnap(root Root) (Snap, error) {
 	}, nil
 }
 
-func (s *service) RetreiveRefs() ([]Ref, error) {
-	return s.roles.SelectRefs()
+func (s *service) RetreiveRefs() (refs []Ref, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		refs, err = s.roles.SelectRefs(ds)
+	})
+	if err != nil {
+		s.log.Error("retrieval failed")
+		return nil, err
+	}
+	return refs, nil
 }
 
 func CollectEnv(roles []Root) []id.ADT {
@@ -254,16 +264,14 @@ func CollectEnv(roles []Root) []id.ADT {
 }
 
 type Repo interface {
-	Insert(Root) error
-	Update(Root) error
-	SelectRefs() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
-	SelectByIDs([]id.ADT) ([]Root, error)
-	SelectByFQN(sym.ADT) (Root, error)
-	SelectByFQNs([]sym.ADT) ([]Root, error)
-	// SelectByRef(Ref) (Snap, error)
-	SelectParts(id.ADT) ([]Ref, error)
-	SelectEnv([]sym.ADT) (map[sym.ADT]Root, error)
+	Insert(data.Source, Root) error
+	Update(data.Source, Root) error
+	SelectRefs(data.Source) ([]Ref, error)
+	SelectByID(data.Source, id.ADT) (Root, error)
+	SelectByIDs(data.Source, []id.ADT) ([]Root, error)
+	SelectByFQN(data.Source, sym.ADT) (Root, error)
+	SelectByFQNs(data.Source, []sym.ADT) ([]Root, error)
+	SelectEnv(data.Source, []sym.ADT) (map[sym.ADT]Root, error)
 }
 
 // goverter:variables

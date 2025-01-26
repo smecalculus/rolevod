@@ -1,9 +1,11 @@
 package sig
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
@@ -58,14 +60,15 @@ type API interface {
 }
 
 type service struct {
-	sigs    Repo
-	aliases alias.Repo
-	log     *slog.Logger
+	sigs     Repo
+	aliases  alias.Repo
+	operator data.Operator
+	log      *slog.Logger
 }
 
-func newService(sigs Repo, aliases alias.Repo, l *slog.Logger) *service {
+func newService(sigs Repo, aliases alias.Repo, operator data.Operator, l *slog.Logger) *service {
 	name := slog.String("name", "sigService")
-	return &service{sigs, aliases, l.With(name)}
+	return &service{sigs, aliases, operator, l.With(name)}
 }
 
 // for compilation purposes
@@ -73,36 +76,35 @@ func newAPI() API {
 	return &service{}
 }
 
-func (s *service) Incept(fqn sym.ADT) (Ref, error) {
-	s.log.Debug("signature inception started", slog.Any("fqn", fqn))
+func (s *service) Incept(fqn sym.ADT) (_ Ref, err error) {
+	ctx := context.Background()
+	fqnAttr := slog.Any("fqn", fqn)
+	s.log.Debug("inception started", fqnAttr)
 	newAlias := alias.Root{Sym: fqn, ID: id.New(), Rev: rev.Initial()}
-	err := s.aliases.Insert(newAlias)
+	newRoot := Root{ID: newAlias.ID, Rev: newAlias.Rev, Title: newAlias.Sym.Name()}
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.aliases.Insert(ds, newAlias)
+		if err != nil {
+			return err
+		}
+		err = s.sigs.Insert(ds, newRoot)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.log.Error("alias insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newAlias),
-		)
+		s.log.Error("inception failed", fqnAttr)
 		return Ref{}, err
 	}
-	newRoot := Root{
-		ID:    newAlias.ID,
-		Rev:   newAlias.Rev,
-		Title: newAlias.Sym.Name(),
-	}
-	err = s.sigs.Insert(newRoot)
-	if err != nil {
-		s.log.Error("signature insertion failed",
-			slog.Any("reason", err),
-			slog.Any("root", newRoot),
-		)
-		return Ref{}, err
-	}
-	s.log.Debug("signature inception succeeded", slog.Any("root", newRoot))
+	s.log.Debug("inception succeeded", fqnAttr, slog.Any("id", newRoot.ID))
 	return ConvertRootToRef(newRoot), nil
 }
 
-func (s *service) Create(spec Spec) (Root, error) {
-	s.log.Debug("signature creation started", slog.Any("spec", spec))
+func (s *service) Create(spec Spec) (_ Root, err error) {
+	ctx := context.Background()
+	fqnAttr := slog.Any("fqn", spec.FQN)
+	s.log.Debug("creation started", fqnAttr, slog.Any("spec", spec))
 	root := Root{
 		ID:    id.New(),
 		Rev:   rev.Initial(),
@@ -110,36 +112,51 @@ func (s *service) Create(spec Spec) (Root, error) {
 		PE:    spec.PE,
 		CEs:   spec.CEs,
 	}
-	err := s.sigs.Insert(root)
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.sigs.Insert(ds, root)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.log.Error("signature insertion failed",
-			slog.Any("reason", err),
-			slog.Any("sig", root),
-		)
-		return root, err
+		s.log.Error("creation failed", fqnAttr)
+		return Root{}, err
 	}
-	s.log.Debug("signature creation succeeded", slog.Any("root", root))
+	s.log.Debug("creation succeeded", fqnAttr, slog.Any("id", root.ID))
 	return root, nil
 }
 
-func (s *service) Retrieve(rid ID) (Root, error) {
-	root, err := s.sigs.SelectByID(rid)
+func (s *service) Retrieve(rid ID) (root Root, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		root, err = s.sigs.SelectByID(ds, rid)
+	})
 	if err != nil {
+		s.log.Error("retrieval failed", slog.Any("id", rid))
 		return Root{}, err
 	}
 	return root, nil
 }
 
-func (s *service) RetreiveRefs() ([]Ref, error) {
-	return s.sigs.SelectAll()
+func (s *service) RetreiveRefs() (refs []Ref, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		refs, err = s.sigs.SelectAll(ds)
+	})
+	if err != nil {
+		s.log.Error("retrieval failed")
+		return nil, err
+	}
+	return refs, nil
 }
 
 type Repo interface {
-	Insert(Root) error
-	SelectAll() ([]Ref, error)
-	SelectByID(ID) (Root, error)
-	SelectByIDs([]ID) ([]Root, error)
-	SelectEnv([]ID) (map[ID]Root, error)
+	Insert(data.Source, Root) error
+	SelectAll(data.Source) ([]Ref, error)
+	SelectByID(data.Source, ID) (Root, error)
+	SelectByIDs(data.Source, []ID) ([]Root, error)
+	SelectEnv(data.Source, []ID) (map[ID]Root, error)
 }
 
 func CollectEnv(sigs []Root) []role.FQN {

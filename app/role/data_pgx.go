@@ -1,28 +1,26 @@
 package role
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"math"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/sym"
 )
 
 // Adapter
 type repoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(l *slog.Logger) *repoPgx {
 	name := slog.String("name", "roleRepoPgx")
-	return &repoPgx{p, l.With(name)}
+	return &repoPgx{l.With(name)}
 }
 
 // for compilation purposes
@@ -30,16 +28,13 @@ func newRepo() Repo {
 	return &repoPgx{}
 }
 
-func (r *repoPgx) Insert(root Root) error {
-	ctx := context.Background()
-	r.log.Log(ctx, core.LevelTrace, "root insertion started", slog.Any("role_id", root.ID))
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+func (r *repoPgx) Insert(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity insertion started", idAttr)
 	dto, err := DataFromRoot(root)
 	if err != nil {
-		r.log.Error("dto mapping failed", slog.Any("reason", err))
+		r.log.Error("model mapping failed", idAttr)
 		return err
 	}
 	insertRoot := `
@@ -53,10 +48,10 @@ func (r *repoPgx) Insert(root Root) error {
 		"rev":     dto.Rev,
 		"title":   dto.Title,
 	}
-	_, err = tx.Exec(ctx, insertRoot, rootArgs)
+	_, err = ds.Conn.Exec(ds.Ctx, insertRoot, rootArgs)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", insertRoot))
+		return err
 	}
 	insertState := `
 		insert into role_states (
@@ -70,34 +65,31 @@ func (r *repoPgx) Insert(root Root) error {
 		"rev_to":   math.MaxInt64,
 		"state_id": dto.StateID,
 	}
-	_, err = tx.Exec(ctx, insertState, stateArgs)
+	_, err = ds.Conn.Exec(ds.Ctx, insertState, stateArgs)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", insertState))
+		return err
 	}
-	r.log.Log(ctx, core.LevelTrace, "root insertion succeeded", slog.Any("role_id", root.ID))
-	return tx.Commit(ctx)
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity insertion succeeded", idAttr)
+	return nil
 }
 
-func (r *repoPgx) Update(root Root) error {
-	ctx := context.Background()
-	r.log.Log(ctx, core.LevelTrace, "root update started", slog.Any("role_id", root.ID))
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+func (r *repoPgx) Update(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity update started", idAttr)
 	dto, err := DataFromRoot(root)
 	if err != nil {
-		r.log.Error("dto mapping failed", slog.Any("reason", err))
+		r.log.Error("model mapping failed", idAttr)
 		return err
 	}
-	rootQuery := `
+	updateRoot := `
 		update role_roots
 		set rev = @rev,
 			state_id = @state_id
 		where role_id = @role_id
 			and rev = @rev - 1`
-	snapQuery := `
+	insertSnap := `
 		insert into role_snaps (
 			role_id, rev, title, state_id, whole_id
 		) values (
@@ -110,80 +102,83 @@ func (r *repoPgx) Update(root Root) error {
 		"state_id": dto.StateID,
 		"whole_id": dto.WholeID,
 	}
-	ct, err := tx.Exec(ctx, rootQuery, args)
+	ct, err := ds.Conn.Exec(ds.Ctx, updateRoot, args)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", updateRoot))
+		return err
 	}
-	if ct.RowsAffected() != 1 {
-		err := errOptimisticUpdate(root.Rev - 1)
-		r.log.Error("root update failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+	if ct.RowsAffected() == 0 {
+		r.log.Error("entity update failed", idAttr)
+		return errOptimisticUpdate(root.Rev - 1)
 	}
-	_, err = tx.Exec(ctx, snapQuery, args)
+	_, err = ds.Conn.Exec(ds.Ctx, insertSnap, args)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", insertSnap))
+		return err
 	}
-	r.log.Log(ctx, core.LevelTrace, "root update succeeded", slog.Any("role_id", root.ID))
-	return tx.Commit(ctx)
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity update succeeded", idAttr)
+	return nil
 }
 
-func (r *repoPgx) SelectRefs() ([]Ref, error) {
+func (r *repoPgx) SelectRefs(source data.Source) ([]Ref, error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	query := `
 		SELECT
 			role_id, rev, title
 		FROM role_roots`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := ds.Conn.Query(ds.Ctx, query)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", slog.String("q", query))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("rows collection failed")
 		return nil, err
 	}
+	r.log.Log(ds.Ctx, core.LevelTrace, "entities selection succeeded", slog.Any("dtos", dtos))
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(rid ID) (Root, error) {
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, selectById, rid.String())
+func (r *repoPgx) SelectByID(source data.Source, rid ID) (Root, error) {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", rid)
+	rows, err := ds.Conn.Query(ds.Ctx, selectById, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", idAttr, slog.String("q", selectById))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("row collection failed", idAttr)
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "selection succeeded", slog.Any("role_id", rid))
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity selection succeeded", idAttr)
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectByFQN(fqn sym.ADT) (Root, error) {
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, selectByFQN, sym.ConvertToString(fqn))
+func (r *repoPgx) SelectByFQN(source data.Source, fqn sym.ADT) (Root, error) {
+	ds := data.MustConform[data.SourcePgx](source)
+	fqnAttr := slog.Any("fqn", fqn)
+	rows, err := ds.Conn.Query(ds.Ctx, selectByFQN, sym.ConvertToString(fqn))
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", fqnAttr, slog.String("q", selectByFQN))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("row collection failed", fqnAttr)
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "role selection succeeded", slog.Any("fqn", fqn))
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity selection succeeded", fqnAttr)
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
+func (r *repoPgx) SelectByIDs(source data.Source, ids []ID) (_ []Root, err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	if len(ids) == 0 {
 		return []Root{}, nil
 	}
@@ -192,11 +187,6 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 			role_id, rev, title, state_id, whole_id
 		from role_roots
 		where role_id = $1`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
 	batch := pgx.Batch{}
 	for _, rid := range ids {
 		if rid.IsEmpty() {
@@ -204,7 +194,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 		}
 		batch.Queue(query, rid.String())
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -212,37 +202,24 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	for _, rid := range ids {
 		rows, err := br.Query()
 		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("role_id", rid),
-			)
+			r.log.Error("query execution failed", slog.Any("id", rid), slog.String("q", query))
 		}
+		defer rows.Close()
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("role_id", rid),
-			)
+			r.log.Error("row collection failed", slog.Any("id", rid))
 		}
 		dtos = append(dtos, dto)
 	}
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return nil, err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "roots selection succeeded", slog.Any("dtos", dtos))
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
+	r.log.Log(ds.Ctx, core.LevelTrace, "entities selection succeeded", slog.Any("dtos", dtos))
 	return DataToRoots(dtos)
 }
 
-func (r *repoPgx) SelectEnv(fqns []sym.ADT) (map[sym.ADT]Root, error) {
-	roots, err := r.SelectByFQNs(fqns)
+func (r *repoPgx) SelectEnv(source data.Source, fqns []sym.ADT) (map[sym.ADT]Root, error) {
+	roots, err := r.SelectByFQNs(source, fqns)
 	if err != nil {
 		return nil, err
 	}
@@ -253,20 +230,16 @@ func (r *repoPgx) SelectEnv(fqns []sym.ADT) (map[sym.ADT]Root, error) {
 	return env, nil
 }
 
-func (r *repoPgx) SelectByFQNs(fqns []sym.ADT) ([]Root, error) {
+func (r *repoPgx) SelectByFQNs(source data.Source, fqns []sym.ADT) (_ []Root, err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	if len(fqns) == 0 {
 		return []Root{}, nil
-	}
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
 	}
 	batch := pgx.Batch{}
 	for _, fqn := range fqns {
 		batch.Queue(selectByFQN, sym.ConvertToString(fqn))
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -274,56 +247,20 @@ func (r *repoPgx) SelectByFQNs(fqns []sym.ADT) ([]Root, error) {
 	for _, fqn := range fqns {
 		rows, err := br.Query()
 		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("fqn", fqn),
-			)
+			r.log.Error("query execution failed", slog.Any("fqn", fqn), slog.String("q", selectByFQN))
 		}
+		defer rows.Close()
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("fqn", fqn),
-			)
+			r.log.Error("row collection failed", slog.Any("fqn", fqn))
 		}
 		dtos = append(dtos, dto)
 	}
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return nil, err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "roots selection succeeded", slog.Any("dtos", dtos))
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
+	r.log.Log(ds.Ctx, core.LevelTrace, "entities selection succeeded", slog.Any("dtos", dtos))
 	return DataToRoots(dtos)
-}
-
-func (r *repoPgx) SelectParts(rid id.ADT) ([]Ref, error) {
-	query := `
-		SELECT
-			r.id,
-			r.name,
-			r.state
-		FROM roles r
-		LEFT JOIN kinships k
-			ON r.id = k.child_id
-		WHERE k.parent_id = $1`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
-	if err != nil {
-		return nil, err
-	}
-	return DataToRefs(dtos)
 }
 
 const (

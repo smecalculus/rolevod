@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
@@ -13,5 +14,5 @@ type Root struct {
 }
 
 type Repo interface {
-	Insert(Root) error
+	Insert(data.Source, Root) error
 }

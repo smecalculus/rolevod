@@ -86,14 +86,20 @@ CREATE TABLE pool_acts (
 CREATE TABLE chnl_roots (
 	chnl_id varchar(36),
 	title varchar(64),
-	rev bigint
+	revs integer[]  -- states = 1, pools = 2
 );
 
 CREATE TABLE chnl_states (
 	chnl_id varchar(36),
 	state_id varchar(36),
 	act_key varchar(36),
-	rev_at bigint
+	rev integer
+);
+
+CREATE TABLE chnl_pools (
+	chnl_id varchar(36),
+	pool_id varchar(36),
+	rev integer
 );
 
 CREATE TABLE deals (

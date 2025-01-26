@@ -2,6 +2,8 @@ package chnl
 
 import (
 	"database/sql"
+
+	"smecalculus/rolevod/lib/rev"
 )
 
 type SpecData struct {
@@ -10,15 +12,16 @@ type SpecData struct {
 }
 
 type refData struct {
-	ID  string `db:"id" json:"id,omitempty"`
-	Key string `db:"name" json:"name,omitempty"`
+	ID    string `db:"chnl_id" json:"id,omitempty"`
+	Title string `db:"title" json:"title,omitempty"`
 }
 
 type rootData struct {
-	ID      string         `db:"id"`
-	Key     string         `db:"name"`
-	PreID   sql.NullString `db:"pre_id"`
+	ID      string         `db:"chnl_id"`
+	Title   string         `db:"title"`
+	PoolID  sql.NullString `db:"pool_id"`
 	StateID sql.NullString `db:"state_id"`
+	Revs    []rev.ADT      `db:"revs"`
 }
 
 // goverter:variables

@@ -6,10 +6,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/msg"
+
+	"smecalculus/rolevod/internal/chnl"
 )
 
 // Adapter

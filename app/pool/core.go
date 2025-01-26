@@ -1,12 +1,16 @@
 package pool
 
 import (
+	"context"
 	"log/slog"
 
-	"smecalculus/rolevod/app/sig"
-	"smecalculus/rolevod/internal/chnl"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/rev"
+
+	"smecalculus/rolevod/internal/chnl"
+
+	"smecalculus/rolevod/app/sig"
 )
 
 type ID = id.ADT
@@ -51,47 +55,70 @@ func newAPI() API {
 }
 
 type service struct {
-	pools Repo
-	log   *slog.Logger
+	pools    Repo
+	operator data.Operator
+	log      *slog.Logger
 }
 
-func newService(pools Repo, l *slog.Logger) *service {
+func newService(pools Repo, operator data.Operator, l *slog.Logger) *service {
 	name := slog.String("name", "poolService")
-	return &service{pools, l.With(name)}
+	return &service{pools, operator, l.With(name)}
 }
 
-func (s *service) Create(spec Spec) (Root, error) {
+func (s *service) Create(spec Spec) (_ Root, err error) {
+	ctx := context.Background()
+	s.log.Debug("creation started", slog.Any("spec", spec))
 	root := Root{
 		ID:    id.New(),
 		Rev:   rev.Initial(),
 		Title: spec.Title,
 		SupID: spec.SupID,
 	}
-	err := s.pools.Insert(root)
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.pools.Insert(ds, root)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
+		s.log.Error("creation failed")
 		return Root{}, err
 	}
+	s.log.Debug("creation succeeded", slog.Any("id", root.ID))
 	return root, nil
 }
 
-func (s *service) Retrieve(rid id.ADT) (Snap, error) {
-	snap, err := s.pools.SelectByID(rid)
+func (s *service) Retrieve(rid id.ADT) (snap Snap, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		snap, err = s.pools.SelectByID(ds, rid)
+	})
 	if err != nil {
+		s.log.Error("retrieval failed", slog.Any("id", rid))
 		return Snap{}, err
 	}
 	return snap, nil
 }
 
-func (s *service) RetreiveRefs() ([]Ref, error) {
-	return s.pools.SelectAll()
+func (s *service) RetreiveRefs() (refs []Ref, err error) {
+	ctx := context.Background()
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		refs, err = s.pools.SelectAll(ds)
+	})
+	if err != nil {
+		s.log.Error("retrieval failed")
+		return nil, err
+	}
+	return refs, nil
 }
 
 // Port
 type Repo interface {
-	Insert(Root) error
-	SelectByID(id.ADT) (Snap, error)
-	SelectAll() ([]Ref, error)
-	Transfer(giver id.ADT, taker id.ADT, pids []chnl.ID) error
+	Insert(data.Source, Root) error
+	SelectByID(data.Source, id.ADT) (Snap, error)
+	SelectAll(data.Source) ([]Ref, error)
+	Transfer(source data.Source, giver id.ADT, taker id.ADT, pids []chnl.ID) error
 }
 
 // goverter:variables

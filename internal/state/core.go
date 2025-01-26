@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/pol"
@@ -245,11 +246,11 @@ type EP struct {
 }
 
 type Repo interface {
-	Insert(Root) error
-	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
-	SelectByIDs([]id.ADT) ([]Root, error)
-	SelectEnv([]id.ADT) (map[id.ADT]Root, error)
+	Insert(data.Source, Root) error
+	SelectAll(data.Source) ([]Ref, error)
+	SelectByID(data.Source, id.ADT) (Root, error)
+	SelectByIDs(data.Source, []id.ADT) ([]Root, error)
+	SelectEnv(data.Source, []id.ADT) (map[id.ADT]Root, error)
 }
 
 func ConvertSpecToRoot(s Spec) Root {

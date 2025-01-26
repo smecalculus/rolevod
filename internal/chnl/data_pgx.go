@@ -1,27 +1,24 @@
 package chnl
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
 type repoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(l *slog.Logger) *repoPgx {
 	name := slog.String("name", "chnlRepoPgx")
-	return &repoPgx{p, l.With(name)}
+	return &repoPgx{l.With(name)}
 }
 
 // for compilation purposes
@@ -29,171 +26,147 @@ func newRepo() Repo {
 	return &repoPgx{}
 }
 
-func (r *repoPgx) Insert(root Root) error {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+func (r *repoPgx) Insert(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
 	dto, err := DataFromRoot(root)
 	if err != nil {
 		return err
 	}
-	query := `
-		INSERT INTO channels (
-			id, name, pre_id, state_id
-		) VALUES (
-			@id, @name, @pre_id, @state_id
-		)`
-	args := pgx.NamedArgs{
-		"id":       dto.ID,
-		"name":     dto.Key,
-		"pre_id":   dto.PreID,
+	rootArgs := pgx.NamedArgs{
+		"chnl_id": dto.ID,
+		"title":   dto.Title,
+	}
+	_, err = ds.Conn.Exec(ds.Ctx, rootInsert, rootArgs)
+	if err != nil {
+		r.log.Error("query execution failed", idAttr, slog.String("q", rootInsert))
+		return err
+	}
+	stateArgs := pgx.NamedArgs{
+		"chnl_id":  dto.ID,
 		"state_id": dto.StateID,
+		"rev":      0,
 	}
-	_, err = tx.Exec(ctx, query, args)
+	_, err = ds.Conn.Exec(ds.Ctx, stateInsert, stateArgs)
 	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", stateInsert))
+		return err
 	}
-	return tx.Commit(ctx)
+	poolArgs := pgx.NamedArgs{
+		"chnl_id": dto.ID,
+		"pool_id": dto.PoolID,
+		"rev":     0,
+	}
+	_, err = ds.Conn.Exec(ds.Ctx, poolInsert, poolArgs)
+	if err != nil {
+		r.log.Error("query execution failed", idAttr, slog.String("q", poolInsert))
+		return err
+	}
+	return nil
 }
 
-func (r *repoPgx) InsertCtx(roots []Root) (rs []Root, err error) {
-	query := `
-		INSERT INTO channels (
-			id, name, pre_id, state_id
-		)
-		SELECT
-			@new_id, name, @pre_id, state_id
-		FROM channels
-		WHERE id = @id
-		RETURNING *`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
+func (r *repoPgx) UpdateState(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
+	dto, err := DataFromRoot(root)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	batch := pgx.Batch{}
-	reqs, err := DataFromRoots(roots)
+	stateArgs := pgx.NamedArgs{
+		"chnl_id":  dto.ID,
+		"state_id": dto.StateID,
+		"rev":      dto.Revs[stateRev],
+	}
+	_, err = ds.Conn.Exec(ds.Ctx, stateInsert, stateArgs)
 	if err != nil {
-		r.log.Error("dtos mapping failed",
-			slog.Any("reason", err),
-			slog.Any("roots", roots),
-		)
-		return nil, err
+		r.log.Error("query execution failed", idAttr, slog.String("q", stateInsert))
+		return err
 	}
-	for _, req := range reqs {
-		args := pgx.NamedArgs{
-			"new_id": req.ID,
-			"pre_id": req.PreID,
-			"id":     req.PreID,
-		}
-		batch.Queue(query, args)
+	rootArgs := pgx.NamedArgs{
+		"chnl_id": dto.ID,
+		"rev":     dto.Revs[stateRev],
 	}
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	var resps []rootData
-	for _, req := range reqs {
-		rows, err := br.Query()
-		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("req", req),
-			)
-		}
-		resp, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
-		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("req", req),
-			)
-		}
-		resps = append(resps, resp)
-	}
+	ct, err := ds.Conn.Exec(ds.Ctx, rootUpdateState, rootArgs)
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", rootUpdateState))
+		return err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
+	if ct.RowsAffected() == 0 {
+		r.log.Error("root update failed", idAttr)
+		return errOptimisticUpdate(root.Revs[stateRev] - 1)
 	}
-	r.log.Log(ctx, core.LevelTrace, "ctx insertion succeeded", slog.Any("resps", resps))
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	return DataToRoots(resps)
+	return nil
 }
 
-func (r *repoPgx) SelectAll() ([]Ref, error) {
+func (r *repoPgx) UpdatePool(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
+	dto, err := DataFromRoot(root)
+	if err != nil {
+		return err
+	}
+	poolArgs := pgx.NamedArgs{
+		"chnl_id": dto.ID,
+		"pool_id": dto.PoolID,
+		"rev":     dto.Revs[stateRev],
+	}
+	_, err = ds.Conn.Exec(ds.Ctx, poolInsert, poolArgs)
+	if err != nil {
+		r.log.Error("query execution failed", idAttr, slog.String("q", poolInsert))
+		return err
+	}
+	rootArgs := pgx.NamedArgs{
+		"chnl_id": dto.ID,
+		"rev":     dto.Revs[stateRev],
+	}
+	ct, err := ds.Conn.Exec(ds.Ctx, rootUpdatePool, rootArgs)
+	if err != nil {
+		r.log.Error("query execution failed", idAttr, slog.String("q", rootUpdatePool))
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		r.log.Error("root update failed", idAttr)
+		return errOptimisticUpdate(root.Revs[stateRev] - 1)
+	}
+	return nil
+}
+
+func (r *repoPgx) SelectRefs(source data.Source) ([]Ref, error) {
 	roots := make([]Ref, 5)
 	return roots, nil
 }
 
-func (r *repoPgx) SelectByID(rid ID) (Root, error) {
-	query := `
-		SELECT
-			id, name, pre_id, state_id
-		FROM channels
-		WHERE id = $1`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
+func (r *repoPgx) SelectByID(source data.Source, rid id.ADT) (Root, error) {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", rid)
+	rows, err := ds.Conn.Query(ds.Ctx, rootSelectById, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("id", rid))
+		r.log.Error("query execution failed", idAttr, slog.String("q", rootSelectById))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err), slog.Any("id", rid))
+		r.log.Error("row collection failed", idAttr)
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "channel selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ds.Ctx, core.LevelTrace, "root selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
+func (r *repoPgx) SelectByIDs(source data.Source, ids []id.ADT) (_ []Root, err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	if len(ids) == 0 {
 		return []Root{}, nil
-	}
-	query := `
-		WITH RECURSIVE history AS (
-			SELECT seed.*
-			FROM channels seed
-			WHERE id = $1
-			UNION ALL
-			SELECT output.*
-			FROM channels output, history input
-			WHERE output.pre_id = input.id
-		)
-		SELECT h.id, h.name, h.pre_id, h.state_id
-		FROM history h
-		WHERE not exists (
-			SELECT 1
-			FROM history
-			WHERE pre_id = h.id
-		)
-		and not exists (
-			select 1
-			from clientships
-			where pid = h.id
-			and from_id = $2
-		)`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
 	}
 	batch := pgx.Batch{}
 	for _, rid := range ids {
 		if rid.IsEmpty() {
 			return nil, id.ErrEmpty
 		}
-		batch.Queue(query, rid.String(), pid.String())
+		batch.Queue(rootSelectById, rid.String())
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -201,152 +174,68 @@ func (r *repoPgx) SelectCtx(pid ID, ids []ID) ([]Root, error) {
 	for _, rid := range ids {
 		rows, err := br.Query()
 		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
-			return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+			r.log.Error("query execution failed", slog.Any("id", rid), slog.String("q", rootSelectById))
 		}
-		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
-			return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-		}
-		dtos = append(dtos, dto)
-	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "ctx selection succeeded", slog.Any("dtos", dtos))
-	return DataToRoots(dtos)
-}
-
-func (r *repoPgx) SelectCfg(ids []ID) (map[ID]Root, error) {
-	chnls, err := r.SelectByIDs(ids)
-	if err != nil {
-		return nil, err
-	}
-	cfg := make(map[ID]Root, len(chnls))
-	for _, ch := range chnls {
-		cfg[ch.ID] = ch
-	}
-	return cfg, nil
-}
-
-func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
-	if len(ids) == 0 {
-		return []Root{}, nil
-	}
-	query := `
-		SELECT
-			id, name, pre_id, state_id, state
-		FROM channels
-		WHERE id = $1`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	batch := pgx.Batch{}
-	for _, rid := range ids {
-		if rid.IsEmpty() {
-			return nil, id.ErrEmpty
-		}
-		batch.Queue(query, rid.String())
-	}
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	var dtos []rootData
-	for _, rid := range ids {
-		rows, err := br.Query()
-		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
-		}
+		defer rows.Close()
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
+			r.log.Error("row collection failed", slog.Any("id", rid))
 		}
 		dtos = append(dtos, dto)
 	}
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return nil, err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "channels selection succeeded", slog.Any("dtos", dtos))
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
+	r.log.Log(ds.Ctx, core.LevelTrace, "roots selection succeeded", slog.Any("dtos", dtos))
 	return DataToRoots(dtos)
 }
 
-func (r *repoPgx) Transfer(from ID, to ID, pids []ID) (err error) {
-	query := `
-		INSERT INTO clientships (
-			from_id, to_id, pid
-		) VALUES (
-			@from_id, @to_id, @pid
+const (
+	rootInsert = `
+		insert into chnl_roots (
+			chnl_id, title, revs
+		) values (
+			@chnl_id, @title, '{0, 0}'
 		)`
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	batch := pgx.Batch{}
-	for _, pid := range pids {
-		args := pgx.NamedArgs{
-			"from_id": sql.NullString{String: from.String(), Valid: !from.IsEmpty()},
-			"to_id":   to.String(),
-			"pid":     pid.String(),
-		}
-		batch.Queue(query, args)
-	}
-	br := tx.SendBatch(ctx, &batch)
-	defer func() {
-		err = errors.Join(err, br.Close())
-	}()
-	for _, pid := range pids {
-		_, err := br.Exec()
-		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("id", pid),
-			)
-		}
-	}
-	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	err = br.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "context transfer succeeded")
-	return nil
-}
+	stateInsert = `
+		insert into chnl_states (
+			chnl_id, state_id, rev
+		) values (
+			@chnl_id, @state_id, @rev
+		)`
+	poolInsert = `
+		insert into chnl_pools (
+			chnl_id, pool_id, rev
+		) values (
+			@chnl_id, @pool_id, @rev
+		)`
+	rootSelectById = `
+		select
+			chnl_id, title, revs
+		from chnl_roots
+		where chnl_id = $1`
+	snapSelectById = `
+		select
+			root.chnl_id,
+			root.title,
+			state.state_id,
+			pool.pool_id
+		from chnl_roots root
+		left join chnl_states state
+			on state.chnl_id = root.chnl_id
+			and state.rev = root.revs[1]
+		left join chnl_pools pool
+			on pool.chnl_id = root.chnl_id
+			and pool.rev = root.revs[2]
+		where root.chnl_id = $1`
+	rootUpdateState = `
+		update chnl_roots
+		set revs[1] = @rev
+		where chnl_id = @chnl_id
+			and revs[1] = @rev - 1`
+	rootUpdatePool = `
+		update chnl_roots
+		set revs[2] = @rev
+		where chnl_id = @chnl_id
+			and revs[2] = @rev - 1`
+)

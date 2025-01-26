@@ -1,27 +1,25 @@
 package sig
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"math"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 )
 
 // Adapter
 type repoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(l *slog.Logger) *repoPgx {
 	name := slog.String("name", "sigRepoPgx")
-	return &repoPgx{p, l.With(name)}
+	return &repoPgx{l.With(name)}
 }
 
 // for compilation purposes
@@ -29,14 +27,12 @@ func newRepo() Repo {
 	return &repoPgx{}
 }
 
-func (r *repoPgx) Insert(root Root) error {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+func (r *repoPgx) Insert(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
 	dto, err := DataFromRoot(root)
 	if err != nil {
+		r.log.Error("model mapping failed", idAttr)
 		return err
 	}
 	insertRoot := `
@@ -50,10 +46,10 @@ func (r *repoPgx) Insert(root Root) error {
 		"rev":    dto.Rev,
 		"title":  dto.Title,
 	}
-	_, err = tx.Exec(ctx, insertRoot, rootArgs)
+	_, err = ds.Conn.Exec(ds.Ctx, insertRoot, rootArgs)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", insertRoot))
+		return err
 	}
 	insertPE := `
 		insert into sig_pes (
@@ -68,10 +64,10 @@ func (r *repoPgx) Insert(root Root) error {
 		"chnl_key": dto.PE.Key,
 		"role_fqn": dto.PE.Link,
 	}
-	_, err = tx.Exec(ctx, insertPE, peArgs)
+	_, err = ds.Conn.Exec(ds.Ctx, insertPE, peArgs)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", insertPE))
+		return err
 	}
 	insertCE := `
 		insert into sig_ces (
@@ -90,45 +86,42 @@ func (r *repoPgx) Insert(root Root) error {
 		}
 		batch.Queue(insertCE, args)
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	for _, ce := range dto.CEs {
+	for range dto.CEs {
 		_, err = br.Exec()
 		if err != nil {
-			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("ce", ce))
+			r.log.Error("query execution failed", idAttr, slog.String("q", insertCE))
 		}
 	}
 	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return err
 	}
-	err = br.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
+	return nil
 }
 
-func (r *repoPgx) SelectByID(rid id.ADT) (Root, error) {
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, selectById, rid.String())
+func (r *repoPgx) SelectByID(source data.Source, rid id.ADT) (Root, error) {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", rid)
+	rows, err := ds.Conn.Query(ds.Ctx, selectById, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", idAttr, slog.String("q", selectById))
 		return Root{}, err
 	}
 	defer rows.Close()
 	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("row collection failed", idAttr)
 		return Root{}, err
 	}
-	r.log.Log(ctx, core.LevelTrace, "signature selection succeeded", slog.Any("dto", dto))
+	r.log.Log(ds.Ctx, core.LevelTrace, "entitiy selection succeeded", slog.Any("dto", dto))
 	return DataToRoot(dto)
 }
 
-func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
-	sigs, err := r.SelectByIDs(ids)
+func (r *repoPgx) SelectEnv(source data.Source, ids []ID) (map[ID]Root, error) {
+	sigs, err := r.SelectByIDs(source, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +132,10 @@ func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	return env, nil
 }
 
-func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
+func (r *repoPgx) SelectByIDs(source data.Source, ids []ID) (_ []Root, err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	if len(ids) == 0 {
 		return []Root{}, nil
-	}
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
 	}
 	batch := pgx.Batch{}
 	for _, rid := range ids {
@@ -155,7 +144,7 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 		}
 		batch.Queue(selectById, rid.String())
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -163,50 +152,37 @@ func (r *repoPgx) SelectByIDs(ids []ID) ([]Root, error) {
 	for _, rid := range ids {
 		rows, err := br.Query()
 		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
+			r.log.Error("query execution failed", slog.Any("id", rid), slog.String("q", selectById))
 		}
+		defer rows.Close()
 		dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
 		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
+			r.log.Error("row collection failed", slog.Any("id", rid))
 		}
 		dtos = append(dtos, dto)
 	}
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return nil, err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "signatures selection succeeded", slog.Any("dtos", dtos))
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
+	r.log.Log(ds.Ctx, core.LevelTrace, "entities selection succeeded", slog.Any("dtos", dtos))
 	return DataToRoots(dtos)
 }
 
-func (r *repoPgx) SelectAll() ([]Ref, error) {
+func (r *repoPgx) SelectAll(source data.Source) ([]Ref, error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	query := `
 		select
 			sig_id, rev, title
 		from sig_roots`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := ds.Conn.Query(ds.Ctx, query)
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err))
+		r.log.Error("query execution failed", slog.String("q", query))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[refData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err))
+		r.log.Error("rows collection failed")
 		return nil, err
 	}
 	return DataToRefs(dtos)

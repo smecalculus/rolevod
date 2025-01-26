@@ -5,6 +5,7 @@ import (
 
 	"smecalculus/rolevod/lib/ak"
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/sym"
@@ -194,11 +195,11 @@ type SpawnSpec struct {
 func (s SpawnSpec) Via() ph.ADT { return s.PE }
 
 type Repo interface {
-	Insert(Root) error
-	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
-	SelectByPID(chnl.ID) (Root, error)
-	SelectByVID(chnl.ID) (Root, error)
+	Insert(data.Source, Root) error
+	SelectAll(data.Source) ([]Ref, error)
+	SelectByID(data.Source, id.ADT) (Root, error)
+	SelectByPID(data.Source, chnl.ID) (Root, error)
+	SelectByVID(data.Source, chnl.ID) (Root, error)
 }
 
 func CollectEnv(t Term) []id.ADT {

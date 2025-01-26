@@ -1,34 +1,34 @@
 package alias
 
 import (
-	"context"
-	"errors"
 	"log/slog"
 	"math"
+	"smecalculus/rolevod/lib/data"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Adapter
 type repoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(l *slog.Logger) *repoPgx {
 	name := slog.String("name", "aliasRepoPgx")
-	return &repoPgx{p, l.With(name)}
+	return &repoPgx{l.With(name)}
 }
 
-func (r *repoPgx) Insert(root Root) error {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+// for compilation purposes
+func newRepo() Repo {
+	return &repoPgx{}
+}
+
+func (r *repoPgx) Insert(source data.Source, root Root) error {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", root.ID)
 	dto, err := DataFromRoot(root)
 	if err != nil {
+		r.log.Error("model mapping failed", idAttr)
 		return err
 	}
 	query := `
@@ -43,9 +43,10 @@ func (r *repoPgx) Insert(root Root) error {
 		"rev_to":   math.MaxInt64,
 		"sym":      dto.Sym,
 	}
-	_, err = tx.Exec(ctx, query, args)
+	_, err = ds.Conn.Exec(ds.Ctx, query, args)
 	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
+		r.log.Error("query execution failed", idAttr, slog.String("q", query))
+		return err
 	}
-	return tx.Commit(ctx)
+	return nil
 }

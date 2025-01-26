@@ -1,12 +1,14 @@
 package deal
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	"golang.org/x/exp/maps"
 
 	"smecalculus/rolevod/lib/ak"
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/pol"
@@ -121,14 +123,15 @@ type API interface {
 }
 
 type service struct {
-	deals  repo
-	roles  role.Repo
-	sigs   sig.Repo
-	chnls  chnl.Repo
-	pools  pool.Repo
-	steps  step.Repo
-	states state.Repo
-	log    *slog.Logger
+	deals    repo
+	roles    role.Repo
+	sigs     sig.Repo
+	chnls    chnl.Repo
+	pools    pool.Repo
+	steps    step.Repo
+	states   state.Repo
+	operator data.Operator
+	log      *slog.Logger
 }
 
 // for compilation purposes
@@ -144,11 +147,12 @@ func newService(
 	pools pool.Repo,
 	steps step.Repo,
 	states state.Repo,
+	operator data.Operator,
 	l *slog.Logger,
 ) *service {
 	name := slog.String("name", "dealService")
 	return &service{
-		deals, roles, sigs, chnls, pools, steps, states, l.With(name),
+		deals, roles, sigs, chnls, pools, steps, states, operator, l.With(name),
 	}
 }
 
@@ -182,48 +186,30 @@ func (s *service) RetreiveAll() ([]Ref, error) {
 	return s.deals.SelectAll()
 }
 
-func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
-	s.log.Debug("signature involvement started", slog.Any("spec", gotSpec))
-	wantSig, err := s.sigs.SelectByID(gotSpec.Service)
+func (s *service) Involve(gotSpec PartSpec) (_ chnl.Root, err error) {
+	ctx := context.Background()
+	s.log.Debug("involvement started", slog.Any("spec", gotSpec))
+	var wantSig sig.Root
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		wantSig, err = s.sigs.SelectByID(ds, gotSpec.Service)
+	})
 	if err != nil {
-		s.log.Error("signature selection failed",
-			slog.Any("reason", err),
-			slog.Any("id", gotSpec.Service),
-		)
+		s.log.Error("sig selection failed", slog.Any("id", gotSpec.Service))
 		return chnl.Root{}, err
 	}
-	wantRole, err := s.roles.SelectByFQN(wantSig.PE.Link)
+	var wantRole role.Root
+	s.operator.Implicit(ctx, func(ds data.Source) {
+		wantRole, err = s.roles.SelectByFQN(ds, wantSig.PE.Link)
+	})
 	if err != nil {
-		s.log.Error("role selection failed",
-			slog.Any("reason", err),
-			slog.Any("fqn", wantSig.PE.Link),
-		)
+		s.log.Error("role selection failed", slog.Any("fqn", wantSig.PE.Link))
 		return chnl.Root{}, err
 	}
 	newPE := chnl.Root{
 		ID:      id.New(),
-		Key:     wantSig.PE.Key,
+		Title:   wantSig.PE.Key,
 		StateID: &wantRole.StateID,
-	}
-	err = s.chnls.Insert(newPE)
-	if err != nil {
-		s.log.Error("providable endpoint insertion failed",
-			slog.Any("reason", err),
-			slog.Any("pe", newPE),
-		)
-		return chnl.Root{}, err
-	}
-	if len(gotSpec.Resources) > 0 {
-		err = s.pools.Transfer(gotSpec.Steward, gotSpec.Servant, gotSpec.Resources)
-		if err != nil {
-			s.log.Error("context transfer failed",
-				slog.Any("reason", err),
-				slog.Any("producer", gotSpec.Steward),
-				slog.Any("consumer", gotSpec.Servant),
-				slog.Any("resources", gotSpec.Resources),
-			)
-			return chnl.Root{}, err
-		}
+		PoolID:  &gotSpec.Servant,
 	}
 	newProc := step.ProcRoot{
 		ID:  id.New(),
@@ -233,15 +219,35 @@ func (s *service) Involve(gotSpec PartSpec) (chnl.Root, error) {
 			Sig: gotSpec.Service,
 		},
 	}
-	err = s.steps.Insert(newProc)
+	s.operator.Explicit(ctx, func(ds data.Source) error {
+		err = s.chnls.Insert(ds, newPE)
+		if err != nil {
+			s.log.Error("providable endpoint insertion failed", slog.Any("pe", newPE))
+			return err
+		}
+		if len(gotSpec.Resources) > 0 {
+			err = s.pools.Transfer(ds, gotSpec.Steward, gotSpec.Servant, gotSpec.Resources)
+			if err != nil {
+				s.log.Error("context transfer failed",
+					slog.Any("producer", gotSpec.Steward),
+					slog.Any("consumer", gotSpec.Servant),
+					slog.Any("resources", gotSpec.Resources),
+				)
+				return err
+			}
+		}
+		err = s.steps.Insert(ds, newProc)
+		if err != nil {
+			s.log.Error("process insertion failed", slog.Any("proc", newProc))
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.log.Error("process insertion failed",
-			slog.Any("reason", err),
-			slog.Any("proc", newProc),
-		)
+		s.log.Error("involvement failed")
 		return chnl.Root{}, err
 	}
-	s.log.Debug("sig involvement succeeded", slog.Any("proc", newProc))
+	s.log.Debug("involvement succeeded", slog.Any("proc", newProc))
 	return newPE, nil
 }
 

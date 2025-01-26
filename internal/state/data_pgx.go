@@ -1,26 +1,24 @@
 package state
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"smecalculus/rolevod/lib/core"
+	"smecalculus/rolevod/lib/data"
 )
 
 // Adapter
 type repoPgx struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	log *slog.Logger
 }
 
-func newRepoPgx(p *pgxpool.Pool, l *slog.Logger) *repoPgx {
+func newRepoPgx(l *slog.Logger) *repoPgx {
 	name := slog.String("name", "stateRepoPgx")
-	return &repoPgx{p, l.With(name)}
+	return &repoPgx{l.With(name)}
 }
 
 // for compilation purposes
@@ -28,12 +26,8 @@ func newRepo() Repo {
 	return &repoPgx{}
 }
 
-func (r *repoPgx) Insert(root Root) (err error) {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
+func (r *repoPgx) Insert(source data.Source, root Root) (err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	dto := dataFromRoot(root)
 	query := `
 		INSERT INTO states (
@@ -51,33 +45,29 @@ func (r *repoPgx) Insert(root Root) (err error) {
 		}
 		batch.Queue(query, sa)
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
-	for _, st := range dto.States {
+	for range dto.States {
 		_, err = br.Exec()
 		if err != nil {
-			r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("state", st))
+			r.log.Error("query execution failed", slog.Any("id", root.Ident()), slog.String("q", query))
 		}
 	}
 	if err != nil {
-		return errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return err
 	}
-	err = br.Close()
-	if err != nil {
-		return errors.Join(err, tx.Rollback(ctx))
-	}
-	return tx.Commit(ctx)
+	return nil
 }
 
-func (r *repoPgx) SelectAll() ([]Ref, error) {
+func (r *repoPgx) SelectAll(source data.Source) ([]Ref, error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	query := `
 		SELECT
 			kind, id
 		FROM states`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := ds.Conn.Query(ds.Ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +79,9 @@ func (r *repoPgx) SelectAll() ([]Ref, error) {
 	return DataToRefs(dtos)
 }
 
-func (r *repoPgx) SelectByID(rid ID) (Root, error) {
+func (r *repoPgx) SelectByID(source data.Source, rid ID) (Root, error) {
+	ds := data.MustConform[data.SourcePgx](source)
+	idAttr := slog.Any("id", rid)
 	query := `
 		WITH RECURSIVE top_states AS (
 			SELECT
@@ -103,24 +95,22 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 			WHERE bs.from_id = ts.id
 		)
 		SELECT * FROM top_states`
-	ctx := context.Background()
-	rows, err := r.pool.Query(ctx, query, rid.String())
+	rows, err := ds.Conn.Query(ds.Ctx, query, rid.String())
 	if err != nil {
-		r.log.Error("query execution failed", slog.Any("reason", err), slog.Any("root", rid))
+		r.log.Error("query execution failed", idAttr, slog.String("q", query))
 		return nil, err
 	}
 	defer rows.Close()
 	dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[stateData])
 	if err != nil {
-		r.log.Error("row collection failed", slog.Any("reason", err), slog.Any("root", rid))
+		r.log.Error("row collection failed", idAttr)
 		return nil, err
 	}
 	if len(dtos) == 0 {
-		err := fmt.Errorf("no rows selected")
-		r.log.Error("state selection failed", slog.Any("reason", err), slog.Any("root", rid))
-		return nil, err
+		r.log.Error("entity selection failed", idAttr)
+		return nil, fmt.Errorf("no rows selected")
 	}
-	r.log.Log(ctx, core.LevelTrace, "state selection succeeded", slog.Any("dtos", dtos))
+	r.log.Log(ds.Ctx, core.LevelTrace, "entity selection succeeded", slog.Any("dtos", dtos))
 	states := make(map[string]stateData, len(dtos))
 	for _, dto := range dtos {
 		states[dto.ID] = dto
@@ -128,8 +118,8 @@ func (r *repoPgx) SelectByID(rid ID) (Root, error) {
 	return statesToRoot(states, states[rid.String()])
 }
 
-func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
-	states, err := r.SelectByIDs(ids)
+func (r *repoPgx) SelectEnv(source data.Source, ids []ID) (map[ID]Root, error) {
+	states, err := r.SelectByIDs(source, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -140,63 +130,42 @@ func (r *repoPgx) SelectEnv(ids []ID) (map[ID]Root, error) {
 	return env, nil
 }
 
-func (r *repoPgx) SelectByIDs(ids []ID) (rs []Root, err error) {
-	ctx := context.Background()
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (r *repoPgx) SelectByIDs(source data.Source, ids []ID) (_ []Root, err error) {
+	ds := data.MustConform[data.SourcePgx](source)
 	batch := pgx.Batch{}
 	for _, rid := range ids {
 		batch.Queue(selectByID, rid.String())
 	}
-	br := tx.SendBatch(ctx, &batch)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
 	var roots []Root
 	for _, rid := range ids {
+		idAttr := slog.Any("id", rid)
 		rows, err := br.Query()
 		if err != nil {
-			r.log.Error("query execution failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
+			r.log.Error("query execution failed", idAttr, slog.String("q", selectByID))
 		}
+		defer rows.Close()
 		dtos, err := pgx.CollectRows(rows, pgx.RowToStructByName[stateData])
 		if err != nil {
-			r.log.Error("row collection failed",
-				slog.Any("reason", err),
-				slog.Any("id", rid),
-			)
+			r.log.Error("rows collection failed", idAttr)
 		}
 		if len(dtos) == 0 {
 			err = ErrDoesNotExist(rid)
-			r.log.Error("state selection failed",
-				slog.Any("reason", err),
-			)
+			r.log.Error("entity selection failed", idAttr)
 		}
 		root, err := dataToRoot(&rootData{rid.String(), dtos})
 		if err != nil {
-			r.log.Error("dto mapping failed",
-				slog.Any("reason", err),
-				slog.Any("dtos", dtos),
-			)
+			r.log.Error("model mapping failed", idAttr)
 		}
 		roots = append(roots, root)
 	}
 	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
+		return nil, err
 	}
-	err = br.Close()
-	if err != nil {
-		return nil, errors.Join(err, tx.Rollback(ctx))
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Join(err, br.Close(), tx.Rollback(ctx))
-	}
-	r.log.Log(ctx, core.LevelTrace, "states selection succeeded", slog.Any("roots", roots))
+	r.log.Log(ds.Ctx, core.LevelTrace, "entities selection succeeded", slog.Any("roots", roots))
 	return roots, err
 }
 

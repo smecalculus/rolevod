@@ -3,11 +3,11 @@ package chnl
 import (
 	"fmt"
 
+	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
+	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
-
-	"smecalculus/rolevod/internal/state"
 )
 
 // for external readability
@@ -22,32 +22,27 @@ type Spec struct {
 
 // aka Z
 type Ref struct {
-	ID  id.ADT
-	Key string
+	ID    id.ADT
+	Title string
 }
 
 type Root struct {
-	ID  id.ADT
-	Key string
-	// Preceding Channel ID
-	PreID *id.ADT
-	// Channel State ID
-	StateID *state.ID
+	ID      id.ADT
+	Title   string
+	StateID *id.ADT
+	PoolID  *id.ADT
+	Revs    []rev.ADT
 }
 
 type Repo interface {
-	Insert(Root) error
-	InsertCtx([]Root) ([]Root, error)
-	SelectAll() ([]Ref, error)
-	SelectByID(id.ADT) (Root, error)
-	SelectByIDs([]id.ADT) ([]Root, error)
-	SelectCtx(id.ADT, []id.ADT) ([]Root, error)
-	SelectCfg([]id.ADT) (map[id.ADT]Root, error)
-	Transfer(giver id.ADT, taker id.ADT, pids []id.ADT) error
+	Insert(data.Source, Root) error
+	SelectRefs(data.Source) ([]Ref, error)
+	SelectByID(data.Source, id.ADT) (Root, error)
+	SelectByIDs(data.Source, []id.ADT) ([]Root, error)
 }
 
-func CollectCtx(roots []Root) []state.ID {
-	var stIDs []state.ID
+func CollectCtx(roots []Root) []id.ADT {
+	var stIDs []id.ADT
 	for _, r := range roots {
 		if r.StateID == nil {
 			continue
@@ -72,6 +67,11 @@ var (
 	ConvertRootToRef func(Root) Ref
 )
 
+const (
+	stateRev = 0
+	poolRev  = 1
+)
+
 func ErrDoesNotExist(want ID) error {
 	return fmt.Errorf("channel doesn't exist: %v", want)
 }
@@ -90,4 +90,8 @@ func ErrAlreadyClosed(got ID) error {
 
 func ErrNotAnID(got ph.ADT) error {
 	return fmt.Errorf("not a channel id: %v", got)
+}
+
+func errOptimisticUpdate(got rev.ADT) error {
+	return fmt.Errorf("entity concurrent modification: got revision %v", got)
 }
