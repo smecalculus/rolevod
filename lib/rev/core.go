@@ -1,6 +1,7 @@
 package rev
 
 type ADT int64
+type Knd uint8
 
 func Initial() ADT {
 	return ADT(1)

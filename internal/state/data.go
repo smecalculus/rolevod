@@ -12,7 +12,7 @@ import (
 type kind int
 
 const (
-	unkst = iota
+	nonst kind = iota
 	one
 	link
 	tensor

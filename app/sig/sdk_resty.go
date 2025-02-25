@@ -22,7 +22,7 @@ func NewAPI() API {
 	return newClientResty()
 }
 
-func (cl *clientResty) Incept(fqn FQN) (Ref, error) {
+func (cl *clientResty) Incept(fqn QN) (Ref, error) {
 	return Ref{}, nil
 }
 

@@ -38,17 +38,19 @@ type SrvRef struct {
 func (r SrvRef) Ident() id.ADT { return r.ID }
 
 type Root interface {
-	step()
+	step() chnl.ID
 }
+
+func ChnlID(r Root) chnl.ID { return r.step() }
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID   id.ADT
-	PID  chnl.ID
-	Term Term
+	ID     id.ADT
+	ProcID chnl.ID
+	Term   Term
 }
 
-func (ProcRoot) step() {}
+func (r ProcRoot) step() chnl.ID { return r.ProcID }
 
 // aka exec.Msg
 type MsgRoot struct {
@@ -58,7 +60,15 @@ type MsgRoot struct {
 	Val Value
 }
 
-func (MsgRoot) step() {}
+func (r MsgRoot) step() chnl.ID { return r.VID }
+
+type MsgRoot2 struct {
+	ProcID id.ADT
+	ChnlID id.ADT
+	Val    Value
+}
+
+func (r MsgRoot2) step() chnl.ID { return r.ChnlID }
 
 type SrvRoot struct {
 	ID   id.ADT
@@ -67,7 +77,15 @@ type SrvRoot struct {
 	Cont Continuation
 }
 
-func (SrvRoot) step() {}
+func (r SrvRoot) step() chnl.ID { return r.VID }
+
+type SrvRoot2 struct {
+	ProcID id.ADT
+	ChnlID id.ADT
+	Cont   Continuation
+}
+
+func (r SrvRoot2) step() chnl.ID { return r.ChnlID }
 
 type TbdRoot struct {
 	ID  id.ADT
@@ -195,7 +213,7 @@ type SpawnSpec struct {
 func (s SpawnSpec) Via() ph.ADT { return s.PE }
 
 type Repo interface {
-	Insert(data.Source, Root) error
+	Insert(data.Source, ...Root) error
 	SelectAll(data.Source) ([]Ref, error)
 	SelectByID(data.Source, id.ADT) (Root, error)
 	SelectByPID(data.Source, chnl.ID) (Root, error)
@@ -341,4 +359,8 @@ func ErrValTypeUnexpected(got Value) error {
 
 func ErrContTypeUnexpected(got Continuation) error {
 	return fmt.Errorf("continuation type unexpected: %T", got)
+}
+
+func ErrMissingInCfg(want ph.ADT) error {
+	return fmt.Errorf("channel missing in cfg: %v", want)
 }

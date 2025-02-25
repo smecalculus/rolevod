@@ -6,6 +6,10 @@ import (
 	"github.com/rs/xid"
 )
 
+var (
+	Nil ADT
+)
+
 type Identifiable interface {
 	Ident() ADT
 }

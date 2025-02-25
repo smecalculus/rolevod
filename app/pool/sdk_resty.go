@@ -33,14 +33,14 @@ func (cl *clientResty) Create(spec Spec) (Root, error) {
 	return MsgToRoot(res)
 }
 
-func (c *clientResty) Retrieve(rid id.ADT) (Snap, error) {
+func (c *clientResty) Retrieve(rid id.ADT) (SubSnap, error) {
 	var res SnapMsg
 	_, err := c.resty.R().
 		SetResult(&res).
 		SetPathParam("id", rid.String()).
 		Get("/pools/{id}")
 	if err != nil {
-		return Snap{}, err
+		return SubSnap{}, err
 	}
 	return MsgToSnap(res)
 }

@@ -10,7 +10,7 @@ import (
 	"smecalculus/rolevod/lib/ph"
 )
 
-type rootData struct {
+type RootData struct {
 	ID   string         `db:"id"`
 	K    stepKind       `db:"kind"`
 	PID  sql.NullString `db:"pid"`
@@ -87,7 +87,7 @@ type ctaData struct {
 type termKind int
 
 const (
-	unkterm = termKind(iota)
+	nonterm = termKind(iota)
 	close
 	wait
 	send
@@ -104,6 +104,8 @@ const (
 // goverter:output:format assign-variable
 // goverter:extend data.*
 var (
+	DataToRoots    func([]RootData) ([]Root, error)
+	DataFromRoots  func([]Root) ([]RootData, error)
 	DataToTerms    func([]specData) ([]Term, error)
 	DataFromTerms  func([]Term) ([]specData, error)
 	DataToValues   func([]specData) ([]Value, error)
@@ -112,18 +114,18 @@ var (
 	DataFromConts  func([]Continuation) ([]specData, error)
 )
 
-func dataFromRoot(r Root) (*rootData, error) {
+func dataFromRoot(r Root) (*RootData, error) {
 	if r == nil {
 		return nil, nil
 	}
 	switch root := r.(type) {
 	case ProcRoot:
-		pid := id.ConvertToNullString(root.PID)
+		pid := id.ConvertToNullString(root.ProcID)
 		spec, err := dataFromTerm(root.Term)
 		if err != nil {
 			return nil, err
 		}
-		return &rootData{
+		return &RootData{
 			K:    proc,
 			ID:   root.ID.String(),
 			PID:  pid,
@@ -132,7 +134,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 	case MsgRoot:
 		pid := id.ConvertToNullString(root.PID)
 		vid := id.ConvertToNullString(root.VID)
-		return &rootData{
+		return &RootData{
 			K:    msg,
 			ID:   root.ID.String(),
 			PID:  pid,
@@ -146,7 +148,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &rootData{
+		return &RootData{
 			K:    srv,
 			ID:   root.ID.String(),
 			PID:  pid,
@@ -158,7 +160,7 @@ func dataFromRoot(r Root) (*rootData, error) {
 	}
 }
 
-func dataToRoot(dto *rootData) (Root, error) {
+func dataToRoot(dto *RootData) (Root, error) {
 	if dto == nil {
 		return nil, nil
 	}
@@ -180,7 +182,7 @@ func dataToRoot(dto *rootData) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: ident, PID: pid, Term: term}, nil
+		return ProcRoot{ID: ident, ProcID: pid, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Spec)
 		if err != nil {

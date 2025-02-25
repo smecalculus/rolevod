@@ -50,6 +50,6 @@ var (
 	MsgToRoot    func(RootMsg) (Root, error)
 	MsgFromRoot  func(Root) RootMsg
 	MsgFromRoots func([]Root) []RootMsg
-	MsgToSnap    func(SnapMsg) (Snap, error)
-	MsgFromSnap  func(Snap) SnapMsg
+	MsgToSnap    func(SnapMsg) (SubSnap, error)
+	MsgFromSnap  func(SubSnap) SnapMsg
 )

@@ -27,13 +27,13 @@ func TestCreation(t *testing.T) {
 			t.Fatal(err)
 		}
 		// and
-		poolSpec2 := pool.Spec{Title: "ts2", SupID: poolRoot1.ID}
+		poolSpec2 := pool.Spec{Title: "ts2", SupID: poolRoot1.PoolID}
 		poolRoot2, err := api.Create(poolSpec2)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// when
-		poolSnap1, err := api.Retrieve(poolRoot1.ID)
+		poolSnap1, err := api.Retrieve(poolRoot1.PoolID)
 		if err != nil {
 			t.Fatal(err)
 		}

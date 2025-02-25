@@ -26,29 +26,35 @@ func newRepo() Repo {
 	return &repoPgx{}
 }
 
-func (r *repoPgx) Insert(source data.Source, root Root) error {
+func (r *repoPgx) Insert(source data.Source, roots ...Root) error {
 	ds := data.MustConform[data.SourcePgx](source)
-	dto, err := dataFromRoot(root)
+	dtos, err := DataFromRoots(roots)
 	if err != nil {
 		r.log.Error("model mapping failed")
 		return err
 	}
-	query := `
-		INSERT INTO steps (
-			id, kind, pid, vid, spec
-		) VALUES (
-			@id, @kind, @pid, @vid, @spec
-		)`
-	args := pgx.NamedArgs{
-		"id":   dto.ID,
-		"kind": dto.K,
-		"pid":  dto.PID,
-		"vid":  dto.VID,
-		"spec": dto.Spec,
+	batch := pgx.Batch{}
+	for _, dto := range dtos {
+		args := pgx.NamedArgs{
+			"id":   dto.ID,
+			"kind": dto.K,
+			"pid":  dto.PID,
+			"vid":  dto.VID,
+			"spec": dto.Spec,
+		}
+		batch.Queue(insertRoot, args)
 	}
-	_, err = ds.Conn.Exec(ds.Ctx, query, args)
+	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	defer func() {
+		err = errors.Join(err, br.Close())
+	}()
+	for _, dto := range dtos {
+		_, err = br.Exec()
+		if err != nil {
+			r.log.Error("query execution failed", slog.Any("id", dto.ID), slog.String("q", insertRoot))
+		}
+	}
 	if err != nil {
-		r.log.Error("query execution failed", slog.String("q", query))
 		return err
 	}
 	return nil
@@ -93,7 +99,7 @@ func (r *repoPgx) execute(source data.Source, query string, arg string) (Root, e
 		return nil, err
 	}
 	defer rows.Close()
-	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[rootData])
+	dto, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[RootData])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -109,3 +115,12 @@ func (r *repoPgx) execute(source data.Source, query string, arg string) (Root, e
 	r.log.Log(ds.Ctx, core.LevelTrace, "entity selection succeeded", slog.Any("root", root))
 	return root, nil
 }
+
+const (
+	insertRoot = `
+		insert into pool_steps (
+			id, kind, pid, vid, spec
+		) values (
+			@id, @kind, @pid, @vid, @spec
+		)`
+)

@@ -145,8 +145,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closeSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  closer.ID,
+			Deal:   bigDeal.ID,
+			ProcID: closer.ID,
 			Term: step.CloseSpec{
 				A: closer.ID,
 			},
@@ -158,8 +158,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waitSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  waiter.ID,
+			Deal:   bigDeal.ID,
+			ProcID: waiter.ID,
 			Term: step.WaitSpec{
 				X: closer.ID,
 				Cont: step.CloseSpec{
@@ -280,8 +280,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		recvSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  receiver.ID,
+			Deal:   bigDeal.ID,
+			ProcID: receiver.ID,
 			Term: step.RecvSpec{
 				X: receiver.ID,
 				Y: message.ID,
@@ -300,8 +300,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		sendSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  sender.ID,
+			Deal:   bigDeal.ID,
+			ProcID: sender.ID,
 			Term: step.SendSpec{
 				A: receiver.ID,
 				B: message.ID,
@@ -400,8 +400,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		caseSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  follower.ID,
+			Deal:   bigDeal.ID,
+			ProcID: follower.ID,
 			Term: step.CaseSpec{
 				X: follower.ID,
 				Conts: map[core.Label]step.Term{
@@ -418,8 +418,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		labSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  decider.ID,
+			Deal:   bigDeal.ID,
+			ProcID: decider.ID,
 			Term: step.LabSpec{
 				A: follower.ID,
 				L: label,
@@ -526,8 +526,8 @@ func TestTake(t *testing.T) {
 		z := sym.New("z")
 		// and
 		spawnSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  spawner.ID,
+			Deal:   bigDeal.ID,
+			ProcID: spawner.ID,
 			Term: step.SpawnSpec{
 				PE: z,
 				CEs: []chnl.ID{
@@ -652,8 +652,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		closeSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  closer.ID,
+			Deal:   bigDeal.ID,
+			ProcID: closer.ID,
 			Term: step.CloseSpec{
 				A: closer.ID,
 			},
@@ -666,7 +666,7 @@ func TestTake(t *testing.T) {
 		fwdSpec := deal.TranSpec{
 			Deal: bigDeal.ID,
 			// канал пересыльщика должен закрыться?
-			PID: forwarder.ID,
+			ProcID: forwarder.ID,
 			Term: step.FwdSpec{
 				C: forwarder.ID,
 				D: closer.ID,
@@ -678,8 +678,8 @@ func TestTake(t *testing.T) {
 		}
 		// and
 		waitSpec := deal.TranSpec{
-			Deal: bigDeal.ID,
-			PID:  waiter.ID,
+			Deal:   bigDeal.ID,
+			ProcID: waiter.ID,
 			Term: step.WaitSpec{
 				X: forwarder.ID,
 				Cont: step.CloseSpec{

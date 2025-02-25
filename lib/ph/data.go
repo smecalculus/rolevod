@@ -10,7 +10,7 @@ import (
 type kind int
 
 const (
-	nonph = iota
+	nonph kind = iota
 	idKind
 	symKind
 )

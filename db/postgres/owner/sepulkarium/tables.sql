@@ -50,55 +50,65 @@ CREATE TABLE sig_subs (
 CREATE TABLE pool_roots (
 	pool_id varchar(36),
 	title varchar(64),
-	sup_id varchar(36),
-	rev bigint,
+	revs integer[] -- org=1, steps=2, assets=3
 );
 
 CREATE TABLE pool_caps (
 	pool_id varchar(36),
-	sig_fqn ltree,
-	rev_from bigint,
-	rev_to bigint
+	sig_id varchar(36),
+	rev integer
 );
 
 CREATE TABLE pool_deps (
 	pool_id varchar(36),
-	sig_fqn ltree,
-	rev_from bigint,
-	rev_to bigint
-);
-
-CREATE TABLE pool_subs (
-	pool_id varchar(36),
-	sub_id varchar(36),
-	rev_from bigint,
-	rev_to bigint
-);
-
-CREATE TABLE pool_acts (
-	pool_id varchar(36),
-	act_key varchar(36), -- ключ распоряжения, пользования...
-	kind smallint,
-	spec jsonb,
-	rev_at bigint
-);
-
-CREATE TABLE chnl_roots (
-	chnl_id varchar(36),
-	title varchar(64),
-	revs integer[]  -- states = 1, pools = 2
-);
-
-CREATE TABLE chnl_states (
-	chnl_id varchar(36),
-	state_id varchar(36),
-	act_key varchar(36),
+	sig_id varchar(36),
 	rev integer
 );
 
-CREATE TABLE chnl_pools (
-	chnl_id varchar(36),
+-- передачи каналов (провайдерская сторона)
+-- по истории передач определяем текущего провайдера
+CREATE TABLE pool_liabs (
 	pool_id varchar(36),
+	proc_id varchar(36),
+	proc_ph varchar(36),
+	ex_pool_id varchar(36),
+	rev integer
+);
+
+-- передачи каналов (потребительская сторона)
+-- по истории передач определяем текущих потребителей
+CREATE TABLE pool_assets (
+	pool_id varchar(36),
+	proc_id varchar(36),
+	proc_ph varchar(36),
+	ex_pool_id varchar(36),
+	rev integer
+);
+
+-- подстановки каналов в процесс
+CREATE TABLE proc_bnds (
+	proc_id varchar(36),
+	proc_ph varchar(36),
+	chnl_id varchar(36),
+	state_id varchar(36),
+	rev integer
+);
+
+CREATE TABLE proc_steps (
+	proc_id varchar(36),
+	chnl_id varchar(36),
+	kind smallint,
+	spec jsonb,
+	rev integer
+);
+
+CREATE TABLE pool_allocs (
+	pool_id varchar(36)
+);
+
+CREATE TABLE pool_sups (
+	pool_id varchar(36),
+	sup_pool_id varchar(36),
 	rev integer
 );
 
@@ -132,13 +142,13 @@ CREATE TABLE steps (
 CREATE TABLE producers (
 	giver_id varchar(36),
 	taker_id varchar(36),
-	chnl_id varchar(36)
+	proc_id varchar(36)
 );
 
 CREATE TABLE consumers (
 	giver_id varchar(36),
 	taker_id varchar(36),
-	chnl_id varchar(36)
+	proc_id varchar(36)
 );
 
 CREATE TABLE clientships (

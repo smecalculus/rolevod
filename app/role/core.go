@@ -17,7 +17,7 @@ import (
 // for external readability
 type ID = id.ADT
 type Rev = rev.ADT
-type FQN = sym.ADT
+type QN = sym.ADT
 type Title = string
 
 type Spec struct {

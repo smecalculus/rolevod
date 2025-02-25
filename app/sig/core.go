@@ -17,7 +17,7 @@ import (
 )
 
 type ID = id.ADT
-type FQN = sym.ADT
+type QN = sym.ADT
 type Name = string
 
 type Spec struct {
@@ -53,7 +53,7 @@ type Root struct {
 }
 
 type API interface {
-	Incept(FQN) (Ref, error)
+	Incept(QN) (Ref, error)
 	Create(Spec) (Root, error)
 	Retrieve(id.ADT) (Root, error)
 	RetreiveRefs() ([]Ref, error)
@@ -159,8 +159,8 @@ type Repo interface {
 	SelectEnv(data.Source, []ID) (map[ID]Root, error)
 }
 
-func CollectEnv(sigs []Root) []role.FQN {
-	roleFQNs := []role.FQN{}
+func CollectEnv(sigs []Root) []role.QN {
+	roleFQNs := []role.QN{}
 	for _, sig := range sigs {
 		roleFQNs = append(roleFQNs, sig.PE.Link)
 		for _, ce := range sig.CEs {
